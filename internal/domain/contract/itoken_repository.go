@@ -1,8 +1,8 @@
 package contract
 
 import (
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"context"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 )
 
 type ITokenRepository interface {

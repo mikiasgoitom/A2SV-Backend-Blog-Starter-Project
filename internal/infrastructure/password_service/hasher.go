@@ -1,8 +1,8 @@
 package passwordservice
 
 import (
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"fmt"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 
 	"golang.org/x/crypto/bcrypt"
 )

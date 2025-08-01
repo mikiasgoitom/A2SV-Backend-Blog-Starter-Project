@@ -38,7 +38,7 @@ func (r *Router) SetupRoutes(router *gin.Engine) {
 	}
 
 	// Protected routes (authentication required)
-	// Note: Add authentication middleware when it's properly configured
+	// TODO: Add authentication middleware when it's properly configured
 	protected := v1.Group("/")
 	// protected.Use(middleware.AuthMiddleWare(jwtManager, userUsecase))
 	{

@@ -13,7 +13,7 @@ type MongoDBClient struct {
 	Client *mongo.Client
 }
 
-func NewMongoDBClient(uri string) (*MongoDBClient, error){
+func NewMongoDBClient(uri string) (*MongoDBClient, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
