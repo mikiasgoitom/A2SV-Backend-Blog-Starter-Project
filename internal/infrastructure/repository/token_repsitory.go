@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"github.com/google/uuid"
 )
 
 // ---------- DTO layer ------------------
@@ -22,6 +22,7 @@ type tokenDTO struct {
 	Revoke    bool      `bson:"revoke"`
 }
 
+// ...existing code...
 func (t *tokenDTO) ToEntity() *entity.Token {
 	userID, _ := uuid.Parse(t.UserID) // handle error as needed
 	id, _ := uuid.Parse(t.ID)         // handle error as needed
@@ -31,7 +32,7 @@ func (t *tokenDTO) ToEntity() *entity.Token {
 		TokenHash: t.TokenHash,
 		CreatedAt: t.CreatedAt,
 		ExpiresAt: t.ExpiresAt,
-		Revoke:   t.Revoke,
+		Revoke:    t.Revoke,
 	}
 }
 
@@ -84,7 +85,7 @@ func (r *TokenRepository) GetByID(ctx context.Context, id string) (*entity.Token
 }
 
 func (r *TokenRepository) GetByUserID(ctx context.Context, userID string) (*entity.Token, error) {
-	filter := bson.M{"_id": userID}
+	filter := bson.M{"user_id": userID}
 	var dto tokenDTO
 	err := r.Collection.FindOne(ctx, filter).Decode(&dto)
 	if err != nil {
@@ -97,13 +98,14 @@ func (r *TokenRepository) GetByUserID(ctx context.Context, userID string) (*enti
 
 func (r *TokenRepository) Revoke(ctx context.Context, id string) error {
 	filter := bson.M{"_id": id}
-	count, err := r.Collection.DeleteOne(ctx, filter)
+	update := bson.M{"$set": bson.M{"revoke": true}}
+	result, err := r.Collection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return err
 	}
 
-	if count.DeletedCount == 0 {
-		return fmt.Errorf("failed to delete token with: %v", id)
+	if result.MatchedCount == 0 {
+		return fmt.Errorf("failed to revoke token with: %v", id)
 	}
 
 	return nil
