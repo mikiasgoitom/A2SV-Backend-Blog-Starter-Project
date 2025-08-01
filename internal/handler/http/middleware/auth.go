@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func AuthMiddleWare(jwtMgr jwt.JWTManager, userUseCase usecase.UserUseCase) gin.HandlerFunc {
+func AuthMiddleWare(jwtMgr jwt.JWTManager, userUseCase usecase.UserUsecase) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		authHeader := ctx.GetHeader("Authorization")
 		if authHeader == "" {

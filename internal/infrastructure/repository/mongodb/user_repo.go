@@ -2,14 +2,15 @@ package mongodb
 
 import (
 	// "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"context"
 	"errors"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
+
 type MongoUserRepository struct {
 	collection *mongo.Collection
 }
@@ -18,8 +19,8 @@ func NewMongoUserRepository(collection *mongo.Collection) *MongoUserRepository {
 	return &MongoUserRepository{collection: collection}
 }
 
-func (r *MongoUserRepository) CreateUser(ctx context.Context, user entity.User) (error) {
-	_,err := r.collection.InsertOne(ctx,user)
+func (r *MongoUserRepository) CreateUser(ctx context.Context, user entity.User) error {
+	_, err := r.collection.InsertOne(ctx, user)
 	return err
 }
 
@@ -56,12 +57,6 @@ func (r *MongoUserRepository) UpdateUser(ctx context.Context, user entity.User) 
 	}
 	if user.Role != "" {
 		setFields["role"] = user.Role
-	}
-	if user.PackageID != nil {
-		setFields["package_id"] = user.PackageID
-	}
-	if user.PackageExpiry != nil {
-		setFields["package_expiry"] = user.PackageExpiry
 	}
 	setFields["is_active"] = user.IsActive // bool zero value is false, so always update
 	if user.FirstName != nil {
