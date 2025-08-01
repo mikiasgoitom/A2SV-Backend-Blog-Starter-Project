@@ -1,7 +1,7 @@
 package contract
 
 import (
-	"blog/internal/domain/entity"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"context"
 )
 
