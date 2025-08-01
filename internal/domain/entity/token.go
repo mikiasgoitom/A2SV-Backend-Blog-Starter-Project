@@ -14,7 +14,7 @@ type Token struct {
 	TokenHash string    `json:"-" db:"token_hash"`
 	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	Revoked   bool      `json:"revoked" db:"revoked"`
+	Revoke    bool      `json:"revoked" db:"revoked"`
 }
 
 // TokenType represents the type of token

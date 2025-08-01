@@ -9,6 +9,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"github.com/google/uuid"
 )
 
 // ---------- DTO layer ------------------
@@ -22,20 +23,22 @@ type tokenDTO struct {
 }
 
 func (t *tokenDTO) ToEntity() *entity.Token {
+	userID, _ := uuid.Parse(t.UserID) // handle error as needed
+	id, _ := uuid.Parse(t.ID)         // handle error as needed
 	return &entity.Token{
-		ID:        t.ID,
-		UserID:    t.UserID,
+		ID:        id,
+		UserID:    userID,
 		TokenHash: t.TokenHash,
 		CreatedAt: t.CreatedAt,
 		ExpiresAt: t.ExpiresAt,
-		Revoke:    t.Revoke,
+		Revoke:   t.Revoke,
 	}
 }
 
 func FromTokenEntityToDTO(t *entity.Token) *tokenDTO {
 	return &tokenDTO{
-		ID:        t.ID,
-		UserID:    t.UserID,
+		ID:        t.ID.String(),
+		UserID:    t.UserID.String(),
 		TokenHash: t.TokenHash,
 		CreatedAt: t.CreatedAt,
 		ExpiresAt: t.ExpiresAt,
@@ -100,7 +103,7 @@ func (r *TokenRepository) Revoke(ctx context.Context, id string) error {
 	}
 
 	if count.DeletedCount == 0 {
-		return fmt.Errorf("failed to delete token with: %v\n", id)
+		return fmt.Errorf("failed to delete token with: %v", id)
 	}
 
 	return nil
