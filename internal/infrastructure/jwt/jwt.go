@@ -1,7 +1,7 @@
 package jwt
 
 import (
-	"blog/internal/domain/contract"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"fmt"
 	"time"
 
