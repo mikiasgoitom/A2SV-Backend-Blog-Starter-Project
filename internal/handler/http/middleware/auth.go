@@ -1,10 +1,11 @@
 package middleware
 
 import (
-	"blog/internal/infrastructure/jwt"
-	"blog/internal/usecase"
 	"net/http"
 	"strings"
+
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/jwt"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 
 	"github.com/gin-gonic/gin"
 )
