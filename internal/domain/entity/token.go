@@ -3,6 +3,7 @@ package entity
 import (
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -21,6 +22,14 @@ type Token struct {
 type TokenType string
 
 const (
-	TokenTypeAccess  TokenType = "access"
-	TokenTypeRefresh TokenType = "refresh"
+	TokenTypeAccess        TokenType = "access"
+	TokenTypeRefresh       TokenType = "refresh"
+	TokenTypePasswordReset TokenType = "password_reset"
 )
+
+// Claims represents the JWT claims for authentication and authorization.
+type Claims struct {
+	UserID uuid.UUID `json:"user_id"`
+	Role   UserRole  `json:"role"`
+	jwt.RegisteredClaims
+}
