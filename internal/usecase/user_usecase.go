@@ -62,9 +62,9 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 	}
 
 	// Check if user with same username or email already exists
-	const ErrUserNotFound = "not found"
+	const errUserNotFound = "not found"
 	existingUserByEmail, err := uc.userRepo.GetUserByEmail(ctx, email)
-	if err != nil && err.Error() != ErrUserNotFound {
+	if err != nil && err.Error() != errUserNotFound {
 		uc.logger.Errorf("failed to check for existing user by email: %v", err)
 		return nil, fmt.Errorf("internal server error")
 	}
@@ -73,7 +73,7 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 	}
 
 	existingUserByUsername, err := uc.userRepo.GetUserByUsername(ctx, username)
-	if err != nil && err.Error() != ErrUserNotFound {
+	if err != nil && err.Error() != errUserNotFound {
 		uc.logger.Errorf("failed to check for existing user by username: %v", err)
 		return nil, fmt.Errorf("internal server error")
 	}
@@ -161,15 +161,15 @@ func (uc *UserUsecase) Login(ctx context.Context, login, password string) (*enti
 	var user *entity.User
 	var err error
 
-	if uc.validator.ValidateEmail(login) == nil { // Use injected validator
+	if uc.validator.ValidateEmail(login) == nil {
 		user, err = uc.userRepo.GetUserByEmail(ctx, login)
 	} else {
 		user, err = uc.userRepo.GetUserByUsername(ctx, login)
 	}
 
 	if err != nil {
-		const ErrUserNotFound = "not found" // Placeholder
-		if err.Error() == ErrUserNotFound {
+		const errUserNotFound = "not found"
+		if err.Error() == errUserNotFound {
 			return nil, "", "", errors.New("invalid credentials")
 		}
 		uc.logger.Errorf("failed to retrieve user for login: %v", err)
@@ -224,10 +224,10 @@ func (uc *UserUsecase) Authenticate(ctx context.Context, accessToken string) (*e
 		return nil, fmt.Errorf("invalid access token: %w", err)
 	}
 
-	const ErrUserNotFound = "not found" // Placeholder
+	const errUserNotFound = "not found" // Changed to camelCase
 	user, err := uc.userRepo.GetUserByID(ctx, claims.UserID)
 	if err != nil {
-		if err.Error() == ErrUserNotFound {
+		if err.Error() == errUserNotFound {
 			return nil, errors.New("user not found")
 		}
 		uc.logger.Errorf("failed to retrieve user during authentication: %v", err)
@@ -245,11 +245,11 @@ func (uc *UserUsecase) RefreshToken(ctx context.Context, refreshToken string) (s
 		return "", "", fmt.Errorf("invalid refresh token: %w", err)
 	}
 
-	const ErrTokenNotFound = "not found" // Placeholder
+	const errTokenNotFound = "not found" // Placeholder
 	// Retrieve the stored token using the UserID from the claims.
 	storedToken, err := uc.tokenRepo.GetTokenByUserID(ctx, claims.UserID)
 	if err != nil {
-		if err.Error() == ErrTokenNotFound {
+		if err.Error() == errTokenNotFound {
 			return "", "", errors.New("refresh token not found or invalidated, please log in again")
 		}
 		uc.logger.Errorf("failed to retrieve stored refresh token: %v", err)
@@ -304,10 +304,10 @@ func (uc *UserUsecase) RefreshToken(ctx context.Context, refreshToken string) (s
 
 // ForgotPassword handles the forgot password flow.
 func (uc *UserUsecase) ForgotPassword(ctx context.Context, email string) error {
-	const ErrUserNotFound = "not found" // Placeholder
+	const errUserNotFound = "not found" // Placeholder
 	user, err := uc.userRepo.GetUserByEmail(ctx, email)
 	if err != nil {
-		if err.Error() == ErrUserNotFound {
+		if err.Error() == errUserNotFound {
 			uc.logger.Warnf("password reset requested for non-existent email: %s", email)
 			return nil
 		}
@@ -358,11 +358,11 @@ func (uc *UserUsecase) ResetPassword(ctx context.Context, resetToken, newPasswor
 		return fmt.Errorf("invalid or expired password reset token: %w", err)
 	}
 
-	const ErrTokenNotFound = "not found" // Placeholder
+	const errTokenNotFound = "not found" // Placeholder
 	// Retrieve the stored token using the UserID from the claims.
 	storedToken, err := uc.tokenRepo.GetTokenByUserID(ctx, claims.UserID)
 	if err != nil {
-		if err.Error() == ErrTokenNotFound {
+		if err.Error() == errTokenNotFound {
 			return errors.New("password reset token not found or invalidated")
 		}
 		uc.logger.Errorf("failed to retrieve stored reset token: %v", err)
@@ -419,11 +419,11 @@ func (uc *UserUsecase) VerifyEmail(ctx context.Context, token string) error {
 		return fmt.Errorf("invalid or expired email verification token: %w", err)
 	}
 
-	const ErrTokenNotFound = "not found" // Placeholder
+	const errTokenNotFound = "not found" // Placeholder
 	// Retrieve the stored email verification token using the UserID from the claims.
 	storedEmailToken, err := uc.emailVerificationTokenRepo.GetEmailVerificationTokenByUserID(ctx, claims.UserID)
 	if err != nil {
-		if err.Error() == ErrTokenNotFound {
+		if err.Error() == errTokenNotFound {
 			return errors.New("email verification token not found or invalidated")
 		}
 		uc.logger.Errorf("failed to retrieve stored email verification token: %v", err)
@@ -451,10 +451,10 @@ func (uc *UserUsecase) VerifyEmail(ctx context.Context, token string) error {
 	}
 
 	// Retrieve the user.
-	const ErrUserNotFound = "not found" // Placeholder
+	const errUserNotFound = "not found" // Placeholder
 	user, err := uc.userRepo.GetUserByID(ctx, claims.UserID)
 	if err != nil {
-		if err.Error() == ErrUserNotFound {
+		if err.Error() == errUserNotFound {
 			return errors.New("user not found for verification")
 		}
 		uc.logger.Errorf("failed to retrieve user for email verification: %v", err)
@@ -493,12 +493,12 @@ func (uc *UserUsecase) Logout(ctx context.Context, refreshToken string) error {
 		return nil
 	}
 
-	const ErrTokenNotFound = "not found" // Placeholder
+	const errTokenNotFound = "not found" // Placeholder
 
 	// Retrieve the stored token by UserID to get its database ID.
 	storedToken, err := uc.tokenRepo.GetTokenByUserID(ctx, claims.UserID)
 	if err != nil {
-		if err.Error() == ErrTokenNotFound {
+		if err.Error() == errTokenNotFound {
 			uc.logger.Warnf("refresh token for user %s not found during logout, assuming it's already deleted", claims.UserID)
 			return nil
 		}
@@ -517,10 +517,10 @@ func (uc *UserUsecase) Logout(ctx context.Context, refreshToken string) error {
 
 // PromoteUser promotes a user to an Admin role.
 func (uc *UserUsecase) PromoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error) {
-	const ErrUserNotFound = "not found" // Placeholder
+	const errUserNotFound = "not found" // Placeholder
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
-		if err.Error() == ErrUserNotFound {
+		if err.Error() == errUserNotFound {
 			return nil, errors.New("user not found")
 		}
 		uc.logger.Errorf("failed to retrieve user for promotion: %v", err)
@@ -544,10 +544,10 @@ func (uc *UserUsecase) PromoteUser(ctx context.Context, userID uuid.UUID) (*enti
 
 // DemoteUser demotes an Admin back to a regular user (member).
 func (uc *UserUsecase) DemoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error) {
-	const ErrUserNotFound = "not found" // Placeholder
+	const errUserNotFound = "not found" // Placeholder
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
-		if err.Error() == ErrUserNotFound {
+		if err.Error() == errUserNotFound {
 			return nil, errors.New("user not found")
 		}
 		uc.logger.Errorf("failed to retrieve user for demotion: %v", err)
@@ -571,10 +571,10 @@ func (uc *UserUsecase) DemoteUser(ctx context.Context, userID uuid.UUID) (*entit
 
 // UpdateProfile allows a registered user to update their profile details.
 func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID uuid.UUID, updates map[string]interface{}) (*entity.User, error) {
-	const ErrUserNotFound = "not found" // Placeholder
+	const errUserNotFound = "not found" // Placeholder
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
-		if err.Error() == ErrUserNotFound {
+		if err.Error() == errUserNotFound {
 			return nil, errors.New("user not found")
 		}
 		uc.logger.Errorf("failed to retrieve user for profile update: %v", err)
@@ -584,9 +584,9 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID uuid.UUID, upda
 	// Apply updates based on the map.
 	if val, ok := updates["username"]; ok {
 		if username, isString := val.(string); isString {
-			const ErrUserNotFound = "not found" // Placeholder
+			const errUserNotFound = "not found" // Placeholder
 			existingUserByUsername, err := uc.userRepo.GetUserByUsername(ctx, username)
-			if err != nil && err.Error() != ErrUserNotFound {
+			if err != nil && err.Error() != errUserNotFound {
 				uc.logger.Errorf("failed to check for existing username during update: %v", err)
 				return nil, errors.New("internal server error")
 			}
@@ -601,9 +601,9 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID uuid.UUID, upda
 			if err := uc.validator.ValidateEmail(email); err != nil {
 				return nil, fmt.Errorf("invalid email format: %w", err)
 			}
-			const ErrUserNotFound = "not found" // Placeholder
+			const errUserNotFound = "not found" // Placeholder
 			existingUserByEmail, err := uc.userRepo.GetUserByEmail(ctx, email)
-			if err != nil && err.Error() != ErrUserNotFound {
+			if err != nil && err.Error() != errUserNotFound {
 				uc.logger.Errorf("failed to check for existing email during update: %v", err)
 				return nil, errors.New("internal server error")
 			}
