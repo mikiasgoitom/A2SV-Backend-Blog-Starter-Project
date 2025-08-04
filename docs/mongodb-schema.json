@@ -1,0 +1,85 @@
+{
+  "User": {
+    "ID": "string/UUID",
+    "Username": "string",
+    "Email": "string",
+    "PasswordHash": "string",
+    "Role": "admin | editor | member",
+    "CreatedAt": "timestamp",
+    "UpdatedAt": "timestamp",
+    "FirstName": "string (optional)",
+    "LastName": "string (optional)"
+  },
+  "Blog": {
+    "ID": "string/UUID",
+    "Title": "string",
+    "Content": "string",
+    "AuthorID": "string/UUID",
+    "Slug": "string",
+    "Status": "draft | published | archived",
+    "CreatedAt": "timestamp",
+    "UpdatedAt": "timestamp",
+    "PublishedAt": "timestamp or null",
+    "ViewCount": 0,
+    "FeaturedImageID": "string/UUID or null",
+    "IsDeleted": true
+  },
+  "Token": {
+    "ID": "string/UUID",
+    "UserID": "string/UUID",
+    "TokenHash": "string",
+    "ExpiresAt": "timestamp",
+    "CreatedAt": "timestamp",
+    "Revoked": true
+  },
+  "Comment": {
+    "ID": "string/UUID",
+    "BlogID": "string/UUID",
+    "ParentID": "string/UUID or null",
+    "AuthorID": "string/UUID",
+    "Content": "string",
+    "CreatedAt": "timestamp",
+    "UpdatedAt": "timestamp",
+    "IsDeleted": true
+  },
+  "Tag": {
+    "ID": "string/UUID",
+    "Name": "string",
+    "Slug": "string",
+    "CreatedAt": "timestamp"
+  },
+  "Media": {
+    "ID": "string/UUID",
+    "FileName": "string",
+    "URL": "string",
+    "MimeType": "string",
+    "FileSize": 0,
+    "UploadedByUserID": "string/UUID",
+    "CreatedAt": "timestamp"
+  },
+  "Like": {
+    "ID": "string/UUID",
+    "UserID": "string/UUID",
+    "TargetID": "string/UUID",
+    "TargetType": "blog | comment | reply",
+    "CreatedAt": "timestamp"
+  },
+  "Notification": {
+    "ID": "string/UUID",
+    "RecipientUserID": "string/UUID",
+    "SenderUserID": "string/UUID or null",
+    "Type": "NEW_COMMENT | POST_LIKED | ...",
+    "Message": "string",
+    "RelatedEntityID": "string/UUID or null",
+    "IsRead": true,
+    "CreatedAt": "timestamp"
+  },
+  "AIQuery": {
+    "ID": "string/UUID",
+    "UserID": "string/UUID or null",
+    "Prompt": "string",
+    "Response": "string",
+    "ModelUsed": "string",
+    "Timestamp": "timestamp"
+  }
+}
