@@ -104,3 +104,29 @@ type UserUseCase interface {
 	DemoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error)
 	UpdateProfile(ctx context.Context, userID uuid.UUID, updates map[string]interface{}) (*entity.User, error)
 }
+
+type BlogUseCase interface {
+	CreateBlog(ctx context.Context, blog entity.Blog) (*entity.Blog, error)
+	GetBlogByID(ctx context.Context, blogID uuid.UUID) (*entity.Blog, error)
+	UpdateBlog(ctx context.Context, blogID, authorID uuid.UUID, title *string, content *string, slug *string, status *entity.BlogStatus, publishedAt *time.Time, featuredImageID *uuid.UUID, isDeleted *bool) (*entity.Blog, error)
+	TrackBlogPopularity(ctx context.Context, blogID, userID uuid.UUID, action BlogAction) (viewCount, likeCount, dislikeCount, commentCount int, err error)
+	DeleteBlog(ctx context.Context, blogID, userID uuid.UUID, isAdmin bool) (bool, error)
+	
+	GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder SortOrder, dateFrom *time.Time, dateTo *time.Time) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
+	SearchAndFilterBlogs(ctx context.Context, query string, page, pageSize int, searchBy string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, minLikes *int, authorID *uuid.UUID) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
+	
+}
+
+type SortOrder string
+const (
+    SortOrderASC  SortOrder = "asc"
+    SortOrderDESC SortOrder = "desc"
+)
+
+type BlogAction string
+const (
+    BlogActionView     BlogAction = "view"
+    BlogActionLike     BlogAction = "like"
+    BlogActionDislike  BlogAction = "dislike"
+    BlogActionComment  BlogAction = "comment"
+)
