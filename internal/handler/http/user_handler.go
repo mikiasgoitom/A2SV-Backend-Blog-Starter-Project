@@ -5,7 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/dto"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
@@ -24,15 +23,11 @@ func NewUserHandler(userUsecase usecase.UserUsecase) *UserHandler {
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req dto.CreateUserRequest
 	if err := BindAndValidate(c, &req); err != nil {
+		ErrorHandler(c, http.StatusBadRequest, "Please make sure to fill all fields with the correct format.")
 		return
 	}
 
-	user := entity.User{
-		Username: req.Username,
-		Email:    req.Email,
-	}
-
-	_, err := h.userUsecase.CreateUser(c.Request.Context(), user, req.Password)
+	_, err := h.userUsecase.Register(c.Request.Context(), req.Username, req.Email,req.Password, req.FirstName, req.LastName)
 	if err != nil {
 		ErrorHandler(c, http.StatusConflict, err.Error())
 		return
@@ -45,6 +40,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 func (h *UserHandler) VerifyEmail(c *gin.Context) {
 	var req dto.VerifyEmailRequest
 	if err := BindAndValidate(c, &req); err != nil {
+		ErrorHandler(c, http.StatusBadRequest, "Bad Request, Please try again.")
 		return
 	}
 
@@ -57,26 +53,11 @@ func (h *UserHandler) VerifyEmail(c *gin.Context) {
 	MessageHandler(c, http.StatusOK, "Email verified successfully. You can now log in.")
 }
 
-// ResendVerification handles resending verification email
-func (h *UserHandler) ResendVerification(c *gin.Context) {
-	var req dto.ResendVerificationRequest
-	if err := BindAndValidate(c, &req); err != nil {
-		return
-	}
-
-	err := h.userUsecase.ResendVerificationEmail(c.Request.Context(), req.Email)
-	if err != nil {
-		ErrorHandler(c, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	MessageHandler(c, http.StatusOK, "Verification email sent successfully")
-}
-
 // Login handles user authentication
 func (h *UserHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := BindAndValidate(c, &req); err != nil {
+		ErrorHandler(c, http.StatusBadRequest, "Bad Request credentials or unverified email")
 		return
 	}
 
@@ -87,7 +68,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 	}
 
 	response := dto.LoginResponse{
-		User:         dto.ToUserResponse(user),
+		User:         dto.ToUserResponse(*user),
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}
@@ -104,13 +85,13 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userUsecase.GetByID(c.Request.Context(), userID)
+	user, err := h.userUsecase.GetUserByID(c.Request.Context(), userID)
 	if err != nil {
 		ErrorHandler(c, http.StatusNotFound, "User not found")
 		return
 	}
 
-	SuccessHandler(c, http.StatusOK, dto.ToUserResponse(user))
+	SuccessHandler(c, http.StatusOK, dto.ToUserResponse(*user))
 }
 
 // GetCurrentUser handles retrieving the current authenticated user
@@ -121,13 +102,13 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userUsecase.GetByID(c.Request.Context(), userID.(uuid.UUID))
+	user, err := h.userUsecase.GetUserByID(c.Request.Context(), userID.(uuid.UUID))
 	if err != nil {
 		ErrorHandler(c, http.StatusNotFound, "User not found")
 		return
 	}
 
-	SuccessHandler(c, http.StatusOK, dto.ToUserResponse(user))
+	SuccessHandler(c, http.StatusOK, dto.ToUserResponse(*user))
 }
 
 // UpdateUser handles updating user profile
@@ -140,22 +121,27 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	var req dto.UpdateUserRequest
 	if err := BindAndValidate(c, &req); err != nil {
+		ErrorHandler(c, http.StatusBadRequest, "Invalid or Bad request")
+
 		return
 	}
 
-	updatedUser, err := h.userUsecase.UpdateUser(c.Request.Context(), userID.(uuid.UUID), req)
+	updates := updateUserRequestToMap(req)
+	updatedUser, err := h.userUsecase.UpdateProfile(c.Request.Context(), userID.(uuid.UUID), updates)
 	if err != nil {
 		ErrorHandler(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	SuccessHandler(c, http.StatusOK, dto.ToUserResponse(updatedUser))
+	SuccessHandler(c, http.StatusOK, dto.ToUserResponse(*updatedUser))
 }
 
 // ForgotPassword handles password reset request
 func (h *UserHandler) ForgotPassword(c *gin.Context) {
 	var req dto.ForgotPasswordRequest
 	if err := BindAndValidate(c, &req); err != nil {
+		ErrorHandler(c, http.StatusBadRequest, "Invalid or Bad request")
+
 		return
 	}
 
@@ -173,6 +159,7 @@ func (h *UserHandler) ForgotPassword(c *gin.Context) {
 func (h *UserHandler) ResetPassword(c *gin.Context) {
 	var req dto.ResetPasswordRequest
 	if err := BindAndValidate(c, &req); err != nil {
+		ErrorHandler(c, http.StatusBadRequest, "Invalid or Bad request")
 		return
 	}
 
@@ -214,17 +201,23 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 
 // Logout handles user logout
 func (h *UserHandler) Logout(c *gin.Context) {
-	userID, exists := c.Get("userID")
-	if !exists {
-		ErrorHandler(c, http.StatusUnauthorized, "User not authenticated")
-		return
-	}
+	refreshToken := c.GetHeader("Authorization")
 
-	err := h.userUsecase.Logout(c.Request.Context(), userID.(uuid.UUID))
+	err := h.userUsecase.Logout(c.Request.Context(), refreshToken)
 	if err != nil {
 		ErrorHandler(c, http.StatusInternalServerError, "Failed to logout")
 		return
 	}
 
 	MessageHandler(c, http.StatusOK, "Logged out successfully")
+}
+
+func updateUserRequestToMap(req dto.UpdateUserRequest) (map[string] interface{}){
+	updates := make(map[string]interface{})
+
+	updates["username"] = req.Username
+	updates["firstName"] = req.FirstName
+	updates["lastName"] = req.LastName
+
+	return updates
 }
