@@ -4,13 +4,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/jwt"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
-
 	"github.com/gin-gonic/gin"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
 
-func AuthMiddleWare(jwtMgr jwt.JWTManager, userUseCase usecase.UserUsecase) gin.HandlerFunc {
+func AuthMiddleWare(jwtService usecase.JWTService, userUseCase usecase.UserUseCase) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		authHeader := ctx.GetHeader("Authorization")
 		if authHeader == "" {
@@ -24,12 +22,13 @@ func AuthMiddleWare(jwtMgr jwt.JWTManager, userUseCase usecase.UserUsecase) gin.
 		}
 		tokenString := parts[1]
 
-		claims, err := jwtMgr.VerifyToken(tokenString)
+		claims, err := jwtService.ParseAccessToken(tokenString)
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
-		ctx.Set("userID", claims.Subject)
+
+		ctx.Set("userID", claims.UserID)
 		ctx.Set("userRole", claims.Role)
 
 		ctx.Next()

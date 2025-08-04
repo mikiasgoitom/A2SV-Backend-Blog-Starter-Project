@@ -2,16 +2,21 @@ package http
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/middleware"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
 
 type Router struct {
 	userHandler *UserHandler
+	userUsecase usecase.UserUseCase
+	jwtService  usecase.JWTService
 }
 
-func NewRouter(userUsecase usecase.UserUseCase) *Router {
+func NewRouter(userUsecase usecase.UserUseCase, jwtService usecase.JWTService) *Router {
 	return &Router{
 		userHandler: NewUserHandler(userUsecase),
+		userUsecase: userUsecase,
+		jwtService:  jwtService,
 	}
 }
 
@@ -37,9 +42,8 @@ func (r *Router) SetupRoutes(router *gin.Engine) {
 	}
 
 	// Protected routes (authentication required)
-	// TODO: Add authentication middleware when it's properly configured
 	protected := v1.Group("/")
-	// protected.Use(middleware.AuthMiddleWare(jwtManager, userUsecase))
+		protected.Use(middleware.AuthMiddleWare(r.jwtService, r.userUsecase))
 	{
 		// Current user routes
 		protected.GET("/me", r.userHandler.GetCurrentUser)

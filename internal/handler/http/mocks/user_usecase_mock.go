@@ -1,12 +1,12 @@
 package mocks
 
 import (
-    "context"
-    "errors"
+	"context"
+	"errors"
 
-    "github.com/google/uuid"
-    "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
-    "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
+	"github.com/google/uuid"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
 
 // MockUserUsecase is a mock implementation of the UserUsecase interface
