@@ -1,5 +1,5 @@
 {
-  "User": {
+  "users": {
     "ID": "string/UUID",
     "Username": "string",
     "Email": "string",
@@ -10,7 +10,7 @@
     "FirstName": "string (optional)",
     "LastName": "string (optional)"
   },
-  "Blog": {
+  "blogs": {
     "ID": "string/UUID",
     "Title": "string",
     "Content": "string",
@@ -24,7 +24,7 @@
     "FeaturedImageID": "string/UUID or null",
     "IsDeleted": true
   },
-  "Token": {
+  "tokens": {
     "ID": "string/UUID",
     "UserID": "string/UUID",
     "TokenHash": "string",
@@ -32,7 +32,7 @@
     "CreatedAt": "timestamp",
     "Revoked": true
   },
-  "Comment": {
+  "comments": {
     "ID": "string/UUID",
     "BlogID": "string/UUID",
     "ParentID": "string/UUID or null",
@@ -42,13 +42,13 @@
     "UpdatedAt": "timestamp",
     "IsDeleted": true
   },
-  "Tag": {
+  "tags": {
     "ID": "string/UUID",
     "Name": "string",
     "Slug": "string",
     "CreatedAt": "timestamp"
   },
-  "Media": {
+  "media": {
     "ID": "string/UUID",
     "FileName": "string",
     "URL": "string",
@@ -57,14 +57,14 @@
     "UploadedByUserID": "string/UUID",
     "CreatedAt": "timestamp"
   },
-  "Like": {
+  "likes": {
     "ID": "string/UUID",
     "UserID": "string/UUID",
     "TargetID": "string/UUID",
     "TargetType": "blog | comment | reply",
     "CreatedAt": "timestamp"
   },
-  "Notification": {
+  "notifications": {
     "ID": "string/UUID",
     "RecipientUserID": "string/UUID",
     "SenderUserID": "string/UUID or null",
@@ -74,7 +74,7 @@
     "IsRead": true,
     "CreatedAt": "timestamp"
   },
-  "AIQuery": {
+  "ai_queries": {
     "ID": "string/UUID",
     "UserID": "string/UUID or null",
     "Prompt": "string",
