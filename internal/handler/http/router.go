@@ -9,7 +9,7 @@ type Router struct {
 	userHandler *UserHandler
 }
 
-func NewRouter(userUsecase usecase.UserUsecase) *Router {
+func NewRouter(userUsecase usecase.UserUseCase) *Router {
 	return &Router{
 		userHandler: NewUserHandler(userUsecase),
 	}
