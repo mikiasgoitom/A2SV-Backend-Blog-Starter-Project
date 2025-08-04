@@ -154,15 +154,15 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 }
 
 // Login handles user login and token generation.
-func (uc *UserUsecase) Login(ctx context.Context, login, password string) (*entity.User, string, string, error) {
+func (uc *UserUsecase) Login(ctx context.Context, email, password string) (*entity.User, string, string, error) {
 	// Retrieve user by username or email
 	var user *entity.User
 	var err error
 
-	if uc.validator.ValidateEmail(login) == nil {
-		user, err = uc.userRepo.GetUserByEmail(ctx, login)
+	if uc.validator.ValidateEmail(email) == nil {
+		user, err = uc.userRepo.GetUserByEmail(ctx, email)
 	} else {
-		user, err = uc.userRepo.GetUserByUsername(ctx, login)
+		user, err = uc.userRepo.GetUserByUsername(ctx, email)
 	}
 
 	if err != nil {

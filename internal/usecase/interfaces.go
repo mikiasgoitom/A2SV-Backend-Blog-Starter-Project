@@ -93,7 +93,7 @@ type UUIDGenerator interface {
 // UserUseCase defines the interface for user-related operations.
 type UserUseCase interface {
 	Register(ctx context.Context, username, email, password, firstName, lastName string) (*entity.User, error)
-	Login(ctx context.Context, login, password string) (*entity.User, string, string, error)
+	Login(ctx context.Context, email, password string) (*entity.User, string, string, error)
 	Authenticate(ctx context.Context, accessToken string) (*entity.User, error)
 	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
 	ForgotPassword(ctx context.Context, email string) error
