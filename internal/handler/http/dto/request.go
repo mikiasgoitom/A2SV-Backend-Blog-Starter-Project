@@ -5,8 +5,8 @@ type CreateUserRequest struct {
 	Username string `json:"username" binding:"required,min=3,max=32"`
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=8,max=32,containsuppercase,containslowercase,containsdigit,containssymbol"`
-	FirstName string `json:"firstname" binding:"required, min=3, max=50"`
-	LastName string `json:"lastname binding:"required,min=3, max=50"`
+	FirstName string `json:"firstname" binding:"required,min=3,max=50"`
+	LastName string `json:"lastname" binding:"required,min=3,max=50"`
 }
 
 // LoginRequest is the DTO for user login.

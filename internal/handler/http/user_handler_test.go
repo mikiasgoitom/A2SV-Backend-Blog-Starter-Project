@@ -5,14 +5,27 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/dto"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/mocks"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/validator"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestMain(m *testing.M) {
+	// Set up Gin in test mode
+	gin.SetMode(gin.TestMode)
+
+	// Register custom validators
+	validator.RegisterCustomValidators()
+
+	// Run the tests
+	os.Exit(m.Run())
+}
 
 func setupRouter(handler *UserHandler) *gin.Engine {
 	gin.SetMode(gin.TestMode)
@@ -29,9 +42,11 @@ func TestCreateUser(t *testing.T) {
 	r := setupRouter(handler)
 
 	payload := dto.CreateUserRequest{
-		Username: "testuser",
-		Email:    "test@example.com",
-		Password: "Password123!",
+		Username:  "testuser",
+		Email:     "test@example.com",
+		Password:  "Password123!",
+		FirstName: "Test",
+		LastName:  "User",
 	}
 	body, _ := json.Marshal(payload)
 
@@ -51,10 +66,12 @@ func TestCreateUser_Fail(t *testing.T) {
 	handler := NewUserHandler(mockUsecase)
 	r := setupRouter(handler)
 
+	// Missing required fields to trigger validation error
 	payload := dto.CreateUserRequest{
 		Username: "testuser",
 		Email:    "test@example.com",
 		Password: "Password123!",
+		// FirstName and LastName omitted intentionally
 	}
 	body, _ := json.Marshal(payload)
 
@@ -64,8 +81,9 @@ func TestCreateUser_Fail(t *testing.T) {
 
 	r.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusConflict, w.Code)
-	assert.Contains(t, w.Body.String(), "user creation failed")
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "Field validation for 'FirstName' failed on the 'required' tag")
+	assert.Contains(t, w.Body.String(), "Field validation for 'LastName' failed on the 'required' tag")
 }
 
 func TestLogin(t *testing.T) {
@@ -109,7 +127,7 @@ func TestLogin_Fail(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "login failed")
+	assert.Contains(t, w.Body.String(), "Invalid credentials")
 }
 
 func TestGetUser(t *testing.T) {
@@ -140,5 +158,5 @@ func TestGetUser_Fail(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
-	assert.Contains(t, w.Body.String(), "user not found")
+	assert.Contains(t, w.Body.String(), "User not found")
 }
