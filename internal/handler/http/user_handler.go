@@ -10,10 +10,10 @@ import (
 )
 
 type UserHandler struct {
-	userUsecase usecase.UserUsecase
+	userUsecase usecase.UserUseCase
 }
 
-func NewUserHandler(userUsecase usecase.UserUsecase) *UserHandler {
+func NewUserHandler(userUsecase usecase.UserUseCase) *UserHandler {
 	return &UserHandler{
 		userUsecase: userUsecase,
 	}
@@ -23,11 +23,10 @@ func NewUserHandler(userUsecase usecase.UserUsecase) *UserHandler {
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req dto.CreateUserRequest
 	if err := BindAndValidate(c, &req); err != nil {
-		ErrorHandler(c, http.StatusBadRequest, "Please make sure to fill all fields with the correct format.")
 		return
 	}
 
-	_, err := h.userUsecase.Register(c.Request.Context(), req.Username, req.Email,req.Password, req.FirstName, req.LastName)
+	_, err := h.userUsecase.Register(c.Request.Context(), req.Username, req.Email, req.Password, req.FirstName, req.LastName)
 	if err != nil {
 		ErrorHandler(c, http.StatusConflict, err.Error())
 		return
