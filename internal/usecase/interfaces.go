@@ -103,4 +103,5 @@ type UserUseCase interface {
 	PromoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error)
 	DemoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error)
 	UpdateProfile(ctx context.Context, userID uuid.UUID, updates map[string]interface{}) (*entity.User, error)
+	GetUserByID(ctx context.Context, userID uuid.UUID) (*entity.User, error)
 }

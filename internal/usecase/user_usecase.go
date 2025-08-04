@@ -594,23 +594,7 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID uuid.UUID, upda
 			user.Username = username
 		}
 	}
-	if val, ok := updates["email"]; ok {
-		if email, isString := val.(string); isString {
-			if err := uc.validator.ValidateEmail(email); err != nil {
-				return nil, fmt.Errorf("invalid email format: %w", err)
-			}
-			const errUserNotFound = "not found" // Placeholder
-			existingUserByEmail, err := uc.userRepo.GetUserByEmail(ctx, email)
-			if err != nil && err.Error() != errUserNotFound {
-				uc.logger.Errorf("failed to check for existing email during update: %v", err)
-				return nil, errors.New("internal server error")
-			}
-			if existingUserByEmail != nil && existingUserByEmail.ID != userID {
-				return nil, fmt.Errorf("email %s already taken", email)
-			}
-			user.Email = email
-		}
-	}
+
 	if val, ok := updates["firstName"]; ok {
 		if firstName, isString := val.(string); isString {
 			if firstName == "" {
@@ -644,6 +628,22 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID uuid.UUID, upda
 	if err := uc.userRepo.UpdateUser(ctx, user.ID, user); err != nil {
 		uc.logger.Errorf("failed to update profile for user %s: %v", userID, err)
 		return nil, errors.New("failed to update profile")
+	}
+
+	return user, nil
+}
+
+
+func (uc *UserUsecase) GetUserByID(ctx context.Context, userID uuid.UUID) (*entity.User, error) {
+	const errUserNotFound = "not found"
+	user, err := uc.userRepo.GetUserByID(ctx, userID)
+	if err != nil {
+		if err.Error() == errUserNotFound {
+			return nil, errors.New("user not found")
+		}
+
+		uc.logger.Errorf("failed to retrieve user by ID: %v", err)
+		return nil, errors.New("internal server error.")
 	}
 
 	return user, nil
