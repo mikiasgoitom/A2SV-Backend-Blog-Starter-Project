@@ -5,13 +5,12 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	
+	"go.mongodb.org/mongo-driver/bson" 
 	"go.mongodb.org/mongo-driver/mongo"
 )
-
 type MongoUserRepository struct {
 	collection *mongo.Collection
 }
@@ -20,14 +19,14 @@ func NewMongoUserRepository(collection *mongo.Collection) *MongoUserRepository {
 	return &MongoUserRepository{collection: collection}
 }
 
-func (r *MongoUserRepository) CreateUser(ctx context.Context, user entity.User) error {
-	_, err := r.collection.InsertOne(ctx, user)
+func (r *MongoUserRepository) CreateUser(ctx context.Context, user entity.User) (error) {
+	_,err := r.collection.InsertOne(ctx,user)
 	return err
 }
 
-func (r *MongoUserRepository) GetUserByID(ctx context.Context, id primitive.ObjectID) (*entity.User, error) {
+func (r *MongoUserRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
 	var user entity.User
-	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&user)
+	err := r.collection.FindOne(ctx, bson.M{"id": id}).Decode(&user)
 	if err != nil {
 		return nil, errors.New("user not found")
 	}
@@ -44,7 +43,7 @@ func (r *MongoUserRepository) GetByUserName(ctx context.Context, username string
 }
 
 func (r *MongoUserRepository) UpdateUser(ctx context.Context, user entity.User) (*entity.User, error) {
-	filter := bson.M{"_id": user.ID}
+	filter := bson.M{"id": user.ID}
 	setFields := bson.M{}
 
 	if user.Username != "" {
@@ -89,8 +88,8 @@ func (r *MongoUserRepository) UpdateUser(ctx context.Context, user entity.User) 
 	return &updatedUser, nil
 }
 
-func (r *MongoUserRepository) DeleteUser(ctx context.Context, id string) error {
-	filter := bson.M{"_id": id}
+func (r *MongoUserRepository) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	filter := bson.M{"id": id}
 	_, err := r.collection.DeleteOne(ctx, filter)
 	return err
 }
