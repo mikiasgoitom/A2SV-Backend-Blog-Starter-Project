@@ -25,7 +25,6 @@ func (r *Router) SetupRoutes(router *gin.Engine) {
 		auth.POST("/register", r.userHandler.CreateUser)
 		auth.POST("/login", r.userHandler.Login)
 		auth.POST("/verify-email", r.userHandler.VerifyEmail)
-		auth.POST("/resend-verification", r.userHandler.ResendVerification)
 		auth.POST("/forgot-password", r.userHandler.ForgotPassword)
 		auth.POST("/reset-password", r.userHandler.ResetPassword)
 		auth.POST("/refresh-token", r.userHandler.RefreshToken)
