@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
@@ -23,7 +24,7 @@ func (a *JWTServiceAdapter) GenerateAccessToken(userID string, role entity.UserR
 
 // GenerateRefreshToken issues a refresh token for a user.
 func (a *JWTServiceAdapter) GenerateRefreshToken(userID string, role entity.UserRole) (string, error) {
-	tokenID := "mock-token-id" // Replace with a proper generator if needed
+	tokenID := uuid.New().String()
 	return a.mgr.GenerateRefreshToken(tokenID, userID)
 }
 
