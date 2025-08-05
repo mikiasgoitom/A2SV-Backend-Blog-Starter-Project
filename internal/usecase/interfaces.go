@@ -75,9 +75,14 @@ type AppLogger interface {
 	Debugf(format string, args ...interface{})
 	Infof(format string, args ...interface{})
 	Warnf(format string, args ...interface{})
+	Warn(message string)
 	Errorf(format string, args ...interface{})
 	Fatalf(format string, args ...interface{})
 }
+
+// func (a AppLogger) Warn(s string) {
+// 	panic("unimplemented")
+// }
 
 // Validator defines the interface for generic input validation.
 type Validator interface {
@@ -105,3 +110,15 @@ type UserUseCase interface {
 	UpdateProfile(ctx context.Context, userID uuid.UUID, updates map[string]interface{}) (*entity.User, error)
 	GetUserByID(ctx context.Context, userID uuid.UUID) (*entity.User, error)
 }
+
+// type BlogUseCase interface {
+// 	CreateBlog(ctx context.Context, blog entity.Blog) (*entity.Blog, error)
+// 	GetBlogByID(ctx context.Context, blogID uuid.UUID) (*entity.Blog, error)
+// 	UpdateBlog(ctx context.Context, blogID, authorID uuid.UUID, title *string, content *string, slug *string, status *entity.BlogStatus, publishedAt *time.Time, featuredImageID *uuid.UUID, isDeleted *bool) (*entity.Blog, error)
+// 	TrackBlogPopularity(ctx context.Context, blogID, userID uuid.UUID, action BlogAction) (viewCount, likeCount, dislikeCount, commentCount int, err error)
+// 	DeleteBlog(ctx context.Context, blogID, userID uuid.UUID, isAdmin bool) (bool, error)
+
+// 	GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder SortOrder, dateFrom *time.Time, dateTo *time.Time) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
+// 	SearchAndFilterBlogs(ctx context.Context, query string, page, pageSize int, searchBy string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, minLikes *int, authorID *uuid.UUID) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
+
+// }
