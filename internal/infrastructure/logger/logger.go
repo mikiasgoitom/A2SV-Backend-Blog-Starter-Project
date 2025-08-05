@@ -38,4 +38,3 @@ func (l *StdLogger) Errorf(format string, args ...interface{}) {
 func (l *StdLogger) Fatalf(format string, args ...interface{}) {
 	log.Fatalf("[FATAL] "+format, args...)
 }
-

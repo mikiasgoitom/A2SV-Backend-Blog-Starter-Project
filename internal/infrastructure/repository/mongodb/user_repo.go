@@ -20,8 +20,8 @@ func NewMongoUserRepository(collection *mongo.Collection) *MongoUserRepository {
 	return &MongoUserRepository{collection: collection}
 }
 
-func (r *MongoUserRepository) CreateUser(ctx context.Context, user *entity.User) (error) {
-	_,err := r.collection.InsertOne(ctx,user)
+func (r *MongoUserRepository) CreateUser(ctx context.Context, user *entity.User) error {
+	_, err := r.collection.InsertOne(ctx, user)
 	return err
 }
 
@@ -69,11 +69,11 @@ func (r *MongoUserRepository) GetByUserName(ctx context.Context, username string
 
 func (r *MongoUserRepository) UpdateUser(ctx context.Context, id string, updates map[string]interface{}) error {
 	updates["updated_at"] = time.Now()
-	
+
 	// Debug logging
 	log.Printf("UpdateUser called with ID: %s", id)
 	log.Printf("Updates map: %+v", updates)
-	
+
 	result, err := r.collection.UpdateOne(
 		ctx,
 		bson.M{"id": id},
@@ -83,9 +83,9 @@ func (r *MongoUserRepository) UpdateUser(ctx context.Context, id string, updates
 		log.Printf("UpdateOne error: %v", err)
 		return err
 	}
-	
+
 	log.Printf("UpdateOne result: MatchedCount=%d, ModifiedCount=%d", result.MatchedCount, result.ModifiedCount)
-	
+
 	if result.MatchedCount == 0 {
 		return errors.New("user not found")
 	}

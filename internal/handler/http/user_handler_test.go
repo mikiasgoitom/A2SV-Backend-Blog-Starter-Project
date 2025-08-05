@@ -15,6 +15,7 @@ import (
 	mocks "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/mocks"
 	"github.com/stretchr/testify/assert"
 )
+
 func TestMain(m *testing.M) {
 	gin.SetMode(gin.TestMode)
 	os.Exit(m.Run())
@@ -34,10 +35,10 @@ func TestCreateUser(t *testing.T) {
 	h := handler.NewUserHandler(mockUsecase)
 	r := setupRouter(h)
 	payload := dto.CreateUserRequest{
-		Username:  "testuser",
-		Email:     "test@example.com",
-		Password:  "Password123!",
-		LastName:  "User",
+		Username: "testuser",
+		Email:    "test@example.com",
+		Password: "Password123!",
+		LastName: "User",
 	}
 	body, _ := json.Marshal(payload)
 

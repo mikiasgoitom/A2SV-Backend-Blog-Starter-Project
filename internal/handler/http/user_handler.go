@@ -226,7 +226,7 @@ func (h *UserHandler) Logout(c *gin.Context) {
 	MessageHandler(c, http.StatusOK, "Logged out successfully")
 }
 
-func updateUserRequestToMap(req dto.UpdateUserRequest) (map[string] interface{}){
+func updateUserRequestToMap(req dto.UpdateUserRequest) map[string]interface{} {
 	updates := make(map[string]interface{})
 
 	if req.Username != nil {

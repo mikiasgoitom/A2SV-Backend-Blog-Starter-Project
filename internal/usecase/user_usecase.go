@@ -13,9 +13,9 @@ import (
 
 // Constants for common error messages
 const (
-	errUserNotFound    = "user not found"
-	errTokenNotFound   = "token not found"
-	errInternalServer  = "internal server error"
+	errUserNotFound   = "user not found"
+	errTokenNotFound  = "token not found"
+	errInternalServer = "internal server error"
 )
 
 // UserUsecase implements the UserUseCase interface.
@@ -110,17 +110,17 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 
 	// Create new user entity, initializing new fields to their zero values or nil
 	user := &entity.User{
-		ID:            uc.uuidGenerator.NewUUID(),
-		Username:      username,
-		Email:         email,
-		PasswordHash:  hashedPassword,
-		Role:          entity.UserRoleUser,
-		IsActive:      !uc.cfg.GetSendActivationEmail(), // Activate user immediately if email verification is off
-		AvatarURL:     nil,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
-		FirstName:     pFirstName,
-		LastName:      pLastName,
+		ID:           uc.uuidGenerator.NewUUID(),
+		Username:     username,
+		Email:        email,
+		PasswordHash: hashedPassword,
+		Role:         entity.UserRoleUser,
+		IsActive:     !uc.cfg.GetSendActivationEmail(), // Activate user immediately if email verification is off
+		AvatarURL:    nil,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+		FirstName:    pFirstName,
+		LastName:     pLastName,
 	}
 
 	// Save user to database
@@ -217,7 +217,7 @@ func (uc *UserUsecase) Login(ctx context.Context, email, password string) (*enti
 		ID:        uc.uuidGenerator.NewUUID(),
 		UserID:    user.ID,
 		TokenType: entity.TokenTypeRefresh,
-		TokenHash: uc.hasher.HashString(refreshToken), 
+		TokenHash: uc.hasher.HashString(refreshToken),
 		ExpiresAt: time.Now().Add(refreshTokenExpiry),
 		CreatedAt: time.Now(),
 		Revoke:    false,
@@ -260,7 +260,7 @@ func (uc *UserUsecase) RefreshToken(ctx context.Context, refreshToken string) (s
 	}
 	uc.logger.Infof("Debug: Successfully parsed token for user: %s", claims.UserID)
 
-// The UserID from claims is already a string, so we can use it directly.
+	// The UserID from claims is already a string, so we can use it directly.
 	userID := claims.UserID
 
 	// Retrieve the stored token using the parsed UUID.
@@ -592,7 +592,7 @@ func (uc *UserUsecase) DemoteUser(ctx context.Context, userID string) (*entity.U
 // UpdateProfile allows a registered user to update their profile details.
 func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID string, updates map[string]interface{}) (*entity.User, error) {
 	uc.logger.Infof("UpdateProfile called for user %s with updates: %+v", userID, updates)
-	
+
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
 		if err.Error() == errUserNotFound {
@@ -626,14 +626,14 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID string, updates
 	}
 
 	uc.logger.Infof("User %s updated successfully", userID)
-	
+
 	// Retrieve and return the updated user
 	updatedUser, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
 		uc.logger.Errorf("failed to retrieve updated user: %v", err)
 		return nil, errors.New("failed to retrieve updated user")
 	}
-	
+
 	return updatedUser, nil
 }
 
@@ -705,7 +705,6 @@ func (uc *UserUsecase) LoginWithOAuth(ctx context.Context, fName, lName, email s
 	}
 	return accessToken, refreshToken, nil
 }
-
 
 func (uc *UserUsecase) GetUserByID(ctx context.Context, userID string) (*entity.User, error) {
 	user, err := uc.userRepo.GetUserByID(ctx, userID)

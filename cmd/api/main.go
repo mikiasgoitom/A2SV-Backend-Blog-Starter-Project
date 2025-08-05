@@ -15,7 +15,6 @@ import (
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/uuidgen"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/validator"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
-
 )
 
 func main() {
@@ -47,30 +46,30 @@ func main() {
 	// Initialize Gin router
 	router := gin.Default()
 
-   // Dependency Injection: Repositories
-   userRepo := mongodb.NewMongoUserRepository(mongoClient.Client.Database(dbName).Collection("users"))
-   tokenRepo := mongodb.NewTokenRepository(mongoClient.Client.Database(dbName).Collection("tokens"))
+	// Dependency Injection: Repositories
+	userRepo := mongodb.NewMongoUserRepository(mongoClient.Client.Database(dbName).Collection("users"))
+	tokenRepo := mongodb.NewTokenRepository(mongoClient.Client.Database(dbName).Collection("tokens"))
 
-   // Dependency Injection: Services
-   hasher := passwordservice.NewHasher()
-   jwtSecret := os.Getenv("JWT_SECRET")
-   if jwtSecret == "" {
-	   log.Fatal("JWT_SECRET environment variable not set")
-   }
-   jwtManager := jwt.NewJWTManager(jwtSecret)
-   jwtService := jwt.NewJWTService(jwtManager)
-   appLogger := logger.NewStdLogger()
+	// Dependency Injection: Services
+	hasher := passwordservice.NewHasher()
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("JWT_SECRET environment variable not set")
+	}
+	jwtManager := jwt.NewJWTManager(jwtSecret)
+	jwtService := jwt.NewJWTService(jwtManager)
+	appLogger := logger.NewStdLogger()
 
-   // Dependency Injection: Usecases
-   appValidator := validator.NewValidator()
-   uuidGenerator := uuidgen.NewGenerator()
-   appConfig := config.NewConfig()
-   userUsecase := usecase.NewUserUsecase(userRepo, tokenRepo, nil, hasher, jwtService, nil, appLogger, appConfig, appValidator, uuidGenerator)
-   // will add more usecases here as they are created
+	// Dependency Injection: Usecases
+	appValidator := validator.NewValidator()
+	uuidGenerator := uuidgen.NewGenerator()
+	appConfig := config.NewConfig()
+	userUsecase := usecase.NewUserUsecase(userRepo, tokenRepo, nil, hasher, jwtService, nil, appLogger, appConfig, appValidator, uuidGenerator)
+	// will add more usecases here as they are created
 
-   // Setup API routes
-   appRouter := handlerHttp.NewRouter(userUsecase, jwtService)
-   appRouter.SetupRoutes(router)
+	// Setup API routes
+	appRouter := handlerHttp.NewRouter(userUsecase, jwtService)
+	appRouter.SetupRoutes(router)
 
 	// Start the server
 	port := os.Getenv("PORT")

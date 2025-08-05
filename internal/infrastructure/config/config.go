@@ -10,20 +10,20 @@ import (
 
 // Config holds application configuration values.
 type Config struct {
-	SendActivationEmail         bool
-	AppBaseURL                  string
-	RefreshTokenExpiry          time.Duration
-	PasswordResetTokenExpiry    time.Duration
+	SendActivationEmail          bool
+	AppBaseURL                   string
+	RefreshTokenExpiry           time.Duration
+	PasswordResetTokenExpiry     time.Duration
 	EmailVerificationTokenExpiry time.Duration
 }
 
 // NewConfig creates a new Config instance, loading values from environment variables.
 func NewConfig() usecase.ConfigProvider {
 	return &Config{
-		SendActivationEmail:         getEnvAsBool("SEND_ACTIVATION_EMAIL", false),
-		AppBaseURL:                  getEnv("APP_BASE_URL", "http://localhost:8080"),
-		RefreshTokenExpiry:          time.Hour * time.Duration(getEnvAsInt("REFRESH_TOKEN_EXPIRY_HOURS", 168)), // 7 days
-		PasswordResetTokenExpiry:    time.Minute * time.Duration(getEnvAsInt("PASSWORD_RESET_TOKEN_EXPIRY_MINUTES", 15)),
+		SendActivationEmail:          getEnvAsBool("SEND_ACTIVATION_EMAIL", false),
+		AppBaseURL:                   getEnv("APP_BASE_URL", "http://localhost:8080"),
+		RefreshTokenExpiry:           time.Hour * time.Duration(getEnvAsInt("REFRESH_TOKEN_EXPIRY_HOURS", 168)), // 7 days
+		PasswordResetTokenExpiry:     time.Minute * time.Duration(getEnvAsInt("PASSWORD_RESET_TOKEN_EXPIRY_MINUTES", 15)),
 		EmailVerificationTokenExpiry: time.Minute * time.Duration(getEnvAsInt("EMAIL_VERIFICATION_TOKEN_EXPIRY_MINUTES", 60)),
 	}
 }

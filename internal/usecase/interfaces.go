@@ -10,24 +10,24 @@ import (
 
 // UserRepository defines the interface for user data persistence.
 type UserRepository interface {
-CreateUser(ctx context.Context, user *entity.User) error
-GetUserByID(ctx context.Context, id string) (*entity.User, error)
-GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
-GetUserByUsername(ctx context.Context, username string) (*entity.User, error)
-UpdateUser(ctx context.Context, id string, updates map[string]interface{}) error
-UpdateUserPassword(ctx context.Context, id string, hashedPassword string) error
+	CreateUser(ctx context.Context, user *entity.User) error
+	GetUserByID(ctx context.Context, id string) (*entity.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
+	GetUserByUsername(ctx context.Context, username string) (*entity.User, error)
+	UpdateUser(ctx context.Context, id string, updates map[string]interface{}) error
+	UpdateUserPassword(ctx context.Context, id string, hashedPassword string) error
 }
 
 // BlogRepository interface defines the methods for blog data persistence.
 type BlogRepository interface {
-CreateBlog(ctx context.Context, blog *entity.Blog) error
-GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error)
-GetBlogs(ctx context.Context, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
-UpdateBlog(ctx context.Context, blog *entity.Blog) error
-DeleteBlog(ctx context.Context, blogID string) error
-SearchBlogs(ctx context.Context, query string, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
-GetBlogsByTags(ctx context.Context, tagIDs []string, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
-GetTrendingBlogs(ctx context.Context, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
+	CreateBlog(ctx context.Context, blog *entity.Blog) error
+	GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error)
+	GetBlogs(ctx context.Context, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
+	UpdateBlog(ctx context.Context, blog *entity.Blog) error
+	DeleteBlog(ctx context.Context, blogID string) error
+	SearchBlogs(ctx context.Context, query string, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
+	GetBlogsByTags(ctx context.Context, tagIDs []string, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
+	GetTrendingBlogs(ctx context.Context, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
 }
 
 // TokenRepository provides methods for managing tokens in the database.
@@ -99,18 +99,18 @@ type Validator interface {
 
 // UserUseCase defines the interface for user-related operations.
 type IUserUseCase interface {
-Register(ctx context.Context, username, email, password, firstName, lastName string) (*entity.User, error)
-Login(ctx context.Context, email, password string) (*entity.User, string, string, error)
-Authenticate(ctx context.Context, accessToken string) (*entity.User, error)
-RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
-ForgotPassword(ctx context.Context, email string) error
-ResetPassword(ctx context.Context, resetToken, newPassword string) error
-VerifyEmail(ctx context.Context, token string) error
-Logout(ctx context.Context, refreshToken string) error
-PromoteUser(ctx context.Context, userID string) (*entity.User, error)
-DemoteUser(ctx context.Context, userID string) (*entity.User, error)
-UpdateProfile(ctx context.Context, userID string, updates map[string]interface{}) (*entity.User, error)
-GetUserByID(ctx context.Context, userID string) (*entity.User, error)
+	Register(ctx context.Context, username, email, password, firstName, lastName string) (*entity.User, error)
+	Login(ctx context.Context, email, password string) (*entity.User, string, string, error)
+	Authenticate(ctx context.Context, accessToken string) (*entity.User, error)
+	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
+	ForgotPassword(ctx context.Context, email string) error
+	ResetPassword(ctx context.Context, resetToken, newPassword string) error
+	VerifyEmail(ctx context.Context, token string) error
+	Logout(ctx context.Context, refreshToken string) error
+	PromoteUser(ctx context.Context, userID string) (*entity.User, error)
+	DemoteUser(ctx context.Context, userID string) (*entity.User, error)
+	UpdateProfile(ctx context.Context, userID string, updates map[string]interface{}) (*entity.User, error)
+	GetUserByID(ctx context.Context, userID string) (*entity.User, error)
 }
 
 // type BlogUseCase interface {
