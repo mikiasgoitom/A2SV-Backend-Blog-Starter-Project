@@ -23,12 +23,13 @@ func AuthMiddleWare(jwtMgr jwt.JWTManager, userUseCase usecase.UserUsecase) gin.
 		}
 		tokenString := parts[1]
 
-		claims, err := jwtMgr.VerifyToken(tokenString)
+		claims, err := jwtService.ParseAccessToken(tokenString)
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
-		ctx.Set("userID", claims.Subject)
+
+		ctx.Set("userID", claims.UserID)
 		ctx.Set("userRole", claims.Role)
 
 		ctx.Next()

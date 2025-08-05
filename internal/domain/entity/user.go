@@ -2,21 +2,23 @@ package entity
 
 import (
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // User represents a registered user in the system
 type User struct {
-	ID           string    `json:"id" db:"id"`
-	Username     string    `json:"username" db:"username"`
-	Email        string    `json:"email" db:"email"`
-	PasswordHash string    `json:"-" db:"password_hash"`
-	Role         UserRole  `json:"role" db:"role"`
-	IsActive     bool      `json:"is_active" db:"is_active"`
-	CreatedAt    time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
-	FirstName    *string   `json:"first_name" db:"first_name"`
-	LastName     *string   `json:"last_name" db:"last_name"`
-	AvatarURL    *string   `json:"avatar_url" db:"avatar_url"`
+	ID           uuid.UUID `db:"id"`
+	Username     string    `db:"username"`
+	Email        string    `db:"email"`
+	PasswordHash string    `db:"password_hash"`
+	Role         UserRole  `db:"role"`
+	IsActive     bool      `db:"is_active"`
+	CreatedAt    time.Time `db:"created_at"`
+	UpdatedAt    time.Time `db:"updated_at"`
+	FirstName    *string   `db:"first_name"`
+	LastName     *string   `db:"last_name"`
+	AvatarURL    *string   `db:"avatar_url"`
 }
 
 // UserRole represents the role of a user in the system

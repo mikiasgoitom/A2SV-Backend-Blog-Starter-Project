@@ -5,13 +5,18 @@ import (
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 )
 
-// StandardUUIDGenerator implements the usecase.UUIDGenerator interface
-type StandardUUIDGenerator struct{}
+// Generator implements the usecase.UUIDGenerator interface.
+type Generator struct{}
 
-// NewUUID generates a new UUID using the standard library's uuid package.
-func (g *StandardUUIDGenerator) NewUUID() string {
-	return uuid.New().String()
+// NewGenerator creates a new UUID generator.
+func NewGenerator() contract.IUUIDGenerator {
+	return &Generator{}
 }
 
-// Ensure StandardUUIDGenerator implements the usecase.UUIDGenerator interface
-var _ contract.IUUIDGenerator = (*StandardUUIDGenerator)(nil)
+// NewUUID generates a new UUID.
+func (g *Generator) NewUUID() uuid.UUID {
+	return uuid.New()
+}
+
+// Ensure Generator implements the contract.IUUIDGenerator interface
+var _ contract.IUUIDGenerator = (*Generator)(nil)

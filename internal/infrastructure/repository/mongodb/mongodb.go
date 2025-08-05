@@ -13,8 +13,8 @@ type MongoDBClient struct {
 	Client *mongo.Client
 }
 
-func NewMongoDBClient(uri string) (*MongoDBClient, error){
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+func NewMongoDBClient(uri string) (*MongoDBClient, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
 
 	clientOptions := options.Client().ApplyURI(uri)
@@ -35,7 +35,7 @@ func NewMongoDBClient(uri string) (*MongoDBClient, error){
 
 // Disconnect disconnects the MongoDB client
 func (m *MongoDBClient) Disconnect() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
 	return m.Client.Disconnect(ctx)
 }

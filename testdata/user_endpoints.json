@@ -1,0 +1,92 @@
+{
+  "Register": {
+    "method": "POST",
+    "endpoint": "localhost:8080/api/v1/auth/register",
+    "authorization_required": false,
+    "payload": {
+      "username": "johndoe",
+      "email": "johndoe@example.com",
+      "password": "Password123!",
+      "firstname": "John",
+      "lastname": "Doe"
+    }
+  },
+  "Login": {
+    "method": "POST",
+    "endpoint": "localhost:8080/api/v1/auth/login",
+    "authorization_required": false,
+    "payload": {
+      "email": "johndoe@example.com",
+      "password": "Password123!"
+    }
+  },
+  "VerifyEmail": {
+    "method": "POST",
+    "endpoint": "localhost:8080/api/v1/auth/verify-email",
+    "authorization_required": false,
+    "payload": {
+      "token": "<your_email_verification_token_here>"
+    }
+  },
+  "ForgotPassword": {
+    "method": "POST",
+    "endpoint": "localhost:8080/api/v1/auth/forgot-password",
+    "authorization_required": false,
+    "payload": {
+      "email": "johndoe@example.com"
+    }
+  },
+  "ResetPassword": {
+    "method": "POST",
+    "endpoint": "localhost:8080/api/v1/auth/reset-password",
+    "authorization_required": false,
+    "payload": {
+      "reset_token": "<your_reset_token_here>",
+      "new_password": "NewPass123!"
+    }
+  },
+  "RefreshToken": {
+    "method": "POST",
+    "endpoint": "localhost:8080/api/v1/auth/refresh-token",
+    "authorization_required": false,
+    "payload": {
+      "refresh_token": "<your_refresh_token_here>"
+    }
+  },
+  "GetUser": {
+    "method": "GET",
+    "endpoint": "localhost:8080/api/v1/users/:id",
+    "authorization_required": true,
+    "authorization_header": "Bearer <your_access_token_here>",
+    "payload": {
+      "id": "123e4567-e89b-12d3-a456-426614174000"
+    }
+  },
+  "GetCurrentUser": {
+    "method": "GET",
+    "endpoint": "localhost:8080/api/v1/me",
+    "authorization_required": true,
+    "authorization_header": "Bearer <your_access_token_here>",
+    "payload": {}
+  },
+  "UpdateCurrentUser": {
+    "method": "PUT",
+    "endpoint": "localhost:8080/api/v1/me",
+    "authorization_required": true,
+    "authorization_header": "Bearer <your_access_token_here>",
+    "payload": {
+      "username": "johndoe-updated",
+      "firstname": "JohnUpdated",
+      "lastname": "DoeUpdated"
+    }
+  },
+  "Logout": {
+    "method": "POST",
+    "endpoint": "localhost:8080/api/v1/logout",
+    "authorization_required": true,
+    "authorization_header": "Bearer <your_access_token_here>",
+    "payload": {
+      "refresh_token": "<your_refresh_token_here>"
+    }
+  }
+}
