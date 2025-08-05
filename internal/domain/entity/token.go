@@ -9,13 +9,13 @@ import (
 
 // Token represents an authentication token (access or refresh)
 type Token struct {
-	ID        string    `json:"id" db:"id"`
-	UserID    string    `json:"user_id" db:"user_id"`
-	TokenType TokenType `json:"token_type" db:"token_type"`
-	TokenHash string    `json:"-" db:"token_hash"`
-	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	Revoke    bool      `json:"revoked" db:"revoked"`
+	ID        string    `bson:"id" json:"id"`
+	UserID    string    `bson:"user_id" json:"user_id"`
+	TokenType TokenType `bson:"token_type" json:"token_type"`
+	TokenHash string    `bson:"token_hash" json:"-"`
+	ExpiresAt time.Time `bson:"expires_at" json:"expires_at"`
+	CreatedAt time.Time `bson:"created_at" json:"created_at"`
+	Revoke    bool      `bson:"revoke" json:"revoked"`
 }
 
 // TokenType represents the type of token
