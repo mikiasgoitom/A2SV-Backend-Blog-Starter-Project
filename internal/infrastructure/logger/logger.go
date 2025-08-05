@@ -29,11 +29,6 @@ func (l *StdLogger) Warnf(format string, args ...interface{}) {
 	log.Printf("[WARN] "+format, args...)
 }
 
-// Warn logs a warning message.
-func (l *StdLogger) Warn(message string) {
-	log.Printf("[WARN] %s", message)
-}
-
 // Errorf logs an error message.
 func (l *StdLogger) Errorf(format string, args ...interface{}) {
 	log.Printf("[ERROR] "+format, args...)

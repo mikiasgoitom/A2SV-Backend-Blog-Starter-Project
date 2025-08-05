@@ -87,14 +87,9 @@ type AppLogger interface {
 	Debugf(format string, args ...interface{})
 	Infof(format string, args ...interface{})
 	Warnf(format string, args ...interface{})
-	Warn(message string)
 	Errorf(format string, args ...interface{})
 	Fatalf(format string, args ...interface{})
 }
-
-// func (a AppLogger) Warn(s string) {
-// 	panic("unimplemented")
-// }
 
 // Validator defines the interface for generic input validation.
 type Validator interface {
