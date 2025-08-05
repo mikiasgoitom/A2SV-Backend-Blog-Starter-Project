@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -26,6 +27,24 @@ const (
 	TokenTypeRefresh       TokenType = "refresh"
 	TokenTypePasswordReset TokenType = "password_reset"
 )
+
+func isValidTokenType(tokType string) bool {
+
+	switch TokenType(tokType) {
+	case TokenTypeAccess, TokenTypeRefresh, TokenTypePasswordReset:
+		return true
+	default:
+		return false
+	}
+}
+
+func SetTokenType(tokType string) (TokenType, error) {
+	if isValidTokenType(tokType) {
+		return TokenType(tokType), nil
+	} else {
+		return "", fmt.Errorf("invalid token type: %s", tokType)
+	}
+}
 
 // Claims represents the JWT claims for authentication and authorization.
 type Claims struct {

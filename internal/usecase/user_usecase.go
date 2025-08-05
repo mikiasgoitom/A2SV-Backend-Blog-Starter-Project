@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -50,6 +51,9 @@ func NewUserUsecase(
 		uuidGenerator:              uuidGenerator,
 	}
 }
+
+// check if UserUseCase implements the IUserUseCase
+var _ IUserUseCase = (*UserUsecase)(nil)
 
 // Register handles user registration.
 func (uc *UserUsecase) Register(ctx context.Context, username, email, password, firstName, lastName string) (*entity.User, error) {
@@ -649,4 +653,73 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID uuid.UUID, upda
 	}
 
 	return user, nil
+}
+
+// login with OAuth2
+
+func (uc *UserUsecase) LoginWithOAuth(ctx context.Context, fName, lName, email string) (string, string, error) {
+	existingUser, err := uc.userRepo.GetUserByEmail(ctx, email)
+
+	if err != nil {
+		var generatedUsername string
+		if fName != "" && lName != "" {
+			generatedUsername = fName + "." + lName
+		} else if fName != "" {
+			generatedUsername = fName
+		} else if lName != "" {
+			generatedUsername = lName
+		} else {
+			generatedUsername = strings.Split(email, "@")[0]
+		}
+		newUser := &entity.User{
+			ID:        uuid.New(),
+			Username:  generatedUsername,
+			Email:     email,
+			Role:      entity.DefaultRole(),
+			IsActive:  true,
+			CreatedAt: time.Now().UTC(),
+			UpdatedAt: time.Now().UTC(),
+			FirstName: &fName,
+			LastName:  &lName,
+		}
+
+		err := uc.userRepo.CreateUser(ctx, newUser)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to create new user: %w", err)
+		}
+		existingUser = newUser
+	}
+
+	accessToken, err := uc.jwtService.GenerateAccessToken(existingUser.ID, existingUser.Role)
+
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	refreshTokenID := uuid.New()
+	refreshToken, err := uc.jwtService.GenerateRefreshToken(existingUser.ID, existingUser.Role)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	tokType, err := entity.SetTokenType("refresh")
+
+	if err != nil {
+		return "", "", fmt.Errorf("invaild token type assigned to the refresh token: %w", err)
+	}
+
+	refreshTokenRecord := &entity.Token{
+		ID:        refreshTokenID,
+		UserID:    existingUser.ID,
+		TokenType: tokType,
+		TokenHash: refreshToken,
+		ExpiresAt: time.Now().UTC().Add(168 * time.Hour),
+		CreatedAt: time.Now().UTC(),
+		Revoke:    false,
+	}
+	err = uc.tokenRepo.CreateToken(ctx, refreshTokenRecord)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to save refresh token record: %w", err)
+	}
+	return accessToken, refreshToken, nil
 }

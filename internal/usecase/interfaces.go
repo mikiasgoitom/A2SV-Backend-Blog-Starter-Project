@@ -91,7 +91,7 @@ type UUIDGenerator interface {
 }
 
 // UserUseCase defines the interface for user-related operations.
-type UserUseCase interface {
+type IUserUseCase interface {
 	Register(ctx context.Context, username, email, password, firstName, lastName string) (*entity.User, error)
 	Login(ctx context.Context, login, password string) (*entity.User, string, string, error)
 	Authenticate(ctx context.Context, accessToken string) (*entity.User, error)
@@ -103,4 +103,5 @@ type UserUseCase interface {
 	PromoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error)
 	DemoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error)
 	UpdateProfile(ctx context.Context, userID uuid.UUID, updates map[string]interface{}) (*entity.User, error)
+	LoginWithOAuth(ctx context.Context, fName, lName, email string) (string, string, error)
 }

@@ -8,7 +8,10 @@ require (
 	go.mongodb.org/mongo-driver v1.17.4
 	golang.org/x/crypto v0.26.0
 	golang.org/x/net v0.25.0
+	golang.org/x/oauth2 v0.30.0
 )
+
+require cloud.google.com/go/compute/metadata v0.3.0 // indirect
 
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect
