@@ -203,19 +203,19 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 
 // Logout handles user logout
 func (h *UserHandler) Logout(c *gin.Context) {
-var req dto.RefreshTokenRequest
-if err := c.ShouldBindJSON(&req); err != nil {
-	ErrorHandler(c, http.StatusBadRequest, "Invalid or missing refresh token")
-	return
-}
+	var req dto.RefreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		ErrorHandler(c, http.StatusBadRequest, "Invalid or missing refresh token")
+		return
+	}
 
-err := h.userUsecase.Logout(c.Request.Context(), req.RefreshToken)
-if err != nil {
-	ErrorHandler(c, http.StatusInternalServerError, "Failed to logout")
-	return
-}
+	err := h.userUsecase.Logout(c.Request.Context(), req.RefreshToken)
+	if err != nil {
+		ErrorHandler(c, http.StatusInternalServerError, "Failed to logout")
+		return
+	}
 
-MessageHandler(c, http.StatusOK, "Logged out successfully")
+	MessageHandler(c, http.StatusOK, "Logged out successfully")
 }
 
 func updateUserRequestToMap(req dto.UpdateUserRequest) (map[string] interface{}){
