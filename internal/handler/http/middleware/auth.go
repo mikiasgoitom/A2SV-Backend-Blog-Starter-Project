@@ -5,10 +5,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/jwt"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
 
-func AuthMiddleWare(jwtService usecase.JWTService, userUseCase usecase.UserUseCase) gin.HandlerFunc {
+func AuthMiddleWare(jwtMgr jwt.JWTManager, userUseCase usecase.UserUsecase) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		authHeader := ctx.GetHeader("Authorization")
 		if authHeader == "" {

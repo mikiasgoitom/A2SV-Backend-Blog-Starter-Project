@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 )
 
@@ -21,7 +23,7 @@ type UserUsecase struct {
 	logger                     AppLogger
 	cfg                        ConfigProvider
 	validator                  Validator
-	uuidGenerator              UUIDGenerator
+	uuidGenerator              contract.IUUIDGenerator
 }
 
 // NewUserUsecase creates a new UserUsecase instance.
@@ -35,7 +37,7 @@ func NewUserUsecase(
 	logger AppLogger,
 	cfg ConfigProvider,
 	validator Validator,
-	uuidGenerator UUIDGenerator,
+	uuidGenerator contract.IUUIDGenerator,
 ) *UserUsecase {
 	return &UserUsecase{
 		userRepo:                   userRepo,
@@ -50,6 +52,9 @@ func NewUserUsecase(
 		uuidGenerator:              uuidGenerator,
 	}
 }
+
+// check if UserUseCase implements the IUserUseCase
+var _ IUserUseCase = (*UserUsecase)(nil)
 
 // Register handles user registration.
 func (uc *UserUsecase) Register(ctx context.Context, username, email, password, firstName, lastName string) (*entity.User, error) {
@@ -100,17 +105,17 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 
 	// Create new user entity, initializing new fields to their zero values or nil
 	user := &entity.User{
-		ID:            uc.uuidGenerator.NewUUID(),
-		Username:      username,
-		Email:         email,
-		PasswordHash:  hashedPassword,
-		Role:          entity.UserRoleUser,
-		IsActive:      false,
-		AvatarURL:     nil,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
-		FirstName:     pFirstName,
-		LastName:      pLastName,
+		ID:           uc.uuidGenerator.NewUUID(),
+		Username:     username,
+		Email:        email,
+		PasswordHash: hashedPassword,
+		Role:         entity.UserRoleUser,
+		IsActive:     false,
+		AvatarURL:    nil,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+		FirstName:    pFirstName,
+		LastName:     pLastName,
 	}
 
 	// Save user to database
@@ -514,7 +519,7 @@ func (uc *UserUsecase) Logout(ctx context.Context, refreshToken string) error {
 }
 
 // PromoteUser promotes a user to an Admin role.
-func (uc *UserUsecase) PromoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error) {
+func (uc *UserUsecase) PromoteUser(ctx context.Context, userID string) (*entity.User, error) {
 	const errUserNotFound = "not found" // Placeholder
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
@@ -541,7 +546,7 @@ func (uc *UserUsecase) PromoteUser(ctx context.Context, userID uuid.UUID) (*enti
 }
 
 // DemoteUser demotes an Admin back to a regular user (member).
-func (uc *UserUsecase) DemoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error) {
+func (uc *UserUsecase) DemoteUser(ctx context.Context, userID string) (*entity.User, error) {
 	const errUserNotFound = "not found" // Placeholder
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
@@ -568,7 +573,7 @@ func (uc *UserUsecase) DemoteUser(ctx context.Context, userID uuid.UUID) (*entit
 }
 
 // UpdateProfile allows a registered user to update their profile details.
-func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID uuid.UUID, updates map[string]interface{}) (*entity.User, error) {
+func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID string, updates map[string]interface{}) (*entity.User, error) {
 	const errUserNotFound = "not found" // Placeholder
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
@@ -631,6 +636,144 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID uuid.UUID, upda
 	}
 
 	return user, nil
+}
+
+// login with OAuth2
+
+func (uc *UserUsecase) LoginWithOAuth(ctx context.Context, fName, lName, email string) (string, string, error) {
+	existingUser, err := uc.userRepo.GetUserByEmail(ctx, email)
+
+	if err != nil {
+		var generatedUsername string
+		if fName != "" && lName != "" {
+			generatedUsername = fName + "." + lName
+		} else if fName != "" {
+			generatedUsername = fName
+		} else if lName != "" {
+			generatedUsername = lName
+		} else {
+			generatedUsername = strings.Split(email, "@")[0]
+		}
+		newUser := &entity.User{
+			ID:        uc.uuidGenerator.NewUUID(),
+			Username:  generatedUsername,
+			Email:     email,
+			Role:      entity.DefaultRole(),
+			IsActive:  true,
+			CreatedAt: time.Now().UTC(),
+			UpdatedAt: time.Now().UTC(),
+			FirstName: &fName,
+			LastName:  &lName,
+		}
+
+		err := uc.userRepo.CreateUser(ctx, newUser)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to create new user: %w", err)
+		}
+		existingUser = newUser
+	}
+
+	accessToken, err := uc.jwtService.GenerateAccessToken(existingUser.ID, existingUser.Role)
+
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	refreshTokenID := uc.uuidGenerator.NewUUID()
+	refreshToken, err := uc.jwtService.GenerateRefreshToken(existingUser.ID, existingUser.Role)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	tokType, err := entity.SetTokenType("refresh")
+
+	if err != nil {
+		return "", "", fmt.Errorf("invaild token type assigned to the refresh token: %w", err)
+	}
+
+	refreshTokenRecord := &entity.Token{
+		ID:        refreshTokenID,
+		UserID:    existingUser.ID,
+		TokenType: tokType,
+		TokenHash: refreshToken,
+		ExpiresAt: time.Now().UTC().Add(168 * time.Hour),
+		CreatedAt: time.Now().UTC(),
+		Revoke:    false,
+	}
+	err = uc.tokenRepo.CreateToken(ctx, refreshTokenRecord)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to save refresh token record: %w", err)
+	}
+	return accessToken, refreshToken, nil
+}
+
+// login with OAuth2
+
+func (uc *UserUsecase) LoginWithOAuth(ctx context.Context, fName, lName, email string) (string, string, error) {
+	existingUser, err := uc.userRepo.GetUserByEmail(ctx, email)
+
+	if err != nil {
+		var generatedUsername string
+		if fName != "" && lName != "" {
+			generatedUsername = fName + "." + lName
+		} else if fName != "" {
+			generatedUsername = fName
+		} else if lName != "" {
+			generatedUsername = lName
+		} else {
+			generatedUsername = strings.Split(email, "@")[0]
+		}
+		newUser := &entity.User{
+			ID:        uc.uuidGenerator.NewUUID(),
+			Username:  generatedUsername,
+			Email:     email,
+			Role:      entity.DefaultRole(),
+			IsActive:  true,
+			CreatedAt: time.Now().UTC(),
+			UpdatedAt: time.Now().UTC(),
+			FirstName: &fName,
+			LastName:  &lName,
+		}
+
+		err := uc.userRepo.CreateUser(ctx, newUser)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to create new user: %w", err)
+		}
+		existingUser = newUser
+	}
+
+	accessToken, err := uc.jwtService.GenerateAccessToken(existingUser.ID, existingUser.Role)
+
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	refreshTokenID := uc.uuidGenerator.NewUUID()
+	refreshToken, err := uc.jwtService.GenerateRefreshToken(existingUser.ID, existingUser.Role)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	tokType, err := entity.SetTokenType("refresh")
+
+	if err != nil {
+		return "", "", fmt.Errorf("invaild token type assigned to the refresh token: %w", err)
+	}
+
+	refreshTokenRecord := &entity.Token{
+		ID:        refreshTokenID,
+		UserID:    existingUser.ID,
+		TokenType: tokType,
+		TokenHash: refreshToken,
+		ExpiresAt: time.Now().UTC().Add(168 * time.Hour),
+		CreatedAt: time.Now().UTC(),
+		Revoke:    false,
+	}
+	err = uc.tokenRepo.CreateToken(ctx, refreshTokenRecord)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to save refresh token record: %w", err)
+	}
+	return accessToken, refreshToken, nil
 }
 
 

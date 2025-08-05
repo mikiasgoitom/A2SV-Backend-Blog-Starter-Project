@@ -1,15 +1,15 @@
-package uuid
+package uuidgen
 
 import (
 	"github.com/google/uuid"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 )
 
 // Generator implements the usecase.UUIDGenerator interface.
 type Generator struct{}
 
 // NewGenerator creates a new UUID generator.
-func NewGenerator() usecase.UUIDGenerator {
+func NewGenerator() contract.IUUIDGenerator {
 	return &Generator{}
 }
 
@@ -18,5 +18,5 @@ func (g *Generator) NewUUID() uuid.UUID {
 	return uuid.New()
 }
 
-// Ensure Generator implements the usecase.UUIDGenerator interface
-var _ usecase.UUIDGenerator = (*Generator)(nil)
+// Ensure Generator implements the contract.IUUIDGenerator interface
+var _ contract.IUUIDGenerator = (*Generator)(nil)

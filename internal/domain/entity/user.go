@@ -28,3 +28,7 @@ const (
 	UserRoleAdmin UserRole = "admin"
 	UserRoleUser  UserRole = "user"
 )
+
+func DefaultRole() UserRole {
+	return UserRoleUser
+}

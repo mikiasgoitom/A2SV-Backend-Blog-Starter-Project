@@ -4,7 +4,7 @@ import (
 	// "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"context"
 	"errors"
-	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
+
 type MongoUserRepository struct {
 	collection *mongo.Collection
 }

@@ -25,11 +25,9 @@ type tokenDTO struct {
 }
 
 func (t *tokenDTO) ToEntity() *entity.Token {
-	userID, _ := uuid.Parse(t.UserID) // handle error as needed
-	id, _ := uuid.Parse(t.ID)         // handle error as needed
 	return &entity.Token{
-		ID:        id,
-		UserID:    userID,
+		ID:        t.ID,
+		UserID:    t.UserID,
 		TokenType: entity.TokenType(t.TokenType),
 		TokenHash: t.TokenHash,
 		CreatedAt: t.CreatedAt,
@@ -40,8 +38,8 @@ func (t *tokenDTO) ToEntity() *entity.Token {
 
 func FromTokenEntityToDTO(t *entity.Token) *tokenDTO {
 	return &tokenDTO{
-		ID:        t.ID.String(),
-		UserID:    t.UserID.String(),
+		ID:        t.ID,
+		UserID:    t.UserID,
 		TokenType: string(t.TokenType),
 		TokenHash: t.TokenHash,
 		CreatedAt: t.CreatedAt,
