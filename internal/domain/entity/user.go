@@ -15,9 +15,9 @@ type User struct {
 	IsActive     bool      `bson:"is_active" json:"is_active"`
 	CreatedAt    time.Time `bson:"created_at" json:"created_at"`
 	UpdatedAt    time.Time `bson:"updated_at" json:"updated_at"`
-	FirstName    *string   `bson:"firstname" json:"firstname,omitempty"`
-	LastName     *string   `bson:"lastname" json:"lastname,omitempty"`
-	AvatarURL    *string   `bson:"avatar_url" json:"avatar_url,omitempty"`
+	FirstName    *string   `bson:"firstname,omitempty"" json:"firstname,omitempty"`
+	LastName     *string   `bson:"lastname,omitempty" json:"lastname,omitempty"`
+	AvatarURL    *string   `bson:"avatar_url,omitempty" json:"avatar_url,omitempty"`
 }
 
 // UserRole represents the role of a user in the system
