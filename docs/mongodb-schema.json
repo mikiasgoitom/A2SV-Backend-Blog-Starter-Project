@@ -27,10 +27,11 @@
   "tokens": {
     "ID": "string/UUID",
     "UserID": "string/UUID",
+    "TokenType": "string",
     "TokenHash": "string",
     "ExpiresAt": "timestamp",
     "CreatedAt": "timestamp",
-    "Revoked": true
+    "Revoked": "boolean"
   },
   "comments": {
     "ID": "string/UUID",
