@@ -260,7 +260,7 @@ func (uc *UserUsecase) RefreshToken(ctx context.Context, refreshToken string) (s
 	}
 	uc.logger.Infof("Debug: Successfully parsed token for user: %s", claims.UserID)
 
-// The UserID from claims is already a string, so we can use it directly.
+	// The UserID from claims is already a string, so we can use it directly.
 	userID := claims.UserID
 
 	// Retrieve the stored token using the parsed UUID.
