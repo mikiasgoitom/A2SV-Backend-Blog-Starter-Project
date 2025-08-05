@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 )
@@ -261,7 +260,7 @@ func (uc *UserUsecase) RefreshToken(ctx context.Context, refreshToken string) (s
 	}
 	uc.logger.Infof("Debug: Successfully parsed token for user: %s", claims.UserID)
 
-	// The UserID from claims is already a uuid.UUID, so we can use it directly.
+// The UserID from claims is already a string, so we can use it directly.
 	userID := claims.UserID
 
 	// Retrieve the stored token using the parsed UUID.
@@ -535,7 +534,7 @@ func (uc *UserUsecase) Logout(ctx context.Context, refreshToken string) error {
 }
 
 // PromoteUser promotes a user to an Admin role.
-func (uc *UserUsecase) PromoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error) {
+func (uc *UserUsecase) PromoteUser(ctx context.Context, userID string) (*entity.User, error) {
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
 		if err.Error() == errUserNotFound {
@@ -563,7 +562,7 @@ func (uc *UserUsecase) PromoteUser(ctx context.Context, userID uuid.UUID) (*enti
 }
 
 // DemoteUser demotes an Admin back to a regular user (member).
-func (uc *UserUsecase) DemoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error) {
+func (uc *UserUsecase) DemoteUser(ctx context.Context, userID string) (*entity.User, error) {
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
 		if err.Error() == errUserNotFound {
@@ -591,8 +590,8 @@ func (uc *UserUsecase) DemoteUser(ctx context.Context, userID uuid.UUID) (*entit
 }
 
 // UpdateProfile allows a registered user to update their profile details.
-func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID uuid.UUID, updates map[string]interface{}) (*entity.User, error) {
-	uc.logger.Infof("UpdateProfile called for user %s with updates: %+v", userID.String(), updates)
+func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID string, updates map[string]interface{}) (*entity.User, error) {
+	uc.logger.Infof("UpdateProfile called for user %s with updates: %+v", userID, updates)
 	
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
@@ -619,14 +618,14 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID uuid.UUID, upda
 		}
 	}
 
-	uc.logger.Infof("About to update user %s with updates: %+v", userID.String(), updates)
+	uc.logger.Infof("About to update user %s with updates: %+v", userID, updates)
 
 	if err := uc.userRepo.UpdateUser(ctx, user.ID, updates); err != nil {
 		uc.logger.Errorf("failed to update profile for user %s: %v", userID, err)
 		return nil, errors.New("failed to update profile")
 	}
 
-	uc.logger.Infof("User %s updated successfully", userID.String())
+	uc.logger.Infof("User %s updated successfully", userID)
 	
 	// Retrieve and return the updated user
 	updatedUser, err := uc.userRepo.GetUserByID(ctx, userID)
@@ -640,72 +639,6 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID uuid.UUID, upda
 
 // login with OAuth2
 
-func (uc *UserUsecase) LoginWithOAuth(ctx context.Context, fName, lName, email string) (string, string, error) {
-	existingUser, err := uc.userRepo.GetUserByEmail(ctx, email)
-
-	if err != nil {
-		var generatedUsername string
-		if fName != "" && lName != "" {
-			generatedUsername = fName + "." + lName
-		} else if fName != "" {
-			generatedUsername = fName
-		} else if lName != "" {
-			generatedUsername = lName
-		} else {
-			generatedUsername = strings.Split(email, "@")[0]
-		}
-		newUser := &entity.User{
-			ID:        uc.uuidGenerator.NewUUID(),
-			Username:  generatedUsername,
-			Email:     email,
-			Role:      entity.DefaultRole(),
-			IsActive:  true,
-			CreatedAt: time.Now().UTC(),
-			UpdatedAt: time.Now().UTC(),
-			FirstName: &fName,
-			LastName:  &lName,
-		}
-
-		err := uc.userRepo.CreateUser(ctx, newUser)
-		if err != nil {
-			return "", "", fmt.Errorf("failed to create new user: %w", err)
-		}
-		existingUser = newUser
-	}
-
-	accessToken, err := uc.jwtService.GenerateAccessToken(existingUser.ID, existingUser.Role)
-
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate access token: %w", err)
-	}
-
-	refreshTokenID := uc.uuidGenerator.NewUUID()
-	refreshToken, err := uc.jwtService.GenerateRefreshToken(existingUser.ID, existingUser.Role)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate refresh token: %w", err)
-	}
-
-	tokType, err := entity.SetTokenType("refresh")
-
-	if err != nil {
-		return "", "", fmt.Errorf("invaild token type assigned to the refresh token: %w", err)
-	}
-
-	refreshTokenRecord := &entity.Token{
-		ID:        refreshTokenID,
-		UserID:    existingUser.ID,
-		TokenType: tokType,
-		TokenHash: refreshToken,
-		ExpiresAt: time.Now().UTC().Add(168 * time.Hour),
-		CreatedAt: time.Now().UTC(),
-		Revoke:    false,
-	}
-	err = uc.tokenRepo.CreateToken(ctx, refreshTokenRecord)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to save refresh token record: %w", err)
-	}
-	return accessToken, refreshToken, nil
-}
 
 // login with OAuth2
 
@@ -777,7 +710,7 @@ func (uc *UserUsecase) LoginWithOAuth(ctx context.Context, fName, lName, email s
 }
 
 
-func (uc *UserUsecase) GetUserByID(ctx context.Context, userID uuid.UUID) (*entity.User, error) {
+func (uc *UserUsecase) GetUserByID(ctx context.Context, userID string) (*entity.User, error) {
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
 		if err.Error() == errUserNotFound {

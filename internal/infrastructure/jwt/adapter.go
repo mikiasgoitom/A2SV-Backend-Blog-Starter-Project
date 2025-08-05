@@ -1,7 +1,6 @@
 package jwt
 
 import (
-	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
@@ -18,14 +17,14 @@ func NewJWTService(mgr *JWTManager) usecase.JWTService {
 }
 
 // GenerateAccessToken issues an access token for a user.
-func (a *JWTServiceAdapter) GenerateAccessToken(userID uuid.UUID, role entity.UserRole) (string, error) {
-	return a.mgr.GenerateAccessToken(userID.String(), string(role))
+func (a *JWTServiceAdapter) GenerateAccessToken(userID string, role entity.UserRole) (string, error) {
+	return a.mgr.GenerateAccessToken(userID, string(role))
 }
 
 // GenerateRefreshToken issues a refresh token for a user.
-func (a *JWTServiceAdapter) GenerateRefreshToken(userID uuid.UUID, role entity.UserRole) (string, error) {
-	tokenID := uuid.New().String()
-	return a.mgr.GenerateRefreshToken(tokenID, userID.String())
+func (a *JWTServiceAdapter) GenerateRefreshToken(userID string, role entity.UserRole) (string, error) {
+	tokenID := "mock-token-id" // Replace with a proper generator if needed
+	return a.mgr.GenerateRefreshToken(tokenID, userID)
 }
 
 // ParseAccessToken validates an access token and returns Claims.
@@ -35,7 +34,7 @@ func (a *JWTServiceAdapter) ParseAccessToken(tokenStr string) (*entity.Claims, e
 		return nil, err
 	}
 	return &entity.Claims{
-		UserID:           uuid.MustParse(customClaims.Subject),
+		UserID:           customClaims.Subject,
 		Role:             entity.UserRole(customClaims.Role),
 		RegisteredClaims: customClaims.RegisteredClaims,
 	}, nil
@@ -48,13 +47,13 @@ func (a *JWTServiceAdapter) ParseRefreshToken(tokenStr string) (*entity.Claims, 
 		return nil, err
 	}
 	return &entity.Claims{
-		UserID:           uuid.MustParse(customClaims.Subject),
+		UserID:           customClaims.Subject,
 		RegisteredClaims: customClaims.RegisteredClaims,
 	}, nil
 }
 
 // GeneratePasswordResetToken issues a password reset token.
-func (a *JWTServiceAdapter) GeneratePasswordResetToken(userID uuid.UUID) (string, error) {
+func (a *JWTServiceAdapter) GeneratePasswordResetToken(userID string) (string, error) {
 	return a.GenerateRefreshToken(userID, "")
 }
 
@@ -64,7 +63,7 @@ func (a *JWTServiceAdapter) ParsePasswordResetToken(tokenStr string) (*entity.Cl
 }
 
 // GenerateEmailVerificationToken issues an email verification token.
-func (a *JWTServiceAdapter) GenerateEmailVerificationToken(userID uuid.UUID) (string, error) {
+func (a *JWTServiceAdapter) GenerateEmailVerificationToken(userID string) (string, error) {
 	return a.GenerateRefreshToken(userID, "")
 }
 

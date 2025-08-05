@@ -3,12 +3,11 @@ package entity
 import (
 	"time"
 
-	"github.com/google/uuid"
 )
 
 // User represents a registered user in the system
 type User struct {
-	ID           uuid.UUID `db:"id"`
+	ID           string    `db:"id"`
 	Username     string    `db:"username"`
 	Email        string    `db:"email"`
 	PasswordHash string    `db:"password_hash"`

@@ -4,31 +4,30 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 )
 
 // UserRepository defines the interface for user data persistence.
 type UserRepository interface {
-	CreateUser(ctx context.Context, user *entity.User) error
-	GetUserByID(ctx context.Context, id uuid.UUID) (*entity.User, error)
-	GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
-	GetUserByUsername(ctx context.Context, username string) (*entity.User, error)
-	UpdateUser(ctx context.Context, id uuid.UUID, updates map[string]interface{}) error
-	UpdateUserPassword(ctx context.Context, id uuid.UUID, hashedPassword string) error
+CreateUser(ctx context.Context, user *entity.User) error
+GetUserByID(ctx context.Context, id string) (*entity.User, error)
+GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
+GetUserByUsername(ctx context.Context, username string) (*entity.User, error)
+UpdateUser(ctx context.Context, id string, updates map[string]interface{}) error
+UpdateUserPassword(ctx context.Context, id string, hashedPassword string) error
 }
 
 // BlogRepository interface defines the methods for blog data persistence.
 type BlogRepository interface {
-	CreateBlog(ctx context.Context, blog *entity.Blog) error
-	GetBlogByID(ctx context.Context, blogID uuid.UUID) (*entity.Blog, error)
-	GetBlogs(ctx context.Context, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
-	UpdateBlog(ctx context.Context, blog *entity.Blog) error
-	DeleteBlog(ctx context.Context, blogID uuid.UUID) error
-	SearchBlogs(ctx context.Context, query string, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
-	GetBlogsByTags(ctx context.Context, tagIDs []uuid.UUID, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
-	GetTrendingBlogs(ctx context.Context, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
+CreateBlog(ctx context.Context, blog *entity.Blog) error
+GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error)
+GetBlogs(ctx context.Context, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
+UpdateBlog(ctx context.Context, blog *entity.Blog) error
+DeleteBlog(ctx context.Context, blogID string) error
+SearchBlogs(ctx context.Context, query string, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
+GetBlogsByTags(ctx context.Context, tagIDs []string, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
+GetTrendingBlogs(ctx context.Context, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
 }
 
 // TokenRepository provides methods for managing tokens in the database.
@@ -105,28 +104,28 @@ type Validator interface {
 
 // UserUseCase defines the interface for user-related operations.
 type IUserUseCase interface {
-	Register(ctx context.Context, username, email, password, firstName, lastName string) (*entity.User, error)
-	Login(ctx context.Context, email, password string) (*entity.User, string, string, error)
-	Authenticate(ctx context.Context, accessToken string) (*entity.User, error)
-	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
-	ForgotPassword(ctx context.Context, email string) error
-	ResetPassword(ctx context.Context, resetToken, newPassword string) error
-	VerifyEmail(ctx context.Context, token string) error
-	Logout(ctx context.Context, refreshToken string) error
-	PromoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error)
-	DemoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error)
-	UpdateProfile(ctx context.Context, userID uuid.UUID, updates map[string]interface{}) (*entity.User, error)
-	GetUserByID(ctx context.Context, userID uuid.UUID) (*entity.User, error)
+Register(ctx context.Context, username, email, password, firstName, lastName string) (*entity.User, error)
+Login(ctx context.Context, email, password string) (*entity.User, string, string, error)
+Authenticate(ctx context.Context, accessToken string) (*entity.User, error)
+RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
+ForgotPassword(ctx context.Context, email string) error
+ResetPassword(ctx context.Context, resetToken, newPassword string) error
+VerifyEmail(ctx context.Context, token string) error
+Logout(ctx context.Context, refreshToken string) error
+PromoteUser(ctx context.Context, userID string) (*entity.User, error)
+DemoteUser(ctx context.Context, userID string) (*entity.User, error)
+UpdateProfile(ctx context.Context, userID string, updates map[string]interface{}) (*entity.User, error)
+GetUserByID(ctx context.Context, userID string) (*entity.User, error)
 }
 
 // type BlogUseCase interface {
 // 	CreateBlog(ctx context.Context, blog entity.Blog) (*entity.Blog, error)
-// 	GetBlogByID(ctx context.Context, blogID uuid.UUID) (*entity.Blog, error)
-// 	UpdateBlog(ctx context.Context, blogID, authorID uuid.UUID, title *string, content *string, slug *string, status *entity.BlogStatus, publishedAt *time.Time, featuredImageID *uuid.UUID, isDeleted *bool) (*entity.Blog, error)
-// 	TrackBlogPopularity(ctx context.Context, blogID, userID uuid.UUID, action BlogAction) (viewCount, likeCount, dislikeCount, commentCount int, err error)
-// 	DeleteBlog(ctx context.Context, blogID, userID uuid.UUID, isAdmin bool) (bool, error)
-
-// 	GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder SortOrder, dateFrom *time.Time, dateTo *time.Time) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
-// 	SearchAndFilterBlogs(ctx context.Context, query string, page, pageSize int, searchBy string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, minLikes *int, authorID *uuid.UUID) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
+//  GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error)
+//  UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, slug *string, status *entity.BlogStatus, publishedAt *time.Time, featuredImageID *string, isDeleted *bool) (*entity.Blog, error)
+//  TrackBlogPopularity(ctx context.Context, blogID, userID string, action BlogAction) (viewCount, likeCount, dislikeCount, commentCount int, err error)
+//  DeleteBlog(ctx context.Context, blogID, userID string, isAdmin bool) (bool, error)
+//
+//  GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder SortOrder, dateFrom *time.Time, dateTo *time.Time) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
+//  SearchAndFilterBlogs(ctx context.Context, query string, page, pageSize int, searchBy string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, minLikes *int, authorID *string) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
 
 // }

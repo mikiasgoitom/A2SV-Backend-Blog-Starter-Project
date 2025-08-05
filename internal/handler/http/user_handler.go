@@ -5,16 +5,15 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/dto"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
 
 type UserHandler struct {
-	userUsecase usecase.UserUseCase
+	userUsecase usecase.UserUsecase
 }
 
-func NewUserHandler(userUsecase usecase.UserUseCase) *UserHandler {
+func NewUserHandler(userUsecase usecase.UserUsecase) *UserHandler {
 	return &UserHandler{
 		userUsecase: userUsecase,
 	}
@@ -78,19 +77,12 @@ func (h *UserHandler) Login(c *gin.Context) {
 
 // GetUser handles retrieving user by ID
 func (h *UserHandler) GetUser(c *gin.Context) {
-	userIDStr := c.Param("id")
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		ErrorHandler(c, http.StatusBadRequest, "Invalid user ID format")
-		return
-	}
-
+	userID := c.Param("id")
 	user, err := h.userUsecase.GetUserByID(c.Request.Context(), userID)
 	if err != nil {
 		ErrorHandler(c, http.StatusNotFound, "User not found")
 		return
 	}
-
 	SuccessHandler(c, http.StatusOK, dto.ToUserResponse(*user))
 }
 
@@ -102,12 +94,11 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userUsecase.GetUserByID(c.Request.Context(), userID.(uuid.UUID))
+	user, err := h.userUsecase.GetUserByID(c.Request.Context(), userID.(string))
 	if err != nil {
 		ErrorHandler(c, http.StatusNotFound, "User not found")
 		return
 	}
-
 	SuccessHandler(c, http.StatusOK, dto.ToUserResponse(*user))
 }
 
@@ -122,19 +113,16 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	var req dto.UpdateUserRequest
 	if err := BindAndValidate(c, &req); err != nil {
 		ErrorHandler(c, http.StatusBadRequest, "Invalid or Bad request")
-
 		return
 	}
 
 	fmt.Printf("Request received: %+v\n", req)
 	updates := updateUserRequestToMap(req)
-	log.Printf("Updates map: %+v", updates)
-	updatedUser, err := h.userUsecase.UpdateProfile(c.Request.Context(), userID.(uuid.UUID), updates)
+	updatedUser, err := h.userUsecase.UpdateProfile(c.Request.Context(), userID.(string), updates)
 	if err != nil {
 		ErrorHandler(c, http.StatusBadRequest, err.Error())
 		return
 	}
-
 	SuccessHandler(c, http.StatusOK, dto.ToUserResponse(*updatedUser))
 }
 
