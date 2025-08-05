@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -125,7 +126,9 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
+	fmt.Printf("Request received: %+v\n", req)
 	updates := updateUserRequestToMap(req)
+	fmt.Printf("Updates map: %+v\n", updates)
 	updatedUser, err := h.userUsecase.UpdateProfile(c.Request.Context(), userID.(uuid.UUID), updates)
 	if err != nil {
 		ErrorHandler(c, http.StatusBadRequest, err.Error())
@@ -173,18 +176,18 @@ func (h *UserHandler) ResetPassword(c *gin.Context) {
 
 // RefreshToken handles token refresh
 func (h *UserHandler) RefreshToken(c *gin.Context) {
-	refreshToken := c.GetHeader("Authorization")
-	if refreshToken == "" {
+	var req dto.RefreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		ErrorHandler(c, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if req.RefreshToken == "" {
 		ErrorHandler(c, http.StatusBadRequest, "Refresh token required")
 		return
 	}
 
-	// Remove "Bearer " prefix if present
-	if len(refreshToken) > 7 && refreshToken[:7] == "Bearer " {
-		refreshToken = refreshToken[7:]
-	}
-
-	newAccessToken, newRefreshToken, err := h.userUsecase.RefreshToken(c.Request.Context(), refreshToken)
+	newAccessToken, newRefreshToken, err := h.userUsecase.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		ErrorHandler(c, http.StatusUnauthorized, "Invalid or expired refresh token")
 		return
@@ -200,23 +203,36 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 
 // Logout handles user logout
 func (h *UserHandler) Logout(c *gin.Context) {
-	refreshToken := c.GetHeader("Authorization")
+var req dto.RefreshTokenRequest
+if err := c.ShouldBindJSON(&req); err != nil {
+	ErrorHandler(c, http.StatusBadRequest, "Invalid or missing refresh token")
+	return
+}
 
-	err := h.userUsecase.Logout(c.Request.Context(), refreshToken)
-	if err != nil {
-		ErrorHandler(c, http.StatusInternalServerError, "Failed to logout")
-		return
-	}
+err := h.userUsecase.Logout(c.Request.Context(), req.RefreshToken)
+if err != nil {
+	ErrorHandler(c, http.StatusInternalServerError, "Failed to logout")
+	return
+}
 
-	MessageHandler(c, http.StatusOK, "Logged out successfully")
+MessageHandler(c, http.StatusOK, "Logged out successfully")
 }
 
 func updateUserRequestToMap(req dto.UpdateUserRequest) (map[string] interface{}){
 	updates := make(map[string]interface{})
 
-	updates["username"] = req.Username
-	updates["firstName"] = req.FirstName
-	updates["lastName"] = req.LastName
+	if req.Username != nil {
+		updates["username"] = *req.Username
+	}
+	if req.FirstName != nil {
+		updates["firstname"] = *req.FirstName
+	}
+	if req.LastName != nil {
+		updates["lastname"] = *req.LastName
+	}
+	if req.AvatarURL != nil {
+		updates["avatarURL"] = *req.AvatarURL
+	}
 
 	return updates
 }

@@ -25,8 +25,8 @@ type RegisterRequest struct {
 // UpdateUserRequest is the DTO for updating user profile.
 type UpdateUserRequest struct {
 	Username  *string `json:"username,omitempty" binding:"omitempty,min=3,max=32"`
-	FirstName *string `json:"first_name,omitempty" binding:"omitempty,max=50"`
-	LastName  *string `json:"last_name,omitempty" binding:"omitempty,max=50"`
+	FirstName *string `json:"firstname,omitempty" binding:"omitempty,max=50"`
+	LastName  *string `json:"lastname,omitempty" binding:"omitempty,max=50"`
 	AvatarURL *string `json:"avatar_url,omitempty" binding:"omitempty,url"`
 }
 
@@ -49,4 +49,9 @@ type VerifyEmailRequest struct {
 // ResendVerificationRequest is the DTO for resending verification email.
 type ResendVerificationRequest struct {
 	Email string `json:"email" binding:"required,email"`
+}
+
+// RefreshTokenRequest is the DTO for refreshing access tokens.
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
 }

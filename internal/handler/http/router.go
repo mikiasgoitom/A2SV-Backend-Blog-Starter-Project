@@ -43,11 +43,13 @@ func (r *Router) SetupRoutes(router *gin.Engine) {
 
 	// Protected routes (authentication required)
 	protected := v1.Group("/")
-		protected.Use(middleware.AuthMiddleWare(r.jwtService, r.userUsecase))
+	protected.Use(middleware.AuthMiddleWare(r.jwtService, r.userUsecase))
 	{
 		// Current user routes
 		protected.GET("/me", r.userHandler.GetCurrentUser)
 		protected.PUT("/me", r.userHandler.UpdateUser)
-		protected.POST("/logout", r.userHandler.Logout)
 	}
+
+	// Logout route (no authentication required just accept the refresh token from the request body and invalidate the user session)
+	v1.POST("/logout", r.userHandler.Logout)
 }
