@@ -13,7 +13,7 @@ import (
 
 // ---------- DTO layer ------------------
 type tokenDTO struct {
-	ID        string    `bson:"_id,omitempty"`
+	ID        string    `bson:"id"`
 	UserID    string    `bson:"user_id"`
 	TokenType string    `bson:"token_type"`
 	TokenHash string    `bson:"token_hash"`
