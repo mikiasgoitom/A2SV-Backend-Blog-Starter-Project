@@ -2,18 +2,16 @@ package entity
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // Notification represents a notification sent to a user
 type Notification struct {
-	ID              uuid.UUID        `json:"id" db:"id"`
-	RecipientUserID uuid.UUID        `json:"recipient_user_id" db:"recipient_user_id"`
-	SenderUserID    *uuid.UUID       `json:"sender_user_id" db:"sender_user_id"`
+	ID              string           `json:"id" db:"id"`
+	RecipientUserID string           `json:"recipient_user_id" db:"recipient_user_id"`
+	SenderUserID    *string          `json:"sender_user_id" db:"sender_user_id"`
 	Type            NotificationType `json:"type" db:"type"`
 	Message         string           `json:"message" db:"message"`
-	RelatedEntityID *uuid.UUID       `json:"related_entity_id" db:"related_entity_id"`
+	RelatedEntityID *string          `json:"related_entity_id" db:"related_entity_id"`
 	IsRead          bool             `json:"is_read" db:"is_read"`
 	CreatedAt       time.Time        `json:"created_at" db:"created_at"`
 }

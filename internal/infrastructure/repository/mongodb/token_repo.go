@@ -2,11 +2,9 @@ package mongodb
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"go.mongodb.org/mongo-driver/bson"
@@ -98,29 +96,28 @@ func (r *TokenRepository) GetByUserID(ctx context.Context, userID string) (*enti
 	return token, nil
 }
 
-// GetTokenByUserID retrieves a token by user ID.
-func (r *TokenRepository) GetTokenByUserID(ctx context.Context, userID uuid.UUID) (*entity.Token, error) {
+// GetTokenByUserID retrieves a token by user ID (string).
+func (r *TokenRepository) GetTokenByUserID(ctx context.Context, userID string) (*entity.Token, error) {
 	var dto tokenDTO
-	// Query using the string representation of the UUID since that's how it's stored in MongoDB
-	err := r.Collection.FindOne(ctx, bson.M{"user_id": userID.String()}).Decode(&dto)
+	err := r.Collection.FindOne(ctx, bson.M{"user_id": userID}).Decode(&dto)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return nil, errors.New("token not found")
+			return nil, fmt.Errorf("token not found")
 		}
 		return nil, err
 	}
 	return dto.ToEntity(), nil
 }
 
-func (r *TokenRepository) DeleteToken(ctx context.Context, id uuid.UUID) error {
-	filter := bson.M{"_id": id.String()}
+func (r *TokenRepository) DeleteToken(ctx context.Context, id string) error {
+	filter := bson.M{"_id": id}
 	_, err := r.Collection.DeleteOne(ctx, filter)
 	return err
 }
 
 // UpdateToken updates the token hash and expiry
-func (r *TokenRepository) UpdateToken(ctx context.Context, tokenID uuid.UUID, tokenHash string, expiry time.Time) error {
-	filter := bson.M{"_id": tokenID.String()}
+func (r *TokenRepository) UpdateToken(ctx context.Context, tokenID string, tokenHash string, expiry time.Time) error {
+	filter := bson.M{"_id": tokenID}
 	update := bson.M{"$set": bson.M{"token_hash": tokenHash, "expires_at": expiry}}
 	_, err := r.Collection.UpdateOne(ctx, filter, update)
 	return err

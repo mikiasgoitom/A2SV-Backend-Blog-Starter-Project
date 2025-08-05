@@ -14,8 +14,8 @@ func NewGenerator() contract.IUUIDGenerator {
 }
 
 // NewUUID generates a new UUID.
-func (g *Generator) NewUUID() uuid.UUID {
-	return uuid.New()
+func (g *Generator) NewUUID() string {
+	return uuid.New().String()
 }
 
 // Ensure Generator implements the contract.IUUIDGenerator interface

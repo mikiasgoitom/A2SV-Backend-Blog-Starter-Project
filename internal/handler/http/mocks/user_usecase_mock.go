@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
@@ -37,7 +36,7 @@ var _ usecase.UserUseCase = (*MockUserUsecase)(nil)
 func NewMockUserUsecase() *MockUserUsecase {
     return &MockUserUsecase{
         MockUser: entity.User{
-            ID:       uuid.New(),
+            ID:       "mock-user-id",
             Username: "testuser",
             Email:    "test@example.com",
             Role:     entity.UserRoleUser,
@@ -68,14 +67,14 @@ func (m *MockUserUsecase) Login(ctx context.Context, email, password string) (*e
     return &m.MockUser, m.MockAccessToken, m.MockRefreshToken, nil
 }
 
-func (m *MockUserUsecase) GetUserByID(ctx context.Context, userID uuid.UUID) (*entity.User, error) {
+func (m *MockUserUsecase) GetUserByID(ctx context.Context, userID string) (*entity.User, error) {
     if m.ShouldFailGetByID {
         return nil, errors.New("user not found")
     }
     return &m.MockUser, nil
 }
 
-func (m *MockUserUsecase) UpdateProfile(ctx context.Context, userID uuid.UUID, updates map[string]interface{}) (*entity.User, error) {
+func (m *MockUserUsecase) UpdateProfile(ctx context.Context, userID string, updates map[string]interface{}) (*entity.User, error) {
     if m.ShouldFailUpdateUser {
         return nil, errors.New("update user failed")
     }
@@ -117,7 +116,7 @@ func (m *MockUserUsecase) Authenticate(ctx context.Context, accessToken string) 
     return &m.MockUser, nil
 }
 
-func (m *MockUserUsecase) PromoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error) {
+func (m *MockUserUsecase) PromoteUser(ctx context.Context, userID string) (*entity.User, error) {
     if m.ShouldFailPromoteUser {
         return nil, errors.New("promotion failed")
     }
@@ -126,7 +125,7 @@ func (m *MockUserUsecase) PromoteUser(ctx context.Context, userID uuid.UUID) (*e
     return &user, nil
 }
 
-func (m *MockUserUsecase) DemoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error) {
+func (m *MockUserUsecase) DemoteUser(ctx context.Context, userID string) (*entity.User, error) {
     if m.ShouldFailDemoteUser {
         return nil, errors.New("demotion failed")
     }
