@@ -128,7 +128,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	fmt.Printf("Request received: %+v\n", req)
 	updates := updateUserRequestToMap(req)
-	fmt.Printf("Updates map: %+v\n", updates)
+	log.Printf("Updates map: %+v", updates)
 	updatedUser, err := h.userUsecase.UpdateProfile(c.Request.Context(), userID.(uuid.UUID), updates)
 	if err != nil {
 		ErrorHandler(c, http.StatusBadRequest, err.Error())
