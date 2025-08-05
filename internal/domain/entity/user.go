@@ -7,17 +7,17 @@ import (
 
 // User represents a registered user in the system
 type User struct {
-	ID           string    `db:"id"`
-	Username     string    `db:"username"`
-	Email        string    `db:"email"`
-	PasswordHash string    `db:"password_hash"`
-	Role         UserRole  `db:"role"`
-	IsActive     bool      `db:"is_active"`
-	CreatedAt    time.Time `db:"created_at"`
-	UpdatedAt    time.Time `db:"updated_at"`
-	FirstName    *string   `db:"firstname"`
-	LastName     *string   `db:"lastname"`
-	AvatarURL    *string   `db:"avatar_url"`
+	ID           string    `bson:"_id,omitempty" json:"id"`
+	Username     string    `bson:"username" json:"username"`
+	Email        string    `bson:"email" json:"email"`
+	PasswordHash string    `bson:"password_hash" json:"-"`
+	Role         UserRole  `bson:"role" json:"role"`
+	IsActive     bool      `bson:"is_active" json:"is_active"`
+	CreatedAt    time.Time `bson:"created_at" json:"created_at"`
+	UpdatedAt    time.Time `bson:"updated_at" json:"updated_at"`
+	FirstName    *string   `bson:"firstname,omitempty"" json:"firstname,omitempty"`
+	LastName     *string   `bson:"lastname,omitempty" json:"lastname,omitempty"`
+	AvatarURL    *string   `bson:"avatar_url,omitempty" json:"avatar_url,omitempty"`
 }
 
 // UserRole represents the role of a user in the system

@@ -9,11 +9,31 @@ import (
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
 
-type UserHandler struct {
-	userUsecase usecase.UserUsecase
+// UserHandlerInterface defines the methods for user handler to allow interface-based dependency injection (for testing/mocking)
+type UserHandlerInterface interface {
+	CreateUser(*gin.Context)
+	VerifyEmail(*gin.Context)
+	Login(*gin.Context)
+	GetUser(*gin.Context)
+	GetCurrentUser(*gin.Context)
+	UpdateUser(*gin.Context)
+	ForgotPassword(*gin.Context)
+	ResetPassword(*gin.Context)
+	RefreshToken(*gin.Context)
+	Logout(*gin.Context)
 }
 
-func NewUserHandler(userUsecase usecase.UserUsecase) *UserHandler {
+// Ensure UserHandler implements UserHandlerInterface
+var _ UserHandlerInterface = (*UserHandler)(nil)
+
+type UserHandler struct {
+	userUsecase usecase.IUserUseCase
+}
+
+// Ensure UserHandler implements UserHandlerInterface
+var _ UserHandlerInterface = (*UserHandler)(nil)
+
+func NewUserHandler(userUsecase usecase.IUserUseCase) *UserHandler {
 	return &UserHandler{
 		userUsecase: userUsecase,
 	}
@@ -206,7 +226,7 @@ func (h *UserHandler) Logout(c *gin.Context) {
 	MessageHandler(c, http.StatusOK, "Logged out successfully")
 }
 
-func updateUserRequestToMap(req dto.UpdateUserRequest) (map[string] interface{}){
+func updateUserRequestToMap(req dto.UpdateUserRequest) map[string]interface{} {
 	updates := make(map[string]interface{})
 
 	if req.Username != nil {
