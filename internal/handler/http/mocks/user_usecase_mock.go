@@ -23,6 +23,7 @@ type MockUserUsecase struct {
 	ShouldFailAuthenticate   bool
 	ShouldFailPromoteUser    bool
 	ShouldFailDemoteUser     bool
+	ShouldFailLoginWithOAuth bool
 
 	// Return values
 	MockUser         entity.User
@@ -132,4 +133,11 @@ func (m *MockUserUsecase) DemoteUser(ctx context.Context, userID string) (*entit
 	user := m.MockUser
 	user.Role = entity.UserRoleUser
 	return &user, nil
+}
+
+func (m *MockUserUsecase) LoginWithOAuth(ctx context.Context, firstName, lastName, email string) (string, string, error) {
+	if m.ShouldFailLoginWithOAuth {
+		return "", "", errors.New("login with OAuth failed")
+	}
+	return m.MockAccessToken, m.MockRefreshToken, nil
 }

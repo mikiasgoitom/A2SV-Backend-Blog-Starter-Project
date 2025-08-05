@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
@@ -536,7 +535,6 @@ func (uc *UserUsecase) Logout(ctx context.Context, refreshToken string) error {
 
 // PromoteUser promotes a user to an Admin role.
 func (uc *UserUsecase) PromoteUser(ctx context.Context, userID string) (*entity.User, error) {
-func (uc *UserUsecase) PromoteUser(ctx context.Context, userID string) (*entity.User, error) {
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
 		if err.Error() == errUserNotFound {
@@ -564,7 +562,6 @@ func (uc *UserUsecase) PromoteUser(ctx context.Context, userID string) (*entity.
 }
 
 // DemoteUser demotes an Admin back to a regular user (member).
-func (uc *UserUsecase) DemoteUser(ctx context.Context, userID string) (*entity.User, error) {
 func (uc *UserUsecase) DemoteUser(ctx context.Context, userID string) (*entity.User, error) {
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
@@ -642,7 +639,85 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID string, updates
 }
 
 // login with OAuth2
+func (uc *UserUsecase) LoginWithOAuth(ctx context.Context, firstName, lastName, email string) (string, string, error) {
+	// Check if user with the given email already exists
+	user, err := uc.userRepo.GetUserByEmail(ctx, email)
+	if err != nil && err.Error() != errUserNotFound {
+		uc.logger.Errorf("failed to check for existing user by email: %v", err)
+		return "", "", fmt.Errorf(errInternalServer)
+	}
 
+	// If user does not exist, create a new one
+	if user == nil {
+		// Create a new user entity
+		var pFirstName *string
+		if firstName != "" {
+			pFirstName = &firstName
+		}
+		var pLastName *string
+		if lastName != "" {
+			pLastName = &lastName
+		}
+
+		newUser := &entity.User{
+			ID:           uc.uuidGenerator.NewUUID(),
+			Username:     email, // Or generate a unique username
+			Email:        email,
+			PasswordHash: "", // No password for OAuth users
+			Role:         entity.UserRoleUser,
+			IsActive:     true, // OAuth users are active by default
+			AvatarURL:    nil,
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
+			FirstName:    pFirstName,
+			LastName:     pLastName,
+		}
+
+		// Save the new user to the database
+		if err := uc.userRepo.CreateUser(ctx, newUser); err != nil {
+			uc.logger.Errorf("failed to create user from OAuth: %v", err)
+			return "", "", fmt.Errorf("failed to register user")
+		}
+		user = newUser
+	}
+
+	// At this point, we have a user (either existing or newly created)
+	// Generate access and refresh tokens
+	accessToken, err := uc.jwtService.GenerateAccessToken(user.ID, user.Role)
+	if err != nil {
+		uc.logger.Errorf("failed to generate access token for OAuth user: %v", err)
+		return "", "", errors.New("failed to generate token")
+	}
+
+	refreshToken, err := uc.jwtService.GenerateRefreshToken(user.ID, user.Role)
+	if err != nil {
+		uc.logger.Errorf("failed to generate refresh token for OAuth user: %v", err)
+		return "", "", errors.New("failed to generate token")
+	}
+
+	refreshTokenExpiry := uc.cfg.GetRefreshTokenExpiry()
+	if refreshTokenExpiry <= 0 {
+		uc.logger.Errorf("invalid refresh token expiry configuration: %v", refreshTokenExpiry)
+		return "", "", errors.New("invalid refresh token expiry configuration")
+	}
+
+	// Create token entity
+	tokenEntity := &entity.Token{
+		ID:        uc.uuidGenerator.NewUUID(),
+		UserID:    user.ID,
+		TokenType: entity.TokenTypeRefresh,
+		TokenHash: uc.hasher.HashString(refreshToken),
+		ExpiresAt: time.Now().Add(refreshTokenExpiry),
+		CreatedAt: time.Now(),
+		Revoke:    false,
+	}
+	if err := uc.tokenRepo.CreateToken(ctx, tokenEntity); err != nil {
+		uc.logger.Errorf("failed to store refresh token for OAuth user %s: %v", user.ID, err)
+		return "", "", errors.New("failed to store token")
+	}
+
+	return accessToken, refreshToken, nil
+}
 
 func (uc *UserUsecase) GetUserByID(ctx context.Context, userID string) (*entity.User, error) {
 	user, err := uc.userRepo.GetUserByID(ctx, userID)

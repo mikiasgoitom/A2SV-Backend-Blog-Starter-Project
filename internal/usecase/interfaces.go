@@ -111,6 +111,7 @@ type IUserUseCase interface {
 	DemoteUser(ctx context.Context, userID string) (*entity.User, error)
 	UpdateProfile(ctx context.Context, userID string, updates map[string]interface{}) (*entity.User, error)
 	GetUserByID(ctx context.Context, userID string) (*entity.User, error)
+	LoginWithOAuth(ctx context.Context, firstName, lastName, email string) (string, string, error)
 }
 
 // type BlogUseCase interface {
