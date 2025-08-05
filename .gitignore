@@ -27,5 +27,4 @@ build/
 .DS_Store
 Thumbs.db
 
-USER_HANDLER_IMPLEMENTATION.md
-USER_IMPLEMENTATION_PLAN.md
+.env
