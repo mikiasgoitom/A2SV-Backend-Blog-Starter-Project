@@ -73,19 +73,19 @@ type AppLogger interface {
 	Debugf(format string, args ...interface{})
 	Infof(format string, args ...interface{})
 	Warnf(format string, args ...interface{})
+	Warn(message string)
 	Errorf(format string, args ...interface{})
 	Fatalf(format string, args ...interface{})
 }
+
+// func (a AppLogger) Warn(s string) {
+// 	panic("unimplemented")
+// }
 
 // Validator defines the interface for generic input validation.
 type Validator interface {
 	ValidateEmail(email string) error
 	ValidatePasswordStrength(password string) error
-}
-
-// UUIDGenerator defines the interface for generating UUIDs.
-type UUIDGenerator interface {
-	NewUUID() string
 }
 
 // UserUseCase defines the interface for user-related operations.

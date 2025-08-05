@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 )
 
@@ -22,7 +22,7 @@ type UserUsecase struct {
 	logger                     AppLogger
 	cfg                        ConfigProvider
 	validator                  Validator
-	uuidGenerator              UUIDGenerator
+	uuidGenerator              contract.IUUIDGenerator
 }
 
 // NewUserUsecase creates a new UserUsecase instance.
@@ -36,7 +36,7 @@ func NewUserUsecase(
 	logger AppLogger,
 	cfg ConfigProvider,
 	validator Validator,
-	uuidGenerator UUIDGenerator,
+	uuidGenerator contract.IUUIDGenerator,
 ) *UserUsecase {
 	return &UserUsecase{
 		userRepo:                   userRepo,
@@ -104,19 +104,17 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 
 	// Create new user entity, initializing new fields to their zero values or nil
 	user := &entity.User{
-		ID:            uc.uuidGenerator.NewUUID(),
-		Username:      username,
-		Email:         email,
-		PasswordHash:  hashedPassword,
-		Role:          entity.UserRoleUser,
-		PackageID:     nil,
-		PackageExpiry: nil,
-		IsActive:      false,
-		AvatarURL:     nil,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
-		FirstName:     pFirstName,
-		LastName:      pLastName,
+		ID:           uc.uuidGenerator.NewUUID(),
+		Username:     username,
+		Email:        email,
+		PasswordHash: hashedPassword,
+		Role:         entity.UserRoleUser,
+		IsActive:     false,
+		AvatarURL:    nil,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+		FirstName:    pFirstName,
+		LastName:     pLastName,
 	}
 
 	// Save user to database
@@ -672,7 +670,7 @@ func (uc *UserUsecase) LoginWithOAuth(ctx context.Context, fName, lName, email s
 			generatedUsername = strings.Split(email, "@")[0]
 		}
 		newUser := &entity.User{
-			ID:        uuid.New(),
+			ID:        uc.uuidGenerator.NewUUID(),
 			Username:  generatedUsername,
 			Email:     email,
 			Role:      entity.DefaultRole(),
@@ -696,7 +694,7 @@ func (uc *UserUsecase) LoginWithOAuth(ctx context.Context, fName, lName, email s
 		return "", "", fmt.Errorf("failed to generate access token: %w", err)
 	}
 
-	refreshTokenID := uuid.New()
+	refreshTokenID := uc.uuidGenerator.NewUUID()
 	refreshToken, err := uc.jwtService.GenerateRefreshToken(existingUser.ID, existingUser.Role)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to generate refresh token: %w", err)

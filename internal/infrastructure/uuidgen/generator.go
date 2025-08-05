@@ -2,7 +2,7 @@ package uuidgen
 
 import (
 	"github.com/google/uuid"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 )
 
 // StandardUUIDGenerator implements the usecase.UUIDGenerator interface
@@ -14,4 +14,4 @@ func (g *StandardUUIDGenerator) NewUUID() string {
 }
 
 // Ensure StandardUUIDGenerator implements the usecase.UUIDGenerator interface
-var _ usecase.UUIDGenerator = (*StandardUUIDGenerator)(nil)
+var _ contract.IUUIDGenerator = (*StandardUUIDGenerator)(nil)

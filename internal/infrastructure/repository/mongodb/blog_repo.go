@@ -43,7 +43,7 @@ func (r *BlogRepository) CreateBlog(ctx context.Context, blog *entity.Blog) erro
 }
 
 // GetBlogByID retrieves a single blog post by its unique ID.
-func (r *BlogRepository) GetBlogByID(ctx context.Context, blogID uuid.UUID) (*entity.Blog, error) {
+func (r *BlogRepository) GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error) {
 	var blog entity.Blog
 	filter := bson.M{"id": blogID, "isDeleted": false}
 
@@ -76,8 +76,14 @@ func (r *BlogRepository) GetBlogs(ctx context.Context, opts *contract.BlogFilter
 		findOptions.SetSort(bson.M{opts.SortBy: sortOrder})
 	}
 
-	if opts.FilterByDate != nil {
-		filter["createdAt"] = bson.M{"$gte": opts.FilterByDate}
+	if opts.DateFrom != nil {
+		filter["createdAt"] = bson.M{"$gte": opts.DateFrom}
+	}
+	if opts.DateTo != nil {
+		if filter["createdAt"] == nil {
+			filter["createdAt"] = bson.M{}
+		}
+		filter["createdAt"].(bson.M)["$lte"] = opts.DateTo
 	}
 
 	cursor, err := r.collection.Find(ctx, filter, findOptions)
@@ -100,7 +106,7 @@ func (r *BlogRepository) GetBlogs(ctx context.Context, opts *contract.BlogFilter
 }
 
 // UpdateBlog updates the details of an existing blog post by its ID.
-func (r *BlogRepository) UpdateBlog(ctx context.Context, blogID uuid.UUID, updates map[string]interface{}) error {
+func (r *BlogRepository) UpdateBlog(ctx context.Context, blogID string, updates map[string]interface{}) error {
 	updates["updatedAt"] = time.Now()
 	filter := bson.M{"id": blogID, "isDeleted": false}
 	update := bson.M{"$set": updates}
@@ -117,7 +123,7 @@ func (r *BlogRepository) UpdateBlog(ctx context.Context, blogID uuid.UUID, updat
 }
 
 // DeleteBlog marks a blog post as deleted by its ID.
-func (r *BlogRepository) DeleteBlog(ctx context.Context, blogID uuid.UUID) error {
+func (r *BlogRepository) DeleteBlog(ctx context.Context, blogID string) error {
 	filter := bson.M{"id": blogID}
 	update := bson.M{"$set": bson.M{"isDeleted": true, "updatedAt": time.Now()}}
 
@@ -138,8 +144,14 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 	baseMatch := bson.M{"isDeleted": false}
 
 	// Add date filter to the base match if present
-	if opts.FilterByDate != nil {
-		baseMatch["createdAt"] = bson.M{"$gte": opts.FilterByDate}
+	if opts.DateFrom != nil {
+		baseMatch["createdAt"] = bson.M{"$gte": opts.DateFrom}
+	}
+	if opts.DateTo != nil {
+		if baseMatch["createdAt"] == nil {
+			baseMatch["createdAt"] = bson.M{}
+		}
+		baseMatch["createdAt"].(bson.M)["$lte"] = opts.DateTo
 	}
 
 	// Define search conditions for title and author details
@@ -232,7 +244,7 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 }
 
 // IncrementViewCount increments the view count of a specific blog post.
-func (r *BlogRepository) IncrementViewCount(ctx context.Context, blogID uuid.UUID) error {
+func (r *BlogRepository) IncrementViewCount(ctx context.Context, blogID string) error {
 	filter := bson.M{"id": blogID}
 	update := bson.M{"$inc": bson.M{"viewCount": 1}}
 
@@ -247,8 +259,160 @@ func (r *BlogRepository) IncrementViewCount(ctx context.Context, blogID uuid.UUI
 	return nil
 }
 
+// IncrementLikeCount increments the like count of a specific blog post.
+func (r *BlogRepository) IncrementLikeCount(ctx context.Context, blogID string) error {
+	filter := bson.M{"id": blogID}
+	update := bson.M{"$inc": bson.M{"likeCount": 1}}
+
+	res, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return errors.New("failed to increment like count")
+	}
+	if res.ModifiedCount == 0 {
+		return errors.New("blog post not found")
+	}
+
+	return nil
+}
+
+// DecrementLikeCount decrements the like count of a specific blog post.
+func (r *BlogRepository) DecrementLikeCount(ctx context.Context, blogID string) error {
+	filter := bson.M{"id": blogID}
+	update := bson.M{"$inc": bson.M{"likeCount": -1}}
+
+	res, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return errors.New("failed to decrement like count")
+	}
+	if res.ModifiedCount == 0 {
+		return errors.New("blog post not found")
+	}
+
+	return nil
+}
+
+// IncrementDislikeCount increments the dislike count of a specific blog post.
+func (r *BlogRepository) IncrementDislikeCount(ctx context.Context, blogID string) error {
+	filter := bson.M{"id": blogID}
+	update := bson.M{"$inc": bson.M{"dislikeCount": 1}}
+
+	res, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return errors.New("failed to increment dislike count")
+	}
+	if res.ModifiedCount == 0 {
+		return errors.New("blog post not found")
+	}
+
+	return nil
+}
+
+// DecrementDislikeCount decrements the dislike count of a specific blog post.
+func (r *BlogRepository) DecrementDislikeCount(ctx context.Context, blogID string) error {
+	filter := bson.M{"id": blogID}
+	update := bson.M{"$inc": bson.M{"dislikeCount": -1}}
+
+	res, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return errors.New("failed to decrement dislike count")
+	}
+	if res.ModifiedCount == 0 {
+		return errors.New("blog post not found")
+	}
+
+	return nil
+}
+
+// IncrementCommentCount increments the comment count of a specific blog post.
+func (r *BlogRepository) IncrementCommentCount(ctx context.Context, blogID string) error {
+	filter := bson.M{"id": blogID}
+	update := bson.M{"$inc": bson.M{"commentCount": 1}}
+
+	res, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return errors.New("failed to increment comment count")
+	}
+	if res.ModifiedCount == 0 {
+		return errors.New("blog post not found")
+	}
+
+	return nil
+}
+
+// DecrementCommentCount decrements the comment count of a specific blog post.
+func (r *BlogRepository) DecrementCommentCount(ctx context.Context, blogID string) error {
+	filter := bson.M{"id": blogID}
+	update := bson.M{"$inc": bson.M{"commentCount": -1}}
+
+	res, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return errors.New("failed to decrement comment count")
+	}
+	if res.ModifiedCount == 0 {
+		return errors.New("blog post not found")
+	}
+
+	return nil
+}
+
+// AddUserLike adds a like or dislike record for a user on a blog post.
+func (r *BlogRepository) AddUserLike(ctx context.Context, blogID, userID string, likeType string) error {
+	// Check if user already liked/disliked
+	filter := bson.M{"blogId": blogID, "userId": userID}
+	update := bson.M{
+		"$set": bson.M{
+			"type":   likeType,
+			"status": "active",
+		},
+	}
+	opts := options.Update().SetUpsert(true)
+	_, err := r.collection.Database().Collection("blog_likes").UpdateOne(ctx, filter, update, opts)
+	if err != nil {
+		return errors.New("failed to add user like")
+	}
+	return nil
+}
+
+// RemoveUserLike removes a like or dislike record for a user on a blog post.
+func (r *BlogRepository) RemoveUserLike(ctx context.Context, blogID, userID string) error {
+	filter := bson.M{"blogId": blogID, "userId": userID}
+	_, err := r.collection.Database().Collection("blog_likes").DeleteOne(ctx, filter)
+	if err != nil {
+		return errors.New("failed to remove user like")
+	}
+	return nil
+}
+
+// HasUserLiked checks if a user has liked or disliked a blog post.
+func (r *BlogRepository) HasUserLiked(ctx context.Context, blogID, userID string) (string, bool, error) {
+	filter := bson.M{"blogId": blogID, "userId": userID}
+	var result struct {
+		Type   string `bson:"type"`
+		Status string `bson:"status"`
+	}
+	err := r.collection.Database().Collection("blog_likes").FindOne(ctx, filter).Decode(&result)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return "", false, nil
+		}
+		return "", false, errors.New("failed to check user like")
+	}
+	return result.Type, result.Status == "active", nil
+}
+
+// GetBlogCounts returns the current counts for a blog post.
+func (r *BlogRepository) GetBlogCounts(ctx context.Context, blogID string) (viewCount, likeCount, dislikeCount, commentCount int, err error) {
+	var blog entity.Blog
+	filter := bson.M{"id": blogID}
+	err = r.collection.FindOne(ctx, filter).Decode(&blog)
+	if err != nil {
+		return 0, 0, 0, 0, errors.New("failed to get blog counts")
+	}
+	return blog.ViewCount, blog.LikeCount, blog.DislikeCount, blog.CommentCount, nil
+}
+
 // AddTagsToBlog associates one or more tags with a blog post.
-func (r *BlogRepository) AddTagsToBlog(ctx context.Context, blogID uuid.UUID, tagIDs []uuid.UUID) error {
+func (r *BlogRepository) AddTagsToBlog(ctx context.Context, blogID string, tagIDs []string) error {
 	if len(tagIDs) == 0 {
 		return nil
 	}
@@ -291,7 +455,7 @@ func (r *BlogRepository) AddTagsToBlog(ctx context.Context, blogID uuid.UUID, ta
 }
 
 // RemoveTagsFromBlog disassociates one or more tags from a blog post.
-func (r *BlogRepository) RemoveTagsFromBlog(ctx context.Context, blogID uuid.UUID, tagIDs []uuid.UUID) error {
+func (r *BlogRepository) RemoveTagsFromBlog(ctx context.Context, blogID string, tagIDs []string) error {
 	if len(tagIDs) == 0 {
 		return nil
 	}
@@ -320,7 +484,7 @@ func (r *BlogRepository) RemoveTagsFromBlog(ctx context.Context, blogID uuid.UUI
 }
 
 // GetBlogsByTagID retrieves a list of blog posts associated with a specific tag ID, applying pagination and sorting options.
-func (r *BlogRepository) GetBlogsByTagID(ctx context.Context, tagID uuid.UUID, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error) {
+func (r *BlogRepository) GetBlogsByTagID(ctx context.Context, tagID string, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error) {
 	// Aggregation pipeline to join blog_tags with blogs
 	pipeline := []bson.M{
 		// Match blog_tags documents by the given tagId.

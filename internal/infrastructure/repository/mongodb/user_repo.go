@@ -56,12 +56,7 @@ func (r *MongoUserRepository) UpdateUser(ctx context.Context, user entity.User) 
 	if user.Role != "" {
 		setFields["role"] = user.Role
 	}
-	if user.PackageID != nil {
-		setFields["package_id"] = user.PackageID
-	}
-	if user.PackageExpiry != nil {
-		setFields["package_expiry"] = user.PackageExpiry
-	}
+
 	setFields["is_active"] = user.IsActive // bool zero value is false, so always update
 	if user.FirstName != nil {
 		setFields["first_name"] = user.FirstName
