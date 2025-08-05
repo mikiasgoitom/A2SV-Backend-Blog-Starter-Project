@@ -30,8 +30,8 @@ type MockUserUsecase struct {
     MockRefreshToken string
 }
 
-// Ensure MockUserUsecase implements the interface
-var _ usecase.UserUseCase = (*MockUserUsecase)(nil)
+// Ensure MockUserUsecase implements the correct interface for handler.NewUserHandler
+var _ usecase.IUserUseCase = (*MockUserUsecase)(nil)
 
 func NewMockUserUsecase() *MockUserUsecase {
     return &MockUserUsecase{
