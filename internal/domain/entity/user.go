@@ -6,7 +6,7 @@ import (
 
 // User represents a registered user in the system
 type User struct {
-	ID           string    `bson:"id" json:"id"`
+	ID           string    `bson:"_id,omitempty" json:"id"`
 	Username     string    `bson:"username" json:"username"`
 	Email        string    `bson:"email" json:"email"`
 	PasswordHash string    `bson:"password_hash" json:"-"`

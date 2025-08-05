@@ -27,7 +27,7 @@ func (r *MongoUserRepository) CreateUser(ctx context.Context, user *entity.User)
 
 func (r *MongoUserRepository) GetUserByID(ctx context.Context, id string) (*entity.User, error) {
 	var user entity.User
-	err := r.collection.FindOne(ctx, bson.M{"id": id}).Decode(&user)
+	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&user)
 	if err != nil {
 		return nil, errors.New("user not found")
 	}
@@ -76,7 +76,7 @@ func (r *MongoUserRepository) UpdateUser(ctx context.Context, id string, updates
 
 	result, err := r.collection.UpdateOne(
 		ctx,
-		bson.M{"id": id},
+		bson.M{"_id": id},
 		bson.M{"$set": updates},
 	)
 	if err != nil {
@@ -93,7 +93,7 @@ func (r *MongoUserRepository) UpdateUser(ctx context.Context, id string, updates
 }
 
 func (r *MongoUserRepository) UpdateUserPassword(ctx context.Context, id string, hashedPassword string) error {
-	filter := bson.M{"id": id}
+	filter := bson.M{"_id": id}
 	update := bson.M{"$set": bson.M{"password_hash": hashedPassword}}
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
