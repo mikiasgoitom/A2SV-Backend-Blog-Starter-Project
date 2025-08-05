@@ -72,8 +72,8 @@ func (r *MongoUserRepository) UpdateUser(ctx context.Context, id uuid.UUID, upda
 	updates["updated_at"] = time.Now()
 	
 	// Debug logging
-	fmt.Printf("UpdateUser called with ID: %s\n", id.String())
-	fmt.Printf("Updates map: %+v\n", updates)
+	log.Printf("UpdateUser called with ID: %s", id.String())
+	log.Printf("Updates map: %+v", updates)
 	
 	result, err := r.collection.UpdateOne(
 		ctx,
