@@ -261,6 +261,7 @@ func (uc *UserUsecase) RefreshToken(ctx context.Context, refreshToken string) (s
 	uc.logger.Infof("Debug: Successfully parsed token for user: %s", claims.UserID)
 
 	// The UserID from claims is already a string, so we can use it directly.
+	// The UserID from claims is already a string, so we can use it directly.
 	userID := claims.UserID
 
 	// Retrieve the stored token using the parsed UUID.
@@ -535,6 +536,7 @@ func (uc *UserUsecase) Logout(ctx context.Context, refreshToken string) error {
 
 // PromoteUser promotes a user to an Admin role.
 func (uc *UserUsecase) PromoteUser(ctx context.Context, userID string) (*entity.User, error) {
+func (uc *UserUsecase) PromoteUser(ctx context.Context, userID string) (*entity.User, error) {
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
 		if err.Error() == errUserNotFound {
@@ -562,6 +564,7 @@ func (uc *UserUsecase) PromoteUser(ctx context.Context, userID string) (*entity.
 }
 
 // DemoteUser demotes an Admin back to a regular user (member).
+func (uc *UserUsecase) DemoteUser(ctx context.Context, userID string) (*entity.User, error) {
 func (uc *UserUsecase) DemoteUser(ctx context.Context, userID string) (*entity.User, error) {
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
@@ -619,6 +622,7 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID string, updates
 	}
 
 	uc.logger.Infof("About to update user %s with updates: %+v", userID, updates)
+	uc.logger.Infof("About to update user %s with updates: %+v", userID, updates)
 
 	if err := uc.userRepo.UpdateUser(ctx, user.ID, updates); err != nil {
 		uc.logger.Errorf("failed to update profile for user %s: %v", userID, err)
@@ -639,72 +643,6 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID string, updates
 
 // login with OAuth2
 
-func (uc *UserUsecase) LoginWithOAuth(ctx context.Context, fName, lName, email string) (string, string, error) {
-	existingUser, err := uc.userRepo.GetUserByEmail(ctx, email)
-
-	if err != nil {
-		var generatedUsername string
-		if fName != "" && lName != "" {
-			generatedUsername = fName + "." + lName
-		} else if fName != "" {
-			generatedUsername = fName
-		} else if lName != "" {
-			generatedUsername = lName
-		} else {
-			generatedUsername = strings.Split(email, "@")[0]
-		}
-		newUser := &entity.User{
-			ID:        uc.uuidGenerator.NewUUID(),
-			Username:  generatedUsername,
-			Email:     email,
-			Role:      entity.DefaultRole(),
-			IsActive:  true,
-			CreatedAt: time.Now().UTC(),
-			UpdatedAt: time.Now().UTC(),
-			FirstName: &fName,
-			LastName:  &lName,
-		}
-
-		err := uc.userRepo.CreateUser(ctx, newUser)
-		if err != nil {
-			return "", "", fmt.Errorf("failed to create new user: %w", err)
-		}
-		existingUser = newUser
-	}
-
-	accessToken, err := uc.jwtService.GenerateAccessToken(existingUser.ID, existingUser.Role)
-
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate access token: %w", err)
-	}
-
-	refreshTokenID := uc.uuidGenerator.NewUUID()
-	refreshToken, err := uc.jwtService.GenerateRefreshToken(existingUser.ID, existingUser.Role)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate refresh token: %w", err)
-	}
-
-	tokType, err := entity.SetTokenType("refresh")
-
-	if err != nil {
-		return "", "", fmt.Errorf("invaild token type assigned to the refresh token: %w", err)
-	}
-
-	refreshTokenRecord := &entity.Token{
-		ID:        refreshTokenID,
-		UserID:    existingUser.ID,
-		TokenType: tokType,
-		TokenHash: refreshToken,
-		ExpiresAt: time.Now().UTC().Add(168 * time.Hour),
-		CreatedAt: time.Now().UTC(),
-		Revoke:    false,
-	}
-	err = uc.tokenRepo.CreateToken(ctx, refreshTokenRecord)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to save refresh token record: %w", err)
-	}
-	return accessToken, refreshToken, nil
-}
 
 func (uc *UserUsecase) GetUserByID(ctx context.Context, userID string) (*entity.User, error) {
 	user, err := uc.userRepo.GetUserByID(ctx, userID)

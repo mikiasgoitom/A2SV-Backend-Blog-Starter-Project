@@ -2,6 +2,7 @@ package entity
 
 import (
 	"time"
+
 )
 
 // User represents a registered user in the system

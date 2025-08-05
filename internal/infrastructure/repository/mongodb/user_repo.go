@@ -26,6 +26,7 @@ func (r *MongoUserRepository) CreateUser(ctx context.Context, user *entity.User)
 }
 
 func (r *MongoUserRepository) GetUserByID(ctx context.Context, id string) (*entity.User, error) {
+func (r *MongoUserRepository) GetUserByID(ctx context.Context, id string) (*entity.User, error) {
 	var user entity.User
 	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&user)
 	if err != nil {
@@ -68,9 +69,11 @@ func (r *MongoUserRepository) GetByUserName(ctx context.Context, username string
 }
 
 func (r *MongoUserRepository) UpdateUser(ctx context.Context, id string, updates map[string]interface{}) error {
+func (r *MongoUserRepository) UpdateUser(ctx context.Context, id string, updates map[string]interface{}) error {
 	updates["updated_at"] = time.Now()
 
 	// Debug logging
+	log.Printf("UpdateUser called with ID: %s", id)
 	log.Printf("UpdateUser called with ID: %s", id)
 	log.Printf("Updates map: %+v", updates)
 
@@ -99,6 +102,7 @@ func (r *MongoUserRepository) UpdateUserPassword(ctx context.Context, id string,
 	return err
 }
 
+func (r *MongoUserRepository) DeleteUser(ctx context.Context, id string) error {
 func (r *MongoUserRepository) DeleteUser(ctx context.Context, id string) error {
 	filter := bson.M{"id": id}
 	_, err := r.collection.DeleteOne(ctx, filter)
