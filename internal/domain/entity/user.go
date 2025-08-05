@@ -2,22 +2,21 @@ package entity
 
 import (
 	"time"
-
 )
 
 // User represents a registered user in the system
 type User struct {
-	ID           string    `db:"id"`
-	Username     string    `db:"username"`
-	Email        string    `db:"email"`
-	PasswordHash string    `db:"password_hash"`
-	Role         UserRole  `db:"role"`
-	IsActive     bool      `db:"is_active"`
-	CreatedAt    time.Time `db:"created_at"`
-	UpdatedAt    time.Time `db:"updated_at"`
-	FirstName    *string   `db:"firstname"`
-	LastName     *string   `db:"lastname"`
-	AvatarURL    *string   `db:"avatar_url"`
+	ID           string    `bson:"id" json:"id"`
+	Username     string    `bson:"username" json:"username"`
+	Email        string    `bson:"email" json:"email"`
+	PasswordHash string    `bson:"password_hash" json:"-"`
+	Role         UserRole  `bson:"role" json:"role"`
+	IsActive     bool      `bson:"is_active" json:"is_active"`
+	CreatedAt    time.Time `bson:"created_at" json:"created_at"`
+	UpdatedAt    time.Time `bson:"updated_at" json:"updated_at"`
+	FirstName    *string   `bson:"firstname" json:"first_name,omitempty"`
+	LastName     *string   `bson:"lastname" json:"last_name,omitempty"`
+	AvatarURL    *string   `bson:"avatar_url" json:"avatar_url,omitempty"`
 }
 
 // UserRole represents the role of a user in the system
