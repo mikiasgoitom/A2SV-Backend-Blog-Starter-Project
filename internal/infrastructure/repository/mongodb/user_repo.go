@@ -81,11 +81,11 @@ func (r *MongoUserRepository) UpdateUser(ctx context.Context, id uuid.UUID, upda
 		bson.M{"$set": updates},
 	)
 	if err != nil {
-		fmt.Printf("UpdateOne error: %v\n", err)
+		log.Printf("UpdateOne error: %v", err)
 		return err
 	}
 	
-	fmt.Printf("UpdateOne result: MatchedCount=%d, ModifiedCount=%d\n", result.MatchedCount, result.ModifiedCount)
+	log.Printf("UpdateOne result: MatchedCount=%d, ModifiedCount=%d", result.MatchedCount, result.ModifiedCount)
 	
 	if result.MatchedCount == 0 {
 		return errors.New("user not found")
