@@ -20,14 +20,21 @@ type IBlogRepository interface {
 	IncrementViewCount(ctx context.Context, blogID uuid.UUID) error
 	AddTagsToBlog(ctx context.Context, blogID uuid.UUID, tagIDs []uuid.UUID) error
 	GetBlogsByTagID(ctx context.Context, tagID uuid.UUID, opts *BlogFilterOptions) ([]*entity.Blog, int64, error)
+	GetBlogsByTagIDs(ctx context.Context, tagIDs []string, page int, pageSize int) ([]*entity.Blog, int64, error)
 	RemoveTagsFromBlog(ctx context.Context, blogID uuid.UUID, tagIDs []uuid.UUID) error
 }
 
 // BlogFilterOptions encapsulates filtering, pagination, and sorting parameters for blog retrieval.
 type BlogFilterOptions struct {
-	Page         int
-	PageSize     int
-	SortBy       string // e.g., "created_at", "view_count"
-	SortOrder    string // e.g., "asc", "desc"
-	FilterByDate *time.Time
+	Page      int
+	PageSize  int
+	SortBy    string // e.g., "created_at", "view_count"
+	SortOrder string // e.g., "asc", "desc"
+	DateFrom  *time.Time
+	DateTo    *time.Time
+	MinViews  *int
+	MaxViews  *int
+	MinLikes  *int
+	MaxLikes  *int
+	AuthorID  *uuid.UUID
 }
