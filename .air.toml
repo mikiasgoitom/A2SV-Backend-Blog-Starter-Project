@@ -1,0 +1,27 @@
+# .air.toml
+# Config file for Air - https://github.com/air-verse/air
+
+# Working directory
+root = "."
+tmp_dir = "tmp"
+
+[build]
+# Command to build your app
+cmd = "go build -o ./tmp/main.exe ./cmd/api"
+# Binary file to run
+bin = "tmp/main.exe"
+# Files and directories to watch
+include_ext = ["go", "tpl", "tmpl", "html"]
+exclude_dir = ["assets", "tmp", "vendor"]
+# Trigger a build on new file creation
+include_file = []
+# Log name for the build process
+log = "air-build.log"
+
+[log]
+# Show log time
+time = true
+
+[misc]
+# Delete tmp directory on exit
+clean_on_exit = true
