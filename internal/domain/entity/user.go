@@ -16,8 +16,8 @@ type User struct {
 	IsActive     bool      `db:"is_active"`
 	CreatedAt    time.Time `db:"created_at"`
 	UpdatedAt    time.Time `db:"updated_at"`
-	FirstName    *string   `db:"first_name"`
-	LastName     *string   `db:"last_name"`
+	FirstName    *string   `db:"firstname"`
+	LastName     *string   `db:"lastname"`
 	AvatarURL    *string   `db:"avatar_url"`
 }
 
