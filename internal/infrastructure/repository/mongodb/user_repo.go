@@ -2,14 +2,13 @@ package mongodb
 
 import (
 	// "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"context"
 	"errors"
-
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
+
 type MongoUserRepository struct {
 	collection *mongo.Collection
 }
@@ -18,12 +17,12 @@ func NewMongoUserRepository(collection *mongo.Collection) *MongoUserRepository {
 	return &MongoUserRepository{collection: collection}
 }
 
-func (r *MongoUserRepository) CreateUser(ctx context.Context, user entity.User) (error) {
-	_,err := r.collection.InsertOne(ctx,user)
+func (r *MongoUserRepository) CreateUser(ctx context.Context, user entity.User) error {
+	_, err := r.collection.InsertOne(ctx, user)
 	return err
 }
 
-func (r *MongoUserRepository) GetUserByID(ctx context.Context, id primitive.ObjectID) (*entity.User, error) {
+func (r *MongoUserRepository) GetUserByID(ctx context.Context, id string) (*entity.User, error) {
 	var user entity.User
 	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&user)
 	if err != nil {

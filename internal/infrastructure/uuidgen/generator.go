@@ -1,4 +1,4 @@
-package uuid
+package uuidgen
 
 import (
 	"github.com/google/uuid"
@@ -9,8 +9,8 @@ import (
 type StandardUUIDGenerator struct{}
 
 // NewUUID generates a new UUID using the standard library's uuid package.
-func (g *StandardUUIDGenerator) NewUUID() uuid.UUID {
-	return uuid.New()
+func (g *StandardUUIDGenerator) NewUUID() string {
+	return uuid.New().String()
 }
 
 // Ensure StandardUUIDGenerator implements the usecase.UUIDGenerator interface

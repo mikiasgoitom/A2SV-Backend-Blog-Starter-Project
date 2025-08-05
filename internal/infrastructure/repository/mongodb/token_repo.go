@@ -1,13 +1,13 @@
 package mongodb
 
 import (
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"context"
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -16,6 +16,7 @@ import (
 type tokenDTO struct {
 	ID        string    `bson:"_id,omitempty"`
 	UserID    string    `bson:"user_id"`
+	TokenType string    `bson:"token_type"`
 	TokenHash string    `bson:"token_hash"`
 	CreatedAt time.Time `bson:"created_at"`
 	ExpiresAt time.Time `bson:"expires_at"`
@@ -24,11 +25,10 @@ type tokenDTO struct {
 
 // ...existing code...
 func (t *tokenDTO) ToEntity() *entity.Token {
-	userID, _ := uuid.Parse(t.UserID) // handle error as needed
-	id, _ := uuid.Parse(t.ID)         // handle error as needed
 	return &entity.Token{
-		ID:        id,
-		UserID:    userID,
+		ID:        t.ID,
+		UserID:    t.UserID,
+		TokenType: entity.TokenType(t.TokenType),
 		TokenHash: t.TokenHash,
 		CreatedAt: t.CreatedAt,
 		ExpiresAt: t.ExpiresAt,
@@ -38,8 +38,9 @@ func (t *tokenDTO) ToEntity() *entity.Token {
 
 func FromTokenEntityToDTO(t *entity.Token) *tokenDTO {
 	return &tokenDTO{
-		ID:        t.ID.String(),
-		UserID:    t.UserID.String(),
+		ID:        t.ID,
+		UserID:    t.UserID,
+		TokenType: string(t.TokenType),
 		TokenHash: t.TokenHash,
 		CreatedAt: t.CreatedAt,
 		ExpiresAt: t.ExpiresAt,

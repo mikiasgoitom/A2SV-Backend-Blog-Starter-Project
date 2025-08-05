@@ -520,7 +520,7 @@ func (uc *UserUsecase) Logout(ctx context.Context, refreshToken string) error {
 }
 
 // PromoteUser promotes a user to an Admin role.
-func (uc *UserUsecase) PromoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error) {
+func (uc *UserUsecase) PromoteUser(ctx context.Context, userID string) (*entity.User, error) {
 	const errUserNotFound = "not found" // Placeholder
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
@@ -547,7 +547,7 @@ func (uc *UserUsecase) PromoteUser(ctx context.Context, userID uuid.UUID) (*enti
 }
 
 // DemoteUser demotes an Admin back to a regular user (member).
-func (uc *UserUsecase) DemoteUser(ctx context.Context, userID uuid.UUID) (*entity.User, error) {
+func (uc *UserUsecase) DemoteUser(ctx context.Context, userID string) (*entity.User, error) {
 	const errUserNotFound = "not found" // Placeholder
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
@@ -574,7 +574,7 @@ func (uc *UserUsecase) DemoteUser(ctx context.Context, userID uuid.UUID) (*entit
 }
 
 // UpdateProfile allows a registered user to update their profile details.
-func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID uuid.UUID, updates map[string]interface{}) (*entity.User, error) {
+func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID string, updates map[string]interface{}) (*entity.User, error) {
 	const errUserNotFound = "not found" // Placeholder
 	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
