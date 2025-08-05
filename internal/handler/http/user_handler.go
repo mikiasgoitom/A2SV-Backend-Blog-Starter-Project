@@ -98,7 +98,6 @@ func (h *UserHandler) Login(c *gin.Context) {
 // GetUser handles retrieving user by ID
 func (h *UserHandler) GetUser(c *gin.Context) {
 	userID := c.Param("id")
-	userID := c.Param("id")
 	user, err := h.userUsecase.GetUserByID(c.Request.Context(), userID)
 	if err != nil {
 		ErrorHandler(c, http.StatusNotFound, "User not found")
@@ -115,7 +114,6 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userUsecase.GetUserByID(c.Request.Context(), userID.(string))
 	user, err := h.userUsecase.GetUserByID(c.Request.Context(), userID.(string))
 	if err != nil {
 		ErrorHandler(c, http.StatusNotFound, "User not found")
@@ -140,7 +138,6 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	fmt.Printf("Request received: %+v\n", req)
 	updates := updateUserRequestToMap(req)
-	updatedUser, err := h.userUsecase.UpdateProfile(c.Request.Context(), userID.(string), updates)
 	updatedUser, err := h.userUsecase.UpdateProfile(c.Request.Context(), userID.(string), updates)
 	if err != nil {
 		ErrorHandler(c, http.StatusBadRequest, err.Error())
