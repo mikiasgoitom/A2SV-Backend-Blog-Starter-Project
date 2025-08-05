@@ -28,7 +28,7 @@ type LoginResponse struct {
 // converts an entity.User to a UserResponse DTO.
 func ToUserResponse(user entity.User) UserResponse {
 	return UserResponse{
-		ID:        user.ID.String(),
+		ID:        user.ID,
 		Username:  user.Username,
 		Email:     user.Email,
 		Role:      string(user.Role),
