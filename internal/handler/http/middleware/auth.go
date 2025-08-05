@@ -1,12 +1,12 @@
 package middleware
 
 import (
-	"blog/internal/infrastructure/jwt"
-	"blog/internal/usecase"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/jwt"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
 
 func AuthMiddleWare(jwtMgr jwt.JWTManager, userUseCase usecase.UserUseCase) gin.HandlerFunc {
