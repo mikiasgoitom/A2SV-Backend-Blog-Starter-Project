@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 )
 
@@ -14,8 +15,20 @@ type UserRepository interface {
 	GetUserByID(ctx context.Context, id string) (*entity.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
 	GetUserByUsername(ctx context.Context, username string) (*entity.User, error)
-	UpdateUser(ctx context.Context, id string, user *entity.User) error
-	UpdateUserPassword(ctx context.Context, id string, hashedPassword string) error
+	UpdateUser(ctx context.Context, id uuid.UUID, updates map[string]interface{}) error
+	UpdateUserPassword(ctx context.Context, id uuid.UUID, hashedPassword string) error
+}
+
+// BlogRepository interface defines the methods for blog data persistence.
+type BlogRepository interface {
+	CreateBlog(ctx context.Context, blog *entity.Blog) error
+	GetBlogByID(ctx context.Context, blogID uuid.UUID) (*entity.Blog, error)
+	GetBlogs(ctx context.Context, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
+	UpdateBlog(ctx context.Context, blog *entity.Blog) error
+	DeleteBlog(ctx context.Context, blogID uuid.UUID) error
+	SearchBlogs(ctx context.Context, query string, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
+	GetBlogsByTags(ctx context.Context, tagIDs []uuid.UUID, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
+	GetTrendingBlogs(ctx context.Context, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
 }
 
 // TokenRepository provides methods for managing tokens in the database.
