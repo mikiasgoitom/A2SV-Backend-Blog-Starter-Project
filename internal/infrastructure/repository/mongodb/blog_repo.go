@@ -43,7 +43,7 @@ func (r *BlogRepository) CreateBlog(ctx context.Context, blog *entity.Blog) erro
 }
 
 // GetBlogByID retrieves a single blog post by its unique ID.
-func (r *BlogRepository) GetBlogByID(ctx context.Context, blogID uuid.UUID) (*entity.Blog, error) {
+func (r *BlogRepository) GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error) {
 	var blog entity.Blog
 	filter := bson.M{"id": blogID, "isDeleted": false}
 
@@ -106,7 +106,7 @@ func (r *BlogRepository) GetBlogs(ctx context.Context, opts *contract.BlogFilter
 }
 
 // UpdateBlog updates the details of an existing blog post by its ID.
-func (r *BlogRepository) UpdateBlog(ctx context.Context, blogID uuid.UUID, updates map[string]interface{}) error {
+func (r *BlogRepository) UpdateBlog(ctx context.Context, blogID string, updates map[string]interface{}) error {
 	updates["updatedAt"] = time.Now()
 	filter := bson.M{"id": blogID, "isDeleted": false}
 	update := bson.M{"$set": updates}
@@ -123,7 +123,7 @@ func (r *BlogRepository) UpdateBlog(ctx context.Context, blogID uuid.UUID, updat
 }
 
 // DeleteBlog marks a blog post as deleted by its ID.
-func (r *BlogRepository) DeleteBlog(ctx context.Context, blogID uuid.UUID) error {
+func (r *BlogRepository) DeleteBlog(ctx context.Context, blogID string) error {
 	filter := bson.M{"id": blogID}
 	update := bson.M{"$set": bson.M{"isDeleted": true, "updatedAt": time.Now()}}
 
@@ -244,7 +244,7 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 }
 
 // IncrementViewCount increments the view count of a specific blog post.
-func (r *BlogRepository) IncrementViewCount(ctx context.Context, blogID uuid.UUID) error {
+func (r *BlogRepository) IncrementViewCount(ctx context.Context, blogID string) error {
 	filter := bson.M{"id": blogID}
 	update := bson.M{"$inc": bson.M{"viewCount": 1}}
 
@@ -260,7 +260,7 @@ func (r *BlogRepository) IncrementViewCount(ctx context.Context, blogID uuid.UUI
 }
 
 // IncrementLikeCount increments the like count of a specific blog post.
-func (r *BlogRepository) IncrementLikeCount(ctx context.Context, blogID uuid.UUID) error {
+func (r *BlogRepository) IncrementLikeCount(ctx context.Context, blogID string) error {
 	filter := bson.M{"id": blogID}
 	update := bson.M{"$inc": bson.M{"likeCount": 1}}
 
@@ -276,7 +276,7 @@ func (r *BlogRepository) IncrementLikeCount(ctx context.Context, blogID uuid.UUI
 }
 
 // DecrementLikeCount decrements the like count of a specific blog post.
-func (r *BlogRepository) DecrementLikeCount(ctx context.Context, blogID uuid.UUID) error {
+func (r *BlogRepository) DecrementLikeCount(ctx context.Context, blogID string) error {
 	filter := bson.M{"id": blogID}
 	update := bson.M{"$inc": bson.M{"likeCount": -1}}
 
@@ -292,7 +292,7 @@ func (r *BlogRepository) DecrementLikeCount(ctx context.Context, blogID uuid.UUI
 }
 
 // IncrementDislikeCount increments the dislike count of a specific blog post.
-func (r *BlogRepository) IncrementDislikeCount(ctx context.Context, blogID uuid.UUID) error {
+func (r *BlogRepository) IncrementDislikeCount(ctx context.Context, blogID string) error {
 	filter := bson.M{"id": blogID}
 	update := bson.M{"$inc": bson.M{"dislikeCount": 1}}
 
@@ -308,7 +308,7 @@ func (r *BlogRepository) IncrementDislikeCount(ctx context.Context, blogID uuid.
 }
 
 // DecrementDislikeCount decrements the dislike count of a specific blog post.
-func (r *BlogRepository) DecrementDislikeCount(ctx context.Context, blogID uuid.UUID) error {
+func (r *BlogRepository) DecrementDislikeCount(ctx context.Context, blogID string) error {
 	filter := bson.M{"id": blogID}
 	update := bson.M{"$inc": bson.M{"dislikeCount": -1}}
 
@@ -324,7 +324,7 @@ func (r *BlogRepository) DecrementDislikeCount(ctx context.Context, blogID uuid.
 }
 
 // IncrementCommentCount increments the comment count of a specific blog post.
-func (r *BlogRepository) IncrementCommentCount(ctx context.Context, blogID uuid.UUID) error {
+func (r *BlogRepository) IncrementCommentCount(ctx context.Context, blogID string) error {
 	filter := bson.M{"id": blogID}
 	update := bson.M{"$inc": bson.M{"commentCount": 1}}
 
@@ -340,7 +340,7 @@ func (r *BlogRepository) IncrementCommentCount(ctx context.Context, blogID uuid.
 }
 
 // DecrementCommentCount decrements the comment count of a specific blog post.
-func (r *BlogRepository) DecrementCommentCount(ctx context.Context, blogID uuid.UUID) error {
+func (r *BlogRepository) DecrementCommentCount(ctx context.Context, blogID string) error {
 	filter := bson.M{"id": blogID}
 	update := bson.M{"$inc": bson.M{"commentCount": -1}}
 
@@ -356,7 +356,7 @@ func (r *BlogRepository) DecrementCommentCount(ctx context.Context, blogID uuid.
 }
 
 // AddUserLike adds a like or dislike record for a user on a blog post.
-func (r *BlogRepository) AddUserLike(ctx context.Context, blogID, userID uuid.UUID, likeType string) error {
+func (r *BlogRepository) AddUserLike(ctx context.Context, blogID, userID string, likeType string) error {
 	// Check if user already liked/disliked
 	filter := bson.M{"blogId": blogID, "userId": userID}
 	update := bson.M{
@@ -374,7 +374,7 @@ func (r *BlogRepository) AddUserLike(ctx context.Context, blogID, userID uuid.UU
 }
 
 // RemoveUserLike removes a like or dislike record for a user on a blog post.
-func (r *BlogRepository) RemoveUserLike(ctx context.Context, blogID, userID uuid.UUID) error {
+func (r *BlogRepository) RemoveUserLike(ctx context.Context, blogID, userID string) error {
 	filter := bson.M{"blogId": blogID, "userId": userID}
 	_, err := r.collection.Database().Collection("blog_likes").DeleteOne(ctx, filter)
 	if err != nil {
@@ -384,7 +384,7 @@ func (r *BlogRepository) RemoveUserLike(ctx context.Context, blogID, userID uuid
 }
 
 // HasUserLiked checks if a user has liked or disliked a blog post.
-func (r *BlogRepository) HasUserLiked(ctx context.Context, blogID, userID uuid.UUID) (string, bool, error) {
+func (r *BlogRepository) HasUserLiked(ctx context.Context, blogID, userID string) (string, bool, error) {
 	filter := bson.M{"blogId": blogID, "userId": userID}
 	var result struct {
 		Type   string `bson:"type"`
@@ -401,7 +401,7 @@ func (r *BlogRepository) HasUserLiked(ctx context.Context, blogID, userID uuid.U
 }
 
 // GetBlogCounts returns the current counts for a blog post.
-func (r *BlogRepository) GetBlogCounts(ctx context.Context, blogID uuid.UUID) (viewCount, likeCount, dislikeCount, commentCount int, err error) {
+func (r *BlogRepository) GetBlogCounts(ctx context.Context, blogID string) (viewCount, likeCount, dislikeCount, commentCount int, err error) {
 	var blog entity.Blog
 	filter := bson.M{"id": blogID}
 	err = r.collection.FindOne(ctx, filter).Decode(&blog)
@@ -412,7 +412,7 @@ func (r *BlogRepository) GetBlogCounts(ctx context.Context, blogID uuid.UUID) (v
 }
 
 // AddTagsToBlog associates one or more tags with a blog post.
-func (r *BlogRepository) AddTagsToBlog(ctx context.Context, blogID uuid.UUID, tagIDs []uuid.UUID) error {
+func (r *BlogRepository) AddTagsToBlog(ctx context.Context, blogID string, tagIDs []string) error {
 	if len(tagIDs) == 0 {
 		return nil
 	}
@@ -455,7 +455,7 @@ func (r *BlogRepository) AddTagsToBlog(ctx context.Context, blogID uuid.UUID, ta
 }
 
 // RemoveTagsFromBlog disassociates one or more tags from a blog post.
-func (r *BlogRepository) RemoveTagsFromBlog(ctx context.Context, blogID uuid.UUID, tagIDs []uuid.UUID) error {
+func (r *BlogRepository) RemoveTagsFromBlog(ctx context.Context, blogID string, tagIDs []string) error {
 	if len(tagIDs) == 0 {
 		return nil
 	}
@@ -484,7 +484,7 @@ func (r *BlogRepository) RemoveTagsFromBlog(ctx context.Context, blogID uuid.UUI
 }
 
 // GetBlogsByTagID retrieves a list of blog posts associated with a specific tag ID, applying pagination and sorting options.
-func (r *BlogRepository) GetBlogsByTagID(ctx context.Context, tagID uuid.UUID, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error) {
+func (r *BlogRepository) GetBlogsByTagID(ctx context.Context, tagID string, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error) {
 	// Aggregation pipeline to join blog_tags with blogs
 	pipeline := []bson.M{
 		// Match blog_tags documents by the given tagId.

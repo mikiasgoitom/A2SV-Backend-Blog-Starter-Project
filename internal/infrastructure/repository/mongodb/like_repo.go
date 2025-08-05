@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -42,7 +41,7 @@ func (r *LikeRepository) CreateLike(ctx context.Context, like *entity.Like) erro
 }
 
 // DeleteLike deletes a like record from the database by its ID.
-func (r *LikeRepository) DeleteLike(ctx context.Context, likeID uuid.UUID) error {
+func (r *LikeRepository) DeleteLike(ctx context.Context, likeID string) error {
 	filter := bson.M{"id": likeID}
 
 	res, err := r.collection.DeleteOne(ctx, filter)
@@ -56,7 +55,7 @@ func (r *LikeRepository) DeleteLike(ctx context.Context, likeID uuid.UUID) error
 }
 
 // GetLikeByUserIDAndTargetID retrieves a like record by the user ID and target ID.
-func (r *LikeRepository) GetLikeByUserIDAndTargetID(ctx context.Context, userID, targetID uuid.UUID) (*entity.Like, error) {
+func (r *LikeRepository) GetLikeByUserIDAndTargetID(ctx context.Context, userID, targetID string) (*entity.Like, error) {
 	var like entity.Like
 	filter := bson.M{"user_id": userID, "target_id": targetID}
 
@@ -71,7 +70,7 @@ func (r *LikeRepository) GetLikeByUserIDAndTargetID(ctx context.Context, userID,
 }
 
 // CountLikesByTargetID counts the number of likes for a specific target (blog or comment).
-func (r *LikeRepository) CountLikesByTargetID(ctx context.Context, targetID uuid.UUID) (int64, error) {
+func (r *LikeRepository) CountLikesByTargetID(ctx context.Context, targetID string) (int64, error) {
 	filter := bson.M{"target_id": targetID}
 	count, err := r.collection.CountDocuments(ctx, filter)
 	if err != nil {

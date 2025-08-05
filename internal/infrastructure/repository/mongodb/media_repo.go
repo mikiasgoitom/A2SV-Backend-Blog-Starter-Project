@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -34,7 +33,7 @@ func (r *MediaRepository) CreateMedia(ctx context.Context, media *entity.Media) 
 }
 
 // GetMediaByID retrieves a single media record by its unique ID.
-func (r *MediaRepository) GetMediaByID(ctx context.Context, mediaID uuid.UUID) (*entity.Media, error) {
+func (r *MediaRepository) GetMediaByID(ctx context.Context, mediaID string) (*entity.Media, error) {
 	var media entity.Media
 	filter := bson.M{"id": mediaID}
 
@@ -49,7 +48,7 @@ func (r *MediaRepository) GetMediaByID(ctx context.Context, mediaID uuid.UUID) (
 }
 
 // DeleteMedia deletes a media record by its ID.
-func (r *MediaRepository) DeleteMedia(ctx context.Context, mediaID uuid.UUID) error {
+func (r *MediaRepository) DeleteMedia(ctx context.Context, mediaID string) error {
 	filter := bson.M{"id": mediaID}
 	res, err := r.collection.DeleteOne(ctx, filter)
 	if err != nil {
