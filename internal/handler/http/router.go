@@ -8,11 +8,11 @@ import (
 
 type Router struct {
 	userHandler *UserHandler
-	userUsecase usecase.UserUseCase
+	userUsecase *usecase.UserUsecase
 	jwtService  usecase.JWTService
 }
 
-func NewRouter(userUsecase usecase.UserUseCase, jwtService usecase.JWTService) *Router {
+func NewRouter(userUsecase *usecase.UserUsecase, jwtService usecase.JWTService) *Router {
 	return &Router{
 		userHandler: NewUserHandler(userUsecase),
 		userUsecase: userUsecase,
@@ -43,6 +43,7 @@ func (r *Router) SetupRoutes(router *gin.Engine) {
 
 	// Protected routes (authentication required)
 	protected := v1.Group("/")
+	// Cast jwtService to the expected JWTManager type if needed
 	protected.Use(middleware.AuthMiddleWare(r.jwtService, r.userUsecase))
 	{
 		// Current user routes
