@@ -55,5 +55,5 @@ func (h *Hasher) CheckPasswordHash(password, hash string) bool {
 func (h *Hasher) CheckHash(s, hash string) bool {
 	// Use SHA256 to compare token hashes
 	expectedHash := h.HashString(s)
-	return expectedHash == hash
+	return subtle.ConstantTimeCompare([]byte(expectedHash), []byte(hash)) == 1
 }
