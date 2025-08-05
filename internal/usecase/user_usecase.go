@@ -639,9 +639,6 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID string, updates
 
 // login with OAuth2
 
-
-// login with OAuth2
-
 func (uc *UserUsecase) LoginWithOAuth(ctx context.Context, fName, lName, email string) (string, string, error) {
 	existingUser, err := uc.userRepo.GetUserByEmail(ctx, email)
 
