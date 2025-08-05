@@ -18,6 +18,9 @@ type Blog struct {
 	UpdatedAt       time.Time  `json:"updated_at" db:"updated_at"`
 	PublishedAt     *time.Time `json:"published_at" db:"published_at"`
 	ViewCount       int        `json:"view_count" db:"view_count"`
+	LikeCount       int        `json:"like_count" db:"like_count"`
+	DislikeCount    int        `json:"dislike_count" db:"dislike_count"`
+	CommentCount    int        `json:"comment_count" db:"comment_count"`
 	FeaturedImageID *uuid.UUID `json:"featured_image_id" db:"featured_image_id"`
 	IsDeleted       bool       `json:"is_deleted" db:"is_deleted"`
 }
