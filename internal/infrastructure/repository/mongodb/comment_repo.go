@@ -474,7 +474,7 @@ func (r *CommentRepository) validateParentTargetLogic(ctx context.Context, comme
 }
 
 func (r *CommentRepository) getRepliesRecursively(ctx context.Context, parentID string, depth int) ([]*entity.CommentThread, error) {
-	if depth > 10 { // Prevent excessive nesting
+	if depth > MaxCommentDepth { // Prevent excessive nesting
 		return []*entity.CommentThread{}, nil
 	}
 
