@@ -37,7 +37,7 @@ type CommentLike struct {
 
 // CommentReport represents a report against a comment
 type CommentReport struct {
-    ID         string   `json:"id" bson:"_id, omitempty"`
+    ID         string   `json:"id" bson:"_id,omitempty"`
     CommentID  string   `json:"comment_id" bson:"comment_id"`
     ReporterID string   `json:"reporter_id" bson:"reporter_id"`
     Reason     string    `json:"reason" bson:"reason"`
