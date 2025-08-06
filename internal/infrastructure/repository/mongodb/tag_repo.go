@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -37,14 +36,13 @@ func (r *TagRepository) CreateTag(ctx context.Context, tag *entity.Tag) error {
 				}
 			}
 		}
-		// Fallback to a wrapped error for all other types of errors
 		return fmt.Errorf("failed to create tag: %w", err)
 	}
 	return nil
 }
 
 // GetTagByID retrieves a single tag by its unique ID.
-func (r *TagRepository) GetTagByID(ctx context.Context, tagID uuid.UUID) (*entity.Tag, error) {
+func (r *TagRepository) GetTagByID(ctx context.Context, tagID string) (*entity.Tag, error) {
 	var tag entity.Tag
 	filter := bson.M{"id": tagID}
 
@@ -89,7 +87,7 @@ func (r *TagRepository) GetAllTags(ctx context.Context) ([]*entity.Tag, error) {
 }
 
 // UpdateTag updates the details of an existing tag by its ID.
-func (r *TagRepository) UpdateTag(ctx context.Context, tagID uuid.UUID, updates map[string]interface{}) error {
+func (r *TagRepository) UpdateTag(ctx context.Context, tagID string, updates map[string]interface{}) error {
 	filter := bson.M{"id": tagID}
 	update := bson.M{"$set": updates}
 
@@ -104,7 +102,7 @@ func (r *TagRepository) UpdateTag(ctx context.Context, tagID uuid.UUID, updates 
 }
 
 // DeleteTag deletes a tag record by its ID.
-func (r *TagRepository) DeleteTag(ctx context.Context, tagID uuid.UUID) error {
+func (r *TagRepository) DeleteTag(ctx context.Context, tagID string) error {
 	filter := bson.M{"id": tagID}
 	res, err := r.collection.DeleteOne(ctx, filter)
 	if err != nil {

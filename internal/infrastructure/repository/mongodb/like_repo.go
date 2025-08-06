@@ -36,15 +36,15 @@ func (r *LikeRepository) CreateReaction(ctx context.Context, like *entity.Like) 
 
 	// Fields to set/update on the document.
 	updateFields := bson.M{
-		"type":       like.Type,  // Set the new type ("like" or "dislike")
-		"is_deleted": false,      // Ensure it's marked as not deleted when created/updated
-		"updated_at": time.Now(), // Update timestamp on any change
+		"type":       like.Type,
+		"is_deleted": false,
+		"updated_at": time.Now(),
 	}
 
 	// Fields to set ONLY on initial insert (when upsert: true creates a new document)
 	setOnInsertFields := bson.M{
-		"id":         uuid.New(), // Use uuid.UUID here to match entity
-		"created_at": time.Now(), // Set creation timestamp
+		"id":         uuid.New().String(),
+		"created_at": time.Now(),
 	}
 
 	updateDoc := bson.M{
@@ -59,12 +59,11 @@ func (r *LikeRepository) CreateReaction(ctx context.Context, like *entity.Like) 
 		return fmt.Errorf("failed to create or update reaction record: %w", err)
 	}
 
-	// If a new document was inserted (upserted), update the ID and CreatedAt in the passed entity
-	// so the caller has the complete, persisted entity details.
 	if res.UpsertedID != nil {
-		// MongoDB's UpsertedID can be an objectID or a UUID, so we'll cast it to the correct type.
-		if id, ok := res.UpsertedID.(uuid.UUID); ok {
+		if id, ok := res.UpsertedID.(string); ok {
 			like.ID = id
+		} else {
+			return fmt.Errorf("upserted ID is not a string, got type %T", res.UpsertedID)
 		}
 		like.CreatedAt = setOnInsertFields["created_at"].(time.Time)
 	}
@@ -88,7 +87,6 @@ func (r *LikeRepository) DeleteReaction(ctx context.Context, reactionID string) 
 }
 
 // GetReactionByUserIDAndTargetID retrieves any active reaction (like or dislike) by a specific user on a specific target.
-// Returns nil if no active reaction is found.
 func (r *LikeRepository) GetReactionByUserIDAndTargetID(ctx context.Context, userID, targetID string) (*entity.Like, error) {
 	var like entity.Like
 	// Filter for active reactions
@@ -105,7 +103,6 @@ func (r *LikeRepository) GetReactionByUserIDAndTargetID(ctx context.Context, use
 }
 
 // GetReactionByUserIDTargetIDAndType retrieves a specific type of active reaction (like or dislike) by a user on a target.
-// Returns nil if no matching active reaction is found.
 func (r *LikeRepository) GetReactionByUserIDTargetIDAndType(ctx context.Context, userID, targetID string, reactionType entity.LikeType) (*entity.Like, error) {
 	var like entity.Like
 	filter := bson.M{
