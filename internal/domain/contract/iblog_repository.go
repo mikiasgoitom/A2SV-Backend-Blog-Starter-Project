@@ -4,28 +4,27 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 )
 
 // IBlogRepository provides methods for managing blog data in the database.
 type IBlogRepository interface {
 	CreateBlog(ctx context.Context, blog *entity.Blog) error
-	GetBlogByID(ctx context.Context, blogID uuid.UUID) (*entity.Blog, error)
+	GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error)
 	GetBlogs(ctx context.Context, filterOptions *BlogFilterOptions) ([]*entity.Blog, int64, error)
-	UpdateBlog(ctx context.Context, blogID uuid.UUID, updates map[string]interface{}) error
-	DeleteBlog(ctx context.Context, blogID uuid.UUID) error
+	UpdateBlog(ctx context.Context, blogID string, updates map[string]interface{}) error
+	DeleteBlog(ctx context.Context, blogID string) error
 	SearchBlogs(ctx context.Context, query string, filterOptions *BlogFilterOptions) ([]*entity.Blog, int64, error)
-	IncrementViewCount(ctx context.Context, blogID uuid.UUID) error
-	IncrementLikeCount(ctx context.Context, blogID uuid.UUID) error
-	DecrementLikeCount(ctx context.Context, blogID uuid.UUID) error
-	IncrementDislikeCount(ctx context.Context, blogID uuid.UUID) error
-	DecrementDislikeCount(ctx context.Context, blogID uuid.UUID) error
-	IncrementCommentCount(ctx context.Context, blogID uuid.UUID) error
-	DecrementCommentCount(ctx context.Context, blogID uuid.UUID) error
-	GetBlogCounts(ctx context.Context, blogID uuid.UUID) (viewCount, likeCount, dislikeCount, commentCount int, err error)
-	AddTagsToBlog(ctx context.Context, blogID uuid.UUID, tagIDs []uuid.UUID) error
-	RemoveTagsFromBlog(ctx context.Context, blogID uuid.UUID, tagIDs []uuid.UUID) error
+	IncrementViewCount(ctx context.Context, blogID string) error
+	IncrementLikeCount(ctx context.Context, blogID string) error
+	DecrementLikeCount(ctx context.Context, blogID string) error
+	IncrementDislikeCount(ctx context.Context, blogID string) error
+	DecrementDislikeCount(ctx context.Context, blogID string) error
+	IncrementCommentCount(ctx context.Context, blogID string) error
+	DecrementCommentCount(ctx context.Context, blogID string) error
+	GetBlogCounts(ctx context.Context, blogID string) (viewCount, likeCount, dislikeCount, commentCount int, err error)
+	AddTagsToBlog(ctx context.Context, blogID string, tagIDs []string) error
+	RemoveTagsFromBlog(ctx context.Context, blogID string, tagIDs []string) error
 }
 
 // BlogFilterOptions encapsulates filtering, pagination, and sorting parameters for blog retrieval.
@@ -40,6 +39,6 @@ type BlogFilterOptions struct {
 	MaxViews  *int
 	MinLikes  *int
 	MaxLikes  *int
-	AuthorID  *uuid.UUID
-	TagIDs    []uuid.UUID
+	AuthorID  *string
+	TagIDs    []string
 }
