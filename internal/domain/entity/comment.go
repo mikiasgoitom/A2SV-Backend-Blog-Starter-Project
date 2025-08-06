@@ -2,7 +2,7 @@ package entity
 
 import (
     "time"
-    "github.com/google/uuid"
+    // "github.com/google/uuid"
 )
 
 // Comment represents a comment on a blog post with advanced reply-to-reply support
