@@ -371,7 +371,7 @@ func (r *CommentRepository) GetCommentLikeCount(ctx context.Context, commentID s
 
 // Reporting System
 func (r *CommentRepository) ReportComment(ctx context.Context, report *entity.CommentReport) error {
-    if report.ID == ""{
+    if report.ID == "" {
         report.ID = uuidgen.NewGenerator().NewUUID()
     }
     report.CreatedAt = time.Now()
