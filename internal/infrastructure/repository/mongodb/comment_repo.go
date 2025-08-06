@@ -159,7 +159,6 @@ func (r *CommentRepository) GetTopLevelComments(ctx context.Context, blogID stri
 	}
 	defer cursor.Close(ctx)
 
-	// var comments []*entity.Comment
 	if err := cursor.All(ctx, &comments); err != nil {
 		return nil, 0, fmt.Errorf("failed to decode comments: %w", err)
 	}
