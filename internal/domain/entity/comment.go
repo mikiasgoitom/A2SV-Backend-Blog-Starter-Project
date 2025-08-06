@@ -29,7 +29,7 @@ type CommentThread struct {
 
 // CommentLike represents a user's like on a comment
 type CommentLike struct {
-    ID        string   `json:"id" bson:"_id, omitempty"`
+    ID        string   `json:"id" bson:"_id,omitempty"`
     CommentID string   `json:"comment_id" bson:"comment_id"`
     UserID    string   `json:"user_id" bson:"user_id"`
     CreatedAt time.Time `json:"created_at" bson:"created_at"`
