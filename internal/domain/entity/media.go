@@ -2,7 +2,6 @@ package entity
 
 import (
 	"time"
-
 )
 
 // Media represents an uploaded media file
