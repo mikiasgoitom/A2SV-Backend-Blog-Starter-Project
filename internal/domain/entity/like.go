@@ -17,6 +17,9 @@ type Like struct {
 	ID         string     `json:"id" db:"id"`
 	UserID     string     `json:"user_id" db:"user_id"`
 	TargetID   string     `json:"target_id" db:"target_id"`
+	ID         string     `json:"id" db:"id"`
+	UserID     string     `json:"user_id" db:"user_id"`
+	TargetID   string     `json:"target_id" db:"target_id"`
 	TargetType TargetType `json:"target_type" db:"target_type"`
 	Type       LikeType   `json:"type" db:"type"`
 	IsDeleted  bool       `json:"is_deleted" db:"is_deleted"`
@@ -31,3 +34,4 @@ const (
 	TargetTypeBlog    TargetType = "blog"
 	TargetTypeComment TargetType = "comment"
 )
+
