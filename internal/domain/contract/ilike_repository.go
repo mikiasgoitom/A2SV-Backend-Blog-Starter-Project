@@ -7,10 +7,12 @@ import (
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 )
 
-// ILikeRepository defines the interface for like data persistence.
+// ILikeRepository defines the interface for reaction data persistence.
 type ILikeRepository interface {
-	CreateLike(ctx context.Context, like *entity.Like) error
-	DeleteLike(ctx context.Context, likeID uuid.UUID) error
-	GetLikeByUserIDAndTargetID(ctx context.Context, userID, targetID uuid.UUID) (*entity.Like, error)
+	CreateReaction(ctx context.Context, like *entity.Like) error
+	DeleteReaction(ctx context.Context, reactionID uuid.UUID) error
+	GetReactionByUserIDAndTargetID(ctx context.Context, userID, targetID uuid.UUID) (*entity.Like, error)
+	GetReactionByUserIDTargetIDAndType(ctx context.Context, userID, targetID uuid.UUID, reactionType entity.LikeType) (*entity.Like, error)
 	CountLikesByTargetID(ctx context.Context, targetID uuid.UUID) (int64, error)
+	CountDislikesByTargetID(ctx context.Context, targetID uuid.UUID) (int64, error)
 }
