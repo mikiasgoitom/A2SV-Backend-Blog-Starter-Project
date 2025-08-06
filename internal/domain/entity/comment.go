@@ -2,9 +2,7 @@ package entity
 
 import (
 	"time"
-	// "github.com/google/uuid"
 )
-
 // Comment represents a comment on a blog post with advanced reply-to-reply support
 type Comment struct {
 	ID        string    `json:"id" bson:"_id,omitempty"`
