@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/uuidgen"
 	"go.mongodb.org/mongo-driver/bson"
@@ -107,7 +106,7 @@ func (r *CommentRepository) Update(ctx context.Context, comment *entity.Comment)
     return nil
 }
 
-func (r *CommentRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *CommentRepository) Delete(ctx context.Context, id string) error {
     filter := bson.M{"_id": id, "is_deleted": false}
     update := bson.M{
         "$set": bson.M{
@@ -129,7 +128,7 @@ func (r *CommentRepository) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 // Listing Operations
-func (r *CommentRepository) GetTopLevelComments(ctx context.Context, blogID uuid.UUID, pagination Pagination) (comments []*entity.Comment, total int64, err error) {
+func (r *CommentRepository) GetTopLevelComments(ctx context.Context, blogID string, pagination Pagination) (comments []*entity.Comment, total int64, err error) {
     if pagination.Page < 1 || pagination.PageSize < 1 {
         return nil, 0, ErrInvalidPagination
     }
@@ -196,7 +195,7 @@ func (r *CommentRepository) GetCommentThread(ctx context.Context, parentID strin
     return thread, nil
 }
 
-func (r *CommentRepository) GetCommentsByUser(ctx context.Context, userID uuid.UUID, pagination Pagination) ([]*entity.Comment, int64, error) {
+func (r *CommentRepository) GetCommentsByUser(ctx context.Context, userID string, pagination Pagination) ([]*entity.Comment, int64, error) {
     if pagination.Page < 1 || pagination.PageSize < 1 {
         return nil, 0, ErrInvalidPagination
     }
@@ -232,7 +231,7 @@ func (r *CommentRepository) GetCommentsByUser(ctx context.Context, userID uuid.U
 }
 
 // Status and Moderation
-func (r *CommentRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
+func (r *CommentRepository) UpdateStatus(ctx context.Context, id string, status string) error {
     filter := bson.M{"_id": id, "is_deleted": false}
     update := bson.M{
         "$set": bson.M{
@@ -253,7 +252,7 @@ func (r *CommentRepository) UpdateStatus(ctx context.Context, id uuid.UUID, stat
     return nil
 }
 
-func (r *CommentRepository) GetCommentCount(ctx context.Context, blogID uuid.UUID) (int64, error) {
+func (r *CommentRepository) GetCommentCount(ctx context.Context, blogID string) (int64, error) {
     filter := bson.M{
         "blog_id":    blogID,
         "is_deleted": false,
@@ -361,7 +360,7 @@ func (r *CommentRepository) IsCommentLikedByUser(ctx context.Context, commentID,
     return count > 0, nil
 }
 
-func (r *CommentRepository) GetCommentLikeCount(ctx context.Context, commentID uuid.UUID) (int64, error) {
+func (r *CommentRepository) GetCommentLikeCount(ctx context.Context, commentID string) (int64, error) {
     filter := bson.M{"comment_id": commentID}
     count, err := r.likeCollection.CountDocuments(ctx, filter)
     if err != nil {
@@ -418,7 +417,7 @@ func (r *CommentRepository) GetCommentReports(ctx context.Context, pagination Pa
     return reports, total, nil
 }
 
-func (r *CommentRepository) UpdateReportStatus(ctx context.Context, reportID uuid.UUID, status string, reviewerID uuid.UUID) error {
+func (r *CommentRepository) UpdateReportStatus(ctx context.Context, reportID string, status string, reviewerID string) error {
     filter := bson.M{"_id": reportID}
     now := time.Now()
     update := bson.M{
