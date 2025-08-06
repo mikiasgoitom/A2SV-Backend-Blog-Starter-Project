@@ -1,9 +1,10 @@
 package jwt
 
 import (
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"fmt"
 	"time"
+
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 
 	"github.com/golang-jwt/jwt/v5"
 )

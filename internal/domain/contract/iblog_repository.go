@@ -5,23 +5,21 @@ import (
 	"time"
 
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
-
-	"github.com/google/uuid"
 )
 
 // IBlogRepository provides methods for managing blog data in the database.
 type IBlogRepository interface {
 	CreateBlog(ctx context.Context, blog *entity.Blog) error
 	GetBlogs(ctx context.Context, filterOptions *BlogFilterOptions) ([]*entity.Blog, int64, error)
-	GetBlogByID(ctx context.Context, blogID uuid.UUID) (*entity.Blog, error)
-	UpdateBlog(ctx context.Context, blogID uuid.UUID, updates map[string]interface{}) error
-	DeleteBlog(ctx context.Context, blogID uuid.UUID) error
+	GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error)
+	UpdateBlog(ctx context.Context, blogID string, updates map[string]interface{}) error
+	DeleteBlog(ctx context.Context, blogID string) error
 	SearchBlogs(ctx context.Context, query string, filterOptions *BlogFilterOptions) ([]*entity.Blog, int64, error)
-	IncrementViewCount(ctx context.Context, blogID uuid.UUID) error
-	AddTagsToBlog(ctx context.Context, blogID uuid.UUID, tagIDs []uuid.UUID) error
-	GetBlogsByTagID(ctx context.Context, tagID uuid.UUID, opts *BlogFilterOptions) ([]*entity.Blog, int64, error)
+	IncrementViewCount(ctx context.Context, blogID string) error
+	AddTagsToBlog(ctx context.Context, blogID string, tagIDs []string) error
+	GetBlogsByTagID(ctx context.Context, tagID string, opts *BlogFilterOptions) ([]*entity.Blog, int64, error)
 	GetBlogsByTagIDs(ctx context.Context, tagIDs []string, page int, pageSize int) ([]*entity.Blog, int64, error)
-	RemoveTagsFromBlog(ctx context.Context, blogID uuid.UUID, tagIDs []uuid.UUID) error
+	RemoveTagsFromBlog(ctx context.Context, blogID string, tagIDs []string) error
 }
 
 // BlogFilterOptions encapsulates filtering, pagination, and sorting parameters for blog retrieval.
@@ -36,5 +34,5 @@ type BlogFilterOptions struct {
 	MaxViews  *int
 	MinLikes  *int
 	MaxLikes  *int
-	AuthorID  *uuid.UUID
+	AuthorID  *string
 }

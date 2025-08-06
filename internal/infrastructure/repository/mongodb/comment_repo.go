@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -37,7 +36,7 @@ func (r *CommentRepository) CreateComment(ctx context.Context, comment *entity.C
 }
 
 // GetCommentByID retrieves a single comment by its unique ID.
-func (r *CommentRepository) GetCommentByID(ctx context.Context, commentID uuid.UUID) (*entity.Comment, error) {
+func (r *CommentRepository) GetCommentByID(ctx context.Context, commentID string) (*entity.Comment, error) {
 	var comment entity.Comment
 	filter := bson.M{"id": commentID, "is_deleted": false}
 
@@ -52,7 +51,7 @@ func (r *CommentRepository) GetCommentByID(ctx context.Context, commentID uuid.U
 }
 
 // GetCommentsByBlogID retrieves a list of comments for a specific blog post, with pagination.
-func (r *CommentRepository) GetCommentsByBlogID(ctx context.Context, blogID uuid.UUID, page, pageSize int) ([]*entity.Comment, int64, error) {
+func (r *CommentRepository) GetCommentsByBlogID(ctx context.Context, blogID string, page, pageSize int) ([]*entity.Comment, int64, error) {
 	filter := bson.M{"blog_id": blogID, "is_deleted": false}
 	findOptions := options.Find()
 
@@ -83,7 +82,7 @@ func (r *CommentRepository) GetCommentsByBlogID(ctx context.Context, blogID uuid
 }
 
 // UpdateComment updates the details of an existing comment by its ID.
-func (r *CommentRepository) UpdateComment(ctx context.Context, commentID uuid.UUID, updates map[string]interface{}) error {
+func (r *CommentRepository) UpdateComment(ctx context.Context, commentID string, updates map[string]interface{}) error {
 	updates["updated_at"] = time.Now()
 	filter := bson.M{"id": commentID, "is_deleted": false}
 	update := bson.M{"$set": updates}
@@ -99,7 +98,7 @@ func (r *CommentRepository) UpdateComment(ctx context.Context, commentID uuid.UU
 }
 
 // DeleteComment marks a comment as deleted by its ID (soft delete).
-func (r *CommentRepository) DeleteComment(ctx context.Context, commentID uuid.UUID) error {
+func (r *CommentRepository) DeleteComment(ctx context.Context, commentID string) error {
 	filter := bson.M{"id": commentID}
 	update := bson.M{"$set": bson.M{"is_deleted": true, "updated_at": time.Now()}}
 

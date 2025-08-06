@@ -4,21 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
-
-	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
+	"time"
 )
 
 type BlogUseCase interface {
-	CreateBlog(ctx context.Context, title, content string, authorID uuid.UUID, slug string, status BlogStatus, featuredImageID *uuid.UUID) (*entity.Blog, error)
+	CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status BlogStatus, featuredImageID *string) (*entity.Blog, error)
 	GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder SortOrder, dateFrom *time.Time, dateTo *time.Time) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
-	UpdateBlog(ctx context.Context, blogID, authorID uuid.UUID, title *string, content *string, slug *string, status *BlogStatus, publishedAt *time.Time, featuredImageID *uuid.UUID, isDeleted *bool) (*entity.Blog, error)
-	DeleteBlog(ctx context.Context, blogID, userID uuid.UUID, isAdmin bool) (bool, error)
-	SearchAndFilterBlogs(ctx context.Context, query string, searchBy string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, maxViews *int, minLikes *int, maxLikes *int, authorID *uuid.UUID, page int, pageSize int) (blogs []entity.Blog, err error, totalCount int, currentPage int, totalPages int)
-	TrackBlogPopularity(ctx context.Context, blogID, userID uuid.UUID, action BlogAction) (viewCount, likeCount, dislikeCount, commentCount int, err error)
-	GetRecommendedBlogs(ctx context.Context, userID uuid.UUID, page, pageSize int) (blogs []entity.Blog, err error)
+	UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, slug *string, status *BlogStatus, publishedAt *time.Time, featuredImageID *string, isDeleted *bool) (*entity.Blog, error)
+	DeleteBlog(ctx context.Context, blogID, userID string, isAdmin bool) (bool, error)
+	SearchAndFilterBlogs(ctx context.Context, query string, searchBy string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, maxViews *int, minLikes *int, maxLikes *int, authorID *string, page int, pageSize int) (blogs []entity.Blog, err error, totalCount int, currentPage int, totalPages int)
+	TrackBlogPopularity(ctx context.Context, blogID, userID string, action BlogAction) (viewCount, likeCount, dislikeCount, commentCount int, err error)
+	GetRecommendedBlogs(ctx context.Context, userID string, page, pageSize int) (blogs []entity.Blog, err error)
 }
 type SortOrder string
 
@@ -47,26 +45,28 @@ const (
 // BlogUseCaseImpl implements the BlogUseCase interface
 type BlogUseCaseImpl struct {
 	blogRepo contract.IBlogRepository
+	uuidgen  contract.IUUIDGenerator
 	logger   AppLogger
 }
 
 // NewBlogUseCase creates a new instance of BlogUseCase
-func NewBlogUseCase(blogRepo contract.IBlogRepository, logger AppLogger) *BlogUseCaseImpl {
+func NewBlogUseCase(blogRepo contract.IBlogRepository, uuidgenrator contract.IUUIDGenerator, logger AppLogger) *BlogUseCaseImpl {
 	return &BlogUseCaseImpl{
 		blogRepo: blogRepo,
 		logger:   logger,
+		uuidgen:  uuidgenrator,
 	}
 }
 
 // CreateBlog creates a new blog post
-func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string, authorID uuid.UUID, slug string, status BlogStatus, featuredImageID *uuid.UUID) (*entity.Blog, error) {
+func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status BlogStatus, featuredImageID *string) (*entity.Blog, error) {
 	if title == "" {
 		return nil, errors.New("title is required")
 	}
 	if content == "" {
 		return nil, errors.New("content is required")
 	}
-	if authorID == uuid.Nil {
+	if authorID == "" {
 		return nil, errors.New("author ID is required")
 	}
 	if slug == "" {
@@ -74,7 +74,7 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 	}
 
 	blog := &entity.Blog{
-		ID:              uuid.New(),
+		ID:              uc.uuidgen.NewUUID(),
 		Title:           title,
 		Content:         content,
 		AuthorID:        authorID,
@@ -138,11 +138,11 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 }
 
 // UpdateBlog updates an existing blog post
-func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID uuid.UUID, title *string, content *string, slug *string, status *BlogStatus, publishedAt *time.Time, featuredImageID *uuid.UUID, isDeleted *bool) (*entity.Blog, error) {
-	if blogID == uuid.Nil {
+func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, slug *string, status *BlogStatus, publishedAt *time.Time, featuredImageID *string, isDeleted *bool) (*entity.Blog, error) {
+	if blogID == "" {
 		return nil, errors.New("blog ID is required")
 	}
-	if authorID == uuid.Nil {
+	if authorID == "" {
 		return nil, errors.New("author ID is required")
 	}
 
@@ -207,11 +207,11 @@ func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID uuid
 }
 
 // DeleteBlog deletes a blog post
-func (uc *BlogUseCaseImpl) DeleteBlog(ctx context.Context, blogID, userID uuid.UUID, isAdmin bool) (bool, error) {
-	if blogID == uuid.Nil {
+func (uc *BlogUseCaseImpl) DeleteBlog(ctx context.Context, blogID, userID string, isAdmin bool) (bool, error) {
+	if blogID == "" {
 		return false, errors.New("blog ID is required")
 	}
-	if userID == uuid.Nil {
+	if userID == "" {
 		return false, errors.New("user ID is required")
 	}
 
@@ -238,8 +238,8 @@ func (uc *BlogUseCaseImpl) DeleteBlog(ctx context.Context, blogID, userID uuid.U
 }
 
 // TrackBlogPopularity tracks blog interactions
-func (uc *BlogUseCaseImpl) TrackBlogPopularity(ctx context.Context, blogID, userID uuid.UUID, action BlogAction) (int, int, int, int, error) {
-	if blogID == uuid.Nil {
+func (uc *BlogUseCaseImpl) TrackBlogPopularity(ctx context.Context, blogID, userID string, action BlogAction) (int, int, int, int, error) {
+	if blogID == "" {
 		return 0, 0, 0, 0, errors.New("blog ID is required")
 	}
 
@@ -274,7 +274,7 @@ func (uc *BlogUseCaseImpl) TrackBlogPopularity(ctx context.Context, blogID, user
 
 	return viewCount, likeCount, dislikeCount, commentCount, nil
 }
-func (uc *BlogUseCaseImpl) SearchAndFilterBlogs(ctx context.Context, query string, searchBy string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, maxViews *int, minLikes *int, maxLikes *int, authorID *uuid.UUID, page int, pageSize int) ([]entity.Blog, error, int, int, int) {
+func (uc *BlogUseCaseImpl) SearchAndFilterBlogs(ctx context.Context, query string, searchBy string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, maxViews *int, minLikes *int, maxLikes *int, authorID *string, page int, pageSize int) ([]entity.Blog, error, int, int, int) {
 	if page < 1 {
 		page = 1
 	}
@@ -346,8 +346,8 @@ func (uc *BlogUseCaseImpl) SearchAndFilterBlogs(ctx context.Context, query strin
 }
 
 // GetRecommendedBlogs gets recommended blogs for a user
-func (uc *BlogUseCaseImpl) GetRecommendedBlogs(ctx context.Context, userID uuid.UUID, page, pageSize int) ([]entity.Blog, error) {
-	if userID == uuid.Nil {
+func (uc *BlogUseCaseImpl) GetRecommendedBlogs(ctx context.Context, userID string, page, pageSize int) ([]entity.Blog, error) {
+	if userID == "" {
 		return nil, errors.New("user ID is required")
 	}
 	if page < 1 {
