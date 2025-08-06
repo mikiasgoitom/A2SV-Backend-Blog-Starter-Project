@@ -38,10 +38,7 @@ func NewCommentRepository(db *mongo.Database) *CommentRepository {
 	}
 }
 
-type Pagination struct {
-	Page     int `json:"page"`
-	PageSize int `json:"page_size"`
-}
+// Pagination struct removed; use contract.Pagination instead.
 
 // Core CRUD Operations
 func (r *CommentRepository) Create(ctx context.Context, comment *entity.Comment) error {
