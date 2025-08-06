@@ -4,23 +4,27 @@ import (
 	"context"
 	"time"
 
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
-
 	"github.com/google/uuid"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 )
 
 // IBlogRepository provides methods for managing blog data in the database.
 type IBlogRepository interface {
 	CreateBlog(ctx context.Context, blog *entity.Blog) error
-	GetBlogs(ctx context.Context, filterOptions *BlogFilterOptions) ([]*entity.Blog, int64, error)
 	GetBlogByID(ctx context.Context, blogID uuid.UUID) (*entity.Blog, error)
+	GetBlogs(ctx context.Context, filterOptions *BlogFilterOptions) ([]*entity.Blog, int64, error)
 	UpdateBlog(ctx context.Context, blogID uuid.UUID, updates map[string]interface{}) error
 	DeleteBlog(ctx context.Context, blogID uuid.UUID) error
 	SearchBlogs(ctx context.Context, query string, filterOptions *BlogFilterOptions) ([]*entity.Blog, int64, error)
 	IncrementViewCount(ctx context.Context, blogID uuid.UUID) error
+	IncrementLikeCount(ctx context.Context, blogID uuid.UUID) error
+	DecrementLikeCount(ctx context.Context, blogID uuid.UUID) error
+	IncrementDislikeCount(ctx context.Context, blogID uuid.UUID) error
+	DecrementDislikeCount(ctx context.Context, blogID uuid.UUID) error
+	IncrementCommentCount(ctx context.Context, blogID uuid.UUID) error
+	DecrementCommentCount(ctx context.Context, blogID uuid.UUID) error
+	GetBlogCounts(ctx context.Context, blogID uuid.UUID) (viewCount, likeCount, dislikeCount, commentCount int, err error)
 	AddTagsToBlog(ctx context.Context, blogID uuid.UUID, tagIDs []uuid.UUID) error
-	GetBlogsByTagID(ctx context.Context, tagID uuid.UUID, opts *BlogFilterOptions) ([]*entity.Blog, int64, error)
-	GetBlogsByTagIDs(ctx context.Context, tagIDs []string, page int, pageSize int) ([]*entity.Blog, int64, error)
 	RemoveTagsFromBlog(ctx context.Context, blogID uuid.UUID, tagIDs []uuid.UUID) error
 }
 
@@ -28,7 +32,7 @@ type IBlogRepository interface {
 type BlogFilterOptions struct {
 	Page      int
 	PageSize  int
-	SortBy    string // e.g., "created_at", "view_count"
+	SortBy    string // e.g., "createdAt", "viewCount"
 	SortOrder string // e.g., "asc", "desc"
 	DateFrom  *time.Time
 	DateTo    *time.Time
@@ -37,4 +41,5 @@ type BlogFilterOptions struct {
 	MinLikes  *int
 	MaxLikes  *int
 	AuthorID  *uuid.UUID
+	TagIDs    []uuid.UUID
 }

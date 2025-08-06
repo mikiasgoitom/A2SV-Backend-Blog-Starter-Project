@@ -31,13 +31,90 @@ func NewBlogRepository(db *mongo.Database) *BlogRepository {
 	}
 }
 
+// --- Helper Functions for code refactoring ---
+
+// buildBaseMatchFilter creates a bson.M filter from BlogFilterOptions.
+// All pointer options are now consistently dereferenced.
+func buildBaseMatchFilter(opts *contract.BlogFilterOptions) bson.M {
+	baseMatch := bson.M{"is_deleted": false}
+
+	// Apply date range filter
+	if opts.DateFrom != nil || opts.DateTo != nil {
+		createdAtFilter := bson.M{}
+		if opts.DateFrom != nil {
+			createdAtFilter["$gte"] = *opts.DateFrom
+		}
+		if opts.DateTo != nil {
+			createdAtFilter["$lte"] = *opts.DateTo
+		}
+		baseMatch["created_at"] = createdAtFilter
+	}
+
+	// Apply view count range filter
+	if opts.MinViews != nil || opts.MaxViews != nil {
+		viewCountFilter := bson.M{}
+		if opts.MinViews != nil {
+			viewCountFilter["$gte"] = *opts.MinViews
+		}
+		if opts.MaxViews != nil {
+			viewCountFilter["$lte"] = *opts.MaxViews
+		}
+		baseMatch["view_count"] = viewCountFilter
+	}
+
+	// Apply like count range filter
+	if opts.MinLikes != nil || opts.MaxLikes != nil {
+		likeCountFilter := bson.M{}
+		if opts.MinLikes != nil {
+			likeCountFilter["$gte"] = *opts.MinLikes
+		}
+		if opts.MaxLikes != nil {
+			likeCountFilter["$lte"] = *opts.MaxLikes
+		}
+		baseMatch["like_count"] = likeCountFilter
+	}
+
+	// Apply author ID filter
+	if opts.AuthorID != nil {
+		baseMatch["author_id"] = *opts.AuthorID
+	}
+
+	return baseMatch
+}
+
+// buildAggregationSortAndPaginationStages creates the sort and pagination stages for an aggregation pipeline.
+// `fieldPrefix` is used for cases where sorting fields are nested (e.g., "blogDetails.").
+func buildAggregationSortAndPaginationStages(opts *contract.BlogFilterOptions, fieldPrefix string) []bson.M {
+	stages := []bson.M{}
+
+	sortOrder := -1
+	if opts.SortOrder == "asc" {
+		sortOrder = 1
+	}
+
+	sortBy := "created_at"
+	if opts.SortBy != "" {
+		sortBy = opts.SortBy
+	}
+
+	sortField := fmt.Sprintf("%s%s", fieldPrefix, sortBy)
+	stages = append(stages, bson.M{"$sort": bson.M{sortField: sortOrder}})
+
+	if opts.Page > 0 && opts.PageSize > 0 {
+		stages = append(stages, bson.M{"$skip": int64((opts.Page - 1) * opts.PageSize)})
+		stages = append(stages, bson.M{"$limit": int64(opts.PageSize)})
+	}
+
+	return stages
+}
+
 // CreateBlog inserts a new blog post record into the database.
 func (r *BlogRepository) CreateBlog(ctx context.Context, blog *entity.Blog) error {
 	blog.CreatedAt = time.Now()
 	blog.UpdatedAt = time.Now()
 	_, err := r.collection.InsertOne(ctx, blog)
 	if err != nil {
-		return errors.New("failed to create blog post")
+		return fmt.Errorf("failed to create blog post: %w", err)
 	}
 	return nil
 }
@@ -45,61 +122,91 @@ func (r *BlogRepository) CreateBlog(ctx context.Context, blog *entity.Blog) erro
 // GetBlogByID retrieves a single blog post by its unique ID.
 func (r *BlogRepository) GetBlogByID(ctx context.Context, blogID uuid.UUID) (*entity.Blog, error) {
 	var blog entity.Blog
-	filter := bson.M{"id": blogID, "isDeleted": false}
+	filter := bson.M{"id": blogID, "is_deleted": false}
 
 	err := r.collection.FindOne(ctx, filter).Decode(&blog)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors.New("blog not found")
 		}
-		return nil, errors.New("failed to retrieve blog post")
+		return nil, fmt.Errorf("failed to retrieve blog post: %w", err)
 	}
 
 	return &blog, nil
 }
 
-// GetBlogs retrieves a list of blog posts based on filtering, pagination, and sorting options.
+// GetBlogs retrieves a list of blog posts with filtering, sorting, and pagination options.
+// This method now uses a single aggregation pipeline for all filter scenarios.
 func (r *BlogRepository) GetBlogs(ctx context.Context, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error) {
-	filter := bson.M{"isDeleted": false}
-	findOptions := options.Find()
+	// Build the base filter using the helper function.
+	baseMatch := buildBaseMatchFilter(opts)
 
-	if opts.Page > 0 && opts.PageSize > 0 {
-		findOptions.SetSkip(int64((opts.Page - 1) * opts.PageSize))
-		findOptions.SetLimit(int64(opts.PageSize))
+	// A pipeline is always used to handle all filter combinations.
+	pipeline := []bson.M{
+		{"$match": baseMatch},
 	}
 
-	if opts.SortBy != "" {
-		sortOrder := -1
-		if opts.SortOrder == "asc" {
-			sortOrder = 1
-		}
-		findOptions.SetSort(bson.M{opts.SortBy: sortOrder})
+	// Conditionally add stages for tag filtering
+	if len(opts.TagIDs) > 0 {
+		pipeline = append(pipeline,
+			bson.M{
+				"$lookup": bson.M{
+					"from":         "blog_tags",
+					"localField":   "id",
+					"foreignField": "blog_id",
+					"as":           "blogTags",
+				},
+			},
+			bson.M{"$unwind": "$blogTags"},
+			bson.M{"$match": bson.M{"blogTags.tag_id": bson.M{"$in": opts.TagIDs}}},
+			// Use a group stage to get unique blogs after the unwind
+			bson.M{
+				"$group": bson.M{
+					"_id":  "$id",
+					"blog": bson.M{"$first": "$$ROOT"},
+				},
+			},
+			// Replace the root with the original blog document
+			bson.M{"$replaceRoot": bson.M{"newRoot": "$blog"}},
+		)
 	}
 
-	if opts.DateFrom != nil {
-		filter["createdAt"] = bson.M{"$gte": opts.DateFrom}
-	}
-	if opts.DateTo != nil {
-		if filter["createdAt"] == nil {
-			filter["createdAt"] = bson.M{}
-		}
-		filter["createdAt"].(bson.M)["$lte"] = opts.DateTo
-	}
+	// Create a separate pipeline for counting by appending the $count stage.
+	countPipeline := append([]bson.M{}, pipeline...)
+	countPipeline = append(countPipeline, bson.M{"$count": "total"})
 
-	cursor, err := r.collection.Find(ctx, filter, findOptions)
+	// Execute the count pipeline.
+	countCursor, err := r.collection.Aggregate(ctx, countPipeline)
 	if err != nil {
-		return nil, 0, errors.New("failed to retrieve blog posts")
+		return nil, 0, fmt.Errorf("failed to count blogs: %w", err)
+	}
+	defer countCursor.Close(ctx)
+
+	var countResult []struct {
+		Total int64 `bson:"total"`
+	}
+	if err = countCursor.All(ctx, &countResult); err != nil {
+		return nil, 0, fmt.Errorf("failed to decode count result for blogs: %w", err)
+	}
+
+	total := int64(0)
+	if len(countResult) > 0 {
+		total = countResult[0].Total
+	}
+
+	// Add sorting and pagination to the main pipeline.
+	pipeline = append(pipeline, buildAggregationSortAndPaginationStages(opts, "")...)
+
+	// Execute the main pipeline.
+	cursor, err := r.collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to retrieve blogs: %w", err)
 	}
 	defer cursor.Close(ctx)
 
 	var blogs []*entity.Blog
 	if err = cursor.All(ctx, &blogs); err != nil {
-		return nil, 0, errors.New("failed to decode blog posts")
-	}
-
-	total, err := r.collection.CountDocuments(ctx, filter)
-	if err != nil {
-		return nil, 0, errors.New("failed to count blog posts")
+		return nil, 0, fmt.Errorf("failed to decode blogs: %w", err)
 	}
 
 	return blogs, total, nil
@@ -107,13 +214,13 @@ func (r *BlogRepository) GetBlogs(ctx context.Context, opts *contract.BlogFilter
 
 // UpdateBlog updates the details of an existing blog post by its ID.
 func (r *BlogRepository) UpdateBlog(ctx context.Context, blogID uuid.UUID, updates map[string]interface{}) error {
-	updates["updatedAt"] = time.Now()
-	filter := bson.M{"id": blogID, "isDeleted": false}
+	updates["updated_at"] = time.Now()
+	filter := bson.M{"id": blogID, "is_deleted": false}
 	update := bson.M{"$set": updates}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return errors.New("failed to update blog post")
+		return fmt.Errorf("failed to update blog post: %w", err)
 	}
 	if res.ModifiedCount == 0 {
 		return errors.New("blog post not found or no changes made")
@@ -125,11 +232,11 @@ func (r *BlogRepository) UpdateBlog(ctx context.Context, blogID uuid.UUID, updat
 // DeleteBlog marks a blog post as deleted by its ID.
 func (r *BlogRepository) DeleteBlog(ctx context.Context, blogID uuid.UUID) error {
 	filter := bson.M{"id": blogID}
-	update := bson.M{"$set": bson.M{"isDeleted": true, "updatedAt": time.Now()}}
+	update := bson.M{"$set": bson.M{"is_deleted": true, "updated_at": time.Now()}}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return errors.New("failed to delete blog post")
+		return fmt.Errorf("failed to delete blog post: %w", err)
 	}
 	if res.ModifiedCount == 0 {
 		return errors.New("blog post not found")
@@ -140,19 +247,8 @@ func (r *BlogRepository) DeleteBlog(ctx context.Context, blogID uuid.UUID) error
 
 // SearchBlogs searches for blog posts based on a query (title, author name, or author ID) and applies filter options.
 func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error) {
-	// Base match for non-deleted blogs
-	baseMatch := bson.M{"isDeleted": false}
-
-	// Add date filter to the base match if present
-	if opts.DateFrom != nil {
-		baseMatch["createdAt"] = bson.M{"$gte": opts.DateFrom}
-	}
-	if opts.DateTo != nil {
-		if baseMatch["createdAt"] == nil {
-			baseMatch["createdAt"] = bson.M{}
-		}
-		baseMatch["createdAt"].(bson.M)["$lte"] = opts.DateTo
-	}
+	// Build the base filter using the helper function.
+	baseMatch := buildBaseMatchFilter(opts)
 
 	// Define search conditions for title and author details
 	searchConditions := []bson.M{
@@ -162,13 +258,13 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 	// Add author name search conditions
 	searchConditions = append(searchConditions,
 		bson.M{"authorDetails.username": bson.M{"$regex": query, "$options": "i"}},
-		bson.M{"authorDetails.firstName": bson.M{"$regex": query, "$options": "i"}},
-		bson.M{"authorDetails.lastName": bson.M{"$regex": query, "$options": "i"}},
+		bson.M{"authorDetails.first_name": bson.M{"$regex": query, "$options": "i"}},
+		bson.M{"authorDetails.last_name": bson.M{"$regex": query, "$options": "i"}},
 	)
 
-	// If the query string is a valid UUID, also search by authorId
+	// If the query string is a valid UUID, also search by author_id
 	if parsedUUID, err := uuid.Parse(query); err == nil {
-		searchConditions = append(searchConditions, bson.M{"authorId": parsedUUID})
+		searchConditions = append(searchConditions, bson.M{"author_id": parsedUUID})
 	}
 
 	// Aggregation pipeline
@@ -178,7 +274,7 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 		// Look up author details from the 'users' collection
 		{"$lookup": bson.M{
 			"from":         "users",
-			"localField":   "authorId",
+			"localField":   "author_id",
 			"foreignField": "id",
 			"as":           "authorDetails",
 		}},
@@ -186,6 +282,31 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 		{"$unwind": "$authorDetails"},
 		// Match based on the search query (title OR author name/ID)
 		{"$match": bson.M{"$or": searchConditions}},
+	}
+
+	// If TagIDs are provided, add a $lookup to blog_tags and filter
+	if len(opts.TagIDs) > 0 {
+		pipeline = append(pipeline,
+			bson.M{
+				"$lookup": bson.M{
+					"from":         "blog_tags",
+					"localField":   "id",
+					"foreignField": "blog_id",
+					"as":           "blogTags",
+				},
+			},
+			bson.M{"$unwind": "$blogTags"},
+			bson.M{"$match": bson.M{"blogTags.tag_id": bson.M{"$in": opts.TagIDs}}},
+			// Use a group stage to get unique blogs after the unwind
+			bson.M{
+				"$group": bson.M{
+					"_id":  "$id",
+					"blog": bson.M{"$first": "$$ROOT"},
+				},
+			},
+			// Replace the root with the original blog document
+			bson.M{"$replaceRoot": bson.M{"newRoot": "$blog"}},
+		)
 	}
 
 	// Create a separate pipeline for counting, by appending $count stage
@@ -210,24 +331,8 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 		totalBlogs = countResult[0].Total
 	}
 
-	// --- Apply sorting to the main pipeline ---
-	if opts.SortBy != "" {
-		sortOrder := 1
-		if opts.SortOrder == "desc" {
-			sortOrder = -1
-		}
-		pipeline = append(pipeline, bson.M{"$sort": bson.M{opts.SortBy: sortOrder}})
-	} else {
-		pipeline = append(pipeline, bson.M{"$sort": bson.M{"createdAt": -1}})
-	}
-
-	// --- Apply pagination to the main pipeline ---
-	if opts.Page > 0 && opts.PageSize > 0 {
-		pipeline = append(pipeline, bson.M{"$skip": int64((opts.Page - 1) * opts.PageSize)})
-		pipeline = append(pipeline, bson.M{"$limit": int64(opts.PageSize)})
-	}
-
-	pipeline = append(pipeline, bson.M{"$replaceRoot": bson.M{"newRoot": "$blogDetails"}})
+	// Add sorting and pagination to the main pipeline using the helper
+	pipeline = append(pipeline, buildAggregationSortAndPaginationStages(opts, "")...)
 
 	cursor, err := r.collection.Aggregate(ctx, pipeline)
 	if err != nil {
@@ -246,11 +351,11 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 // IncrementViewCount increments the view count of a specific blog post.
 func (r *BlogRepository) IncrementViewCount(ctx context.Context, blogID uuid.UUID) error {
 	filter := bson.M{"id": blogID}
-	update := bson.M{"$inc": bson.M{"viewCount": 1}}
+	update := bson.M{"$inc": bson.M{"view_count": 1}}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return errors.New("failed to increment view count")
+		return fmt.Errorf("failed to increment view count: %w", err)
 	}
 	if res.ModifiedCount == 0 {
 		return errors.New("blog post not found")
@@ -262,11 +367,11 @@ func (r *BlogRepository) IncrementViewCount(ctx context.Context, blogID uuid.UUI
 // IncrementLikeCount increments the like count of a specific blog post.
 func (r *BlogRepository) IncrementLikeCount(ctx context.Context, blogID uuid.UUID) error {
 	filter := bson.M{"id": blogID}
-	update := bson.M{"$inc": bson.M{"likeCount": 1}}
+	update := bson.M{"$inc": bson.M{"like_count": 1}}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return errors.New("failed to increment like count")
+		return fmt.Errorf("failed to increment like count: %w", err)
 	}
 	if res.ModifiedCount == 0 {
 		return errors.New("blog post not found")
@@ -278,11 +383,11 @@ func (r *BlogRepository) IncrementLikeCount(ctx context.Context, blogID uuid.UUI
 // DecrementLikeCount decrements the like count of a specific blog post.
 func (r *BlogRepository) DecrementLikeCount(ctx context.Context, blogID uuid.UUID) error {
 	filter := bson.M{"id": blogID}
-	update := bson.M{"$inc": bson.M{"likeCount": -1}}
+	update := bson.M{"$inc": bson.M{"like_count": -1}}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return errors.New("failed to decrement like count")
+		return fmt.Errorf("failed to decrement like count: %w", err)
 	}
 	if res.ModifiedCount == 0 {
 		return errors.New("blog post not found")
@@ -294,11 +399,11 @@ func (r *BlogRepository) DecrementLikeCount(ctx context.Context, blogID uuid.UUI
 // IncrementDislikeCount increments the dislike count of a specific blog post.
 func (r *BlogRepository) IncrementDislikeCount(ctx context.Context, blogID uuid.UUID) error {
 	filter := bson.M{"id": blogID}
-	update := bson.M{"$inc": bson.M{"dislikeCount": 1}}
+	update := bson.M{"$inc": bson.M{"dislike_count": 1}}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return errors.New("failed to increment dislike count")
+		return fmt.Errorf("failed to increment dislike count: %w", err)
 	}
 	if res.ModifiedCount == 0 {
 		return errors.New("blog post not found")
@@ -310,11 +415,11 @@ func (r *BlogRepository) IncrementDislikeCount(ctx context.Context, blogID uuid.
 // DecrementDislikeCount decrements the dislike count of a specific blog post.
 func (r *BlogRepository) DecrementDislikeCount(ctx context.Context, blogID uuid.UUID) error {
 	filter := bson.M{"id": blogID}
-	update := bson.M{"$inc": bson.M{"dislikeCount": -1}}
+	update := bson.M{"$inc": bson.M{"dislike_count": -1}}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return errors.New("failed to decrement dislike count")
+		return fmt.Errorf("failed to decrement dislike count: %w", err)
 	}
 	if res.ModifiedCount == 0 {
 		return errors.New("blog post not found")
@@ -326,11 +431,11 @@ func (r *BlogRepository) DecrementDislikeCount(ctx context.Context, blogID uuid.
 // IncrementCommentCount increments the comment count of a specific blog post.
 func (r *BlogRepository) IncrementCommentCount(ctx context.Context, blogID uuid.UUID) error {
 	filter := bson.M{"id": blogID}
-	update := bson.M{"$inc": bson.M{"commentCount": 1}}
+	update := bson.M{"$inc": bson.M{"comment_count": 1}}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return errors.New("failed to increment comment count")
+		return fmt.Errorf("failed to increment comment count: %w", err)
 	}
 	if res.ModifiedCount == 0 {
 		return errors.New("blog post not found")
@@ -342,11 +447,11 @@ func (r *BlogRepository) IncrementCommentCount(ctx context.Context, blogID uuid.
 // DecrementCommentCount decrements the comment count of a specific blog post.
 func (r *BlogRepository) DecrementCommentCount(ctx context.Context, blogID uuid.UUID) error {
 	filter := bson.M{"id": blogID}
-	update := bson.M{"$inc": bson.M{"commentCount": -1}}
+	update := bson.M{"$inc": bson.M{"comment_count": -1}}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return errors.New("failed to decrement comment count")
+		return fmt.Errorf("failed to decrement comment count: %w", err)
 	}
 	if res.ModifiedCount == 0 {
 		return errors.New("blog post not found")
@@ -355,58 +460,16 @@ func (r *BlogRepository) DecrementCommentCount(ctx context.Context, blogID uuid.
 	return nil
 }
 
-// AddUserLike adds a like or dislike record for a user on a blog post.
-func (r *BlogRepository) AddUserLike(ctx context.Context, blogID, userID uuid.UUID, likeType string) error {
-	// Check if user already liked/disliked
-	filter := bson.M{"blogId": blogID, "userId": userID}
-	update := bson.M{
-		"$set": bson.M{
-			"type":   likeType,
-			"status": "active",
-		},
-	}
-	opts := options.Update().SetUpsert(true)
-	_, err := r.collection.Database().Collection("blog_likes").UpdateOne(ctx, filter, update, opts)
-	if err != nil {
-		return errors.New("failed to add user like")
-	}
-	return nil
-}
-
-// RemoveUserLike removes a like or dislike record for a user on a blog post.
-func (r *BlogRepository) RemoveUserLike(ctx context.Context, blogID, userID uuid.UUID) error {
-	filter := bson.M{"blogId": blogID, "userId": userID}
-	_, err := r.collection.Database().Collection("blog_likes").DeleteOne(ctx, filter)
-	if err != nil {
-		return errors.New("failed to remove user like")
-	}
-	return nil
-}
-
-// HasUserLiked checks if a user has liked or disliked a blog post.
-func (r *BlogRepository) HasUserLiked(ctx context.Context, blogID, userID uuid.UUID) (string, bool, error) {
-	filter := bson.M{"blogId": blogID, "userId": userID}
-	var result struct {
-		Type   string `bson:"type"`
-		Status string `bson:"status"`
-	}
-	err := r.collection.Database().Collection("blog_likes").FindOne(ctx, filter).Decode(&result)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return "", false, nil
-		}
-		return "", false, errors.New("failed to check user like")
-	}
-	return result.Type, result.Status == "active", nil
-}
-
 // GetBlogCounts returns the current counts for a blog post.
 func (r *BlogRepository) GetBlogCounts(ctx context.Context, blogID uuid.UUID) (viewCount, likeCount, dislikeCount, commentCount int, err error) {
 	var blog entity.Blog
 	filter := bson.M{"id": blogID}
 	err = r.collection.FindOne(ctx, filter).Decode(&blog)
 	if err != nil {
-		return 0, 0, 0, 0, errors.New("failed to get blog counts")
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return 0, 0, 0, 0, errors.New("blog not found")
+		}
+		return 0, 0, 0, 0, fmt.Errorf("failed to get blog counts: %w", err)
 	}
 	return blog.ViewCount, blog.LikeCount, blog.DislikeCount, blog.CommentCount, nil
 }
@@ -417,13 +480,11 @@ func (r *BlogRepository) AddTagsToBlog(ctx context.Context, blogID uuid.UUID, ta
 		return nil
 	}
 
-	// Check if the blog exists and is not deleted
 	_, err := r.GetBlogByID(ctx, blogID)
 	if err != nil {
 		return fmt.Errorf("blog not found: %w", err)
 	}
 
-	// Prepare documents for bulk insert
 	var blogTags []interface{}
 	for _, tagID := range tagIDs {
 		blogTag := entity.BlogTag{
@@ -433,16 +494,23 @@ func (r *BlogRepository) AddTagsToBlog(ctx context.Context, blogID uuid.UUID, ta
 		blogTags = append(blogTags, blogTag)
 	}
 
-	// Insert many, ignoring duplicate key errors if a blog-tag pair already exists
 	opts := options.InsertMany().SetOrdered(false)
 	_, err = r.blogTagsCollection.InsertMany(ctx, blogTags, opts)
 	if err != nil {
-		// Check for duplicate key errors specifically
 		if writeException, ok := err.(mongo.BulkWriteException); ok {
+			type tempBlogTag struct {
+				TagID uuid.UUID `bson:"tag_id"`
+			}
 			for _, e := range writeException.WriteErrors {
 				if e.Code == 11000 {
-					// Log or ignore duplicate errors, as they mean the tag was already associated
-					fmt.Printf("Warning: Duplicate blog-tag association for blog %s and tag %s. Error: %v\n", blogID, e.Raw, e)
+					var failedTagID uuid.UUID
+					var tempTag tempBlogTag
+					if unmarshalErr := bson.Unmarshal(e.Raw, &tempTag); unmarshalErr == nil {
+						failedTagID = tempTag.TagID
+					} else {
+						failedTagID = uuid.Nil
+					}
+					fmt.Printf("Warning: Duplicate blog-tag association for blog %s and tag %s. Error: %v\n", blogID, failedTagID, e)
 				} else {
 					return fmt.Errorf("failed to add tags: %w", err)
 				}
@@ -460,98 +528,23 @@ func (r *BlogRepository) RemoveTagsFromBlog(ctx context.Context, blogID uuid.UUI
 		return nil
 	}
 
-	// Check if the blog exists and is not deleted
 	_, err := r.GetBlogByID(ctx, blogID)
 	if err != nil {
 		return fmt.Errorf("blog not found: %w", err)
 	}
 
-	// Prepare filter for deletion
 	filter := bson.M{
-		"blogId": blogID,
-		"tagId":  bson.M{"$in": tagIDs},
+		"blog_id": blogID,
+		"tag_id":  bson.M{"$in": tagIDs},
 	}
 
 	res, err := r.blogTagsCollection.DeleteMany(ctx, filter)
 	if err != nil {
-		return errors.New("failed to remove tags from blog")
+		return fmt.Errorf("failed to remove tags from blog: %w", err)
 	}
 	if res.DeletedCount == 0 {
 		return errors.New("no matching tags found to remove for the blog post")
 	}
 
 	return nil
-}
-
-// GetBlogsByTagID retrieves a list of blog posts associated with a specific tag ID, applying pagination and sorting options.
-func (r *BlogRepository) GetBlogsByTagID(ctx context.Context, tagID uuid.UUID, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error) {
-	// Aggregation pipeline to join blog_tags with blogs
-	pipeline := []bson.M{
-		// Match blog_tags documents by the given tagId.
-		{"$match": bson.M{"tagId": tagID}},
-		// Look up the corresponding blog documents from the 'blogs' collection
-		{"$lookup": bson.M{
-			"from":         "blogs",
-			"localField":   "blogId",
-			"foreignField": "id",
-			"as":           "blogDetails",
-		}},
-		// Unwind the blogDetails array (each blog_tag document will now have a blogDetails object)
-		{"$unwind": "$blogDetails"},
-		// Match only active (not deleted) blogs
-		{"$match": bson.M{"blogDetails.isDeleted": false}},
-	}
-
-	// Add sorting
-	if opts.SortBy != "" {
-		sortOrder := 1
-		if opts.SortOrder == "desc" {
-			sortOrder = -1
-		}
-		pipeline = append(pipeline, bson.M{"$sort": bson.M{fmt.Sprintf("blogDetails.%s", opts.SortBy): sortOrder}})
-	} else {
-		pipeline = append(pipeline, bson.M{"$sort": bson.M{"blogDetails.createdAt": -1}})
-	}
-
-	// Count total documents before pagination
-	countPipeline := append(pipeline, bson.M{"$count": "total"})
-	countCursor, err := r.blogTagsCollection.Aggregate(ctx, countPipeline)
-	if err != nil {
-		return nil, 0, errors.New("failed to count blogs by tag")
-	}
-	defer countCursor.Close(ctx)
-
-	var countResult []struct {
-		Total int64 `bson:"total"`
-	}
-	if err = countCursor.All(ctx, &countResult); err != nil {
-		return nil, 0, errors.New("failed to decode count result")
-	}
-
-	totalBlogs := int64(0)
-	if len(countResult) > 0 {
-		totalBlogs = countResult[0].Total
-	}
-
-	// Add pagination to the main pipeline
-	if opts.Page > 0 && opts.PageSize > 0 {
-		pipeline = append(pipeline, bson.M{"$skip": int64((opts.Page - 1) * opts.PageSize)})
-		pipeline = append(pipeline, bson.M{"$limit": int64(opts.PageSize)})
-	}
-
-	// Project to shape the output as an entity.Blog
-	pipeline = append(pipeline, bson.M{"$replaceRoot": bson.M{"newRoot": "$blogDetails"}})
-
-	cursor, err := r.blogTagsCollection.Aggregate(ctx, pipeline)
-	if err != nil {
-		return nil, 0, errors.New("failed to retrieve blogs by tag")
-	}
-	defer cursor.Close(ctx)
-
-	var blogs []*entity.Blog
-	if err = cursor.All(ctx, &blogs); err != nil {
-		return nil, 0, fmt.Errorf("failed to decode blogs by tag: %w", err)
-	}
-
-	return blogs, totalBlogs, nil
 }
