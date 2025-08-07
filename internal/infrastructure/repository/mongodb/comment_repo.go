@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
@@ -475,10 +476,13 @@ func (r *CommentRepository) validateParentTargetLogic(ctx context.Context, comme
 }
 
 func (r *CommentRepository) getRepliesRecursively(ctx context.Context, parentID string, depth int) ([]*entity.CommentThread, error) {
+	log.Printf("DEBUG: Enter getRepliesRecursively: parentID=%s, depth=%d", parentID, depth)
 	if depth > contract.MaxCommentDepth { // Prevent excessive nesting
+		log.Printf("DEBUG: Max depth exceeded for parentID=%s, depth=%d (MaxCommentDepth=%d)", parentID, depth, contract.MaxCommentDepth)
 		return []*entity.CommentThread{}, nil
 	}
 
+	log.Printf("DEBUG: Querying replies: parentID=%s, depth=%d", parentID, depth)
 	filter := bson.M{
 		"parent_id":  parentID,
 		"is_deleted": false,
@@ -496,6 +500,7 @@ func (r *CommentRepository) getRepliesRecursively(ctx context.Context, parentID 
 	if err := cursor.All(ctx, &replies); err != nil {
 		return nil, fmt.Errorf("failed to decode replies: %w", err)
 	}
+	log.Printf("DEBUG: Fetched %d replies for parentID=%s at depth=%d", len(replies), parentID, depth)
 
 	var threads []*entity.CommentThread
 	for _, reply := range replies {

@@ -13,11 +13,14 @@ import (
 	handler "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http"
 	dto "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/dto"
 	mocks "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/mocks"
+	validator "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/validator"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {
+	// enable Gin test mode and register custom validators for binding
 	gin.SetMode(gin.TestMode)
+	validator.RegisterCustomValidators()
 	os.Exit(m.Run())
 }
 
@@ -35,10 +38,11 @@ func TestCreateUser(t *testing.T) {
 	h := handler.NewUserHandler(mockUsecase)
 	r := setupRouter(h)
 	payload := dto.CreateUserRequest{
-		Username: "testuser",
-		Email:    "test@example.com",
-		Password: "Password123!",
-		LastName: "User",
+		Username:  "testuser",
+		Email:     "test@example.com",
+		Password:  "Password123!",
+		FirstName: "Test",
+		LastName:  "User",
 	}
 	body, _ := json.Marshal(payload)
 

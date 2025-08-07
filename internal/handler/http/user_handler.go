@@ -2,6 +2,7 @@ package http
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -243,4 +244,54 @@ func updateUserRequestToMap(req dto.UpdateUserRequest) map[string]interface{} {
 	}
 
 	return updates
+}
+
+// UploadAvatar handles avatar image upload
+func (h *UserHandler) UploadAvatar(c *gin.Context) {
+	log.Println("DEBUG: UploadAvatar handler started")
+
+	userID, exists := c.Get("userID")
+	if !exists {
+		log.Println("DEBUG: User not authenticated")
+		ErrorHandler(c, http.StatusUnauthorized, "User not authenticated")
+		return
+	}
+	log.Printf("DEBUG: User ID: %s", userID.(string))
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		log.Printf("DEBUG: Error getting form file: %v", err)
+		ErrorHandler(c, http.StatusBadRequest, "Could not get uploaded file")
+		return
+	}
+	defer file.Close()
+	log.Printf("DEBUG: File received: %s, size: %d", header.Filename, header.Size)
+
+	// In a real application, you would pass the file to a usecase that handles storage
+	// For now, we'll just simulate a successful upload
+	// Example: updatedUser, err := h.userUsecase.UpdateAvatar(c.Request.Context(), userID.(string), file)
+
+	// Simulate success
+	log.Println("DEBUG: Simulating successful avatar upload")
+	MessageHandler(c, http.StatusOK, fmt.Sprintf("Avatar '%s' uploaded successfully for user %s.", header.Filename, userID.(string)))
+}
+
+// DeleteAvatar handles avatar deletion
+func (h *UserHandler) DeleteAvatar(c *gin.Context) {
+	log.Println("DEBUG: DeleteAvatar handler started")
+
+	userID, exists := c.Get("userID")
+	if !exists {
+		log.Println("DEBUG: User not authenticated")
+		ErrorHandler(c, http.StatusUnauthorized, "User not authenticated")
+		return
+	}
+	log.Printf("DEBUG: User ID: %s", userID.(string))
+
+	// In a real application, you would call a usecase to delete the avatar
+	// Example: err := h.userUsecase.DeleteAvatar(c.Request.Context(), userID.(string))
+
+	// Simulate success
+	log.Println("DEBUG: Simulating successful avatar deletion")
+	MessageHandler(c, http.StatusOK, fmt.Sprintf("Avatar deleted successfully for user %s.", userID.(string)))
 }

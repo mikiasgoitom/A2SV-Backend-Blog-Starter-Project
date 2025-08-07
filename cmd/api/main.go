@@ -67,8 +67,11 @@ func main() {
 	userUsecase := usecase.NewUserUsecase(userRepo, tokenRepo, nil, hasher, jwtService, nil, appLogger, appConfig, appValidator, uuidGenerator)
 	// will add more usecases here as they are created
 
-	// Setup API routes
-	appRouter := handlerHttp.NewRouter(userUsecase, jwtService)
+	// Setup avatar usecase
+	avatarRepo := mongodb.NewUserAvatarRepository(mongoClient.Client.Database(dbName))
+	avatarUsecase := usecase.NewUserAvatarUseCase(avatarRepo)
+	// Setup API routes with avatar support
+	appRouter := handlerHttp.NewRouter(userUsecase, avatarUsecase, jwtService)
 	appRouter.SetupRoutes(router)
 
 	// Start the server
