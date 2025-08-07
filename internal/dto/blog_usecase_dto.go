@@ -31,7 +31,7 @@ type CommentResponse struct {
     ParentID   *string `json:"parent_id"`
     TargetID   *string `json:"target_id"`
     AuthorID   string  `json:"author_id"`
-    AuthorName string     `json:"author_name"`
+    AuthorName string `json:"author_name"`
     Content    string     `json:"content"`
     Status     string     `json:"status"`
     LikeCount  int        `json:"like_count"`
