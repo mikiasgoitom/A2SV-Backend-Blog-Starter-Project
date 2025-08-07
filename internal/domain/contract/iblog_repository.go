@@ -10,6 +10,7 @@ import (
 // IBlogRepository provides methods for managing blog data in the database.
 type IBlogRepository interface {
 	CreateBlog(ctx context.Context, blog *entity.Blog) error
+	GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error)
 	GetBlogBySlug(ctx context.Context, slug string) (*entity.Blog, error)
 	GetBlogs(ctx context.Context, filterOptions *BlogFilterOptions) ([]*entity.Blog, int64, error)
 	UpdateBlog(ctx context.Context, blogID string, updates map[string]interface{}) error

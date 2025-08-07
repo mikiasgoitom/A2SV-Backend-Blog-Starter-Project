@@ -97,6 +97,22 @@ func (r *BlogRepository) CreateBlog(ctx context.Context, blog *entity.Blog) erro
 	return nil
 }
 
+// GetBlogByID retrieves a single blog post by its unique id.
+func (r *BlogRepository) GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error) {
+	var blog entity.Blog
+	filter := bson.M{"_id": blogID, "is_deleted": false}
+
+	err := r.collection.FindOne(ctx, filter).Decode(&blog)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, fmt.Errorf("blog with id '%s' not found or has been deleted: %w", blogID, err)
+		}
+		return nil, fmt.Errorf("failed to retrieve blog post: %w", err)
+	}
+
+	return &blog, nil
+}
+
 // GetBlogBySlug retrieves a single blog post by its unique slug.
 func (r *BlogRepository) GetBlogBySlug(ctx context.Context, slug string) (*entity.Blog, error) {
 	var blog entity.Blog
