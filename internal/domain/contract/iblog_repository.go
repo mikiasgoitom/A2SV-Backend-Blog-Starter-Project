@@ -17,9 +17,20 @@ type IBlogRepository interface {
 	SearchBlogs(ctx context.Context, query string, filterOptions *BlogFilterOptions) ([]*entity.Blog, int64, error)
 	IncrementViewCount(ctx context.Context, blogID string) error
 	AddTagsToBlog(ctx context.Context, blogID string, tagIDs []string) error
-	GetBlogsByTagID(ctx context.Context, tagID string, opts *BlogFilterOptions) ([]*entity.Blog, int64, error)
-	GetBlogsByTagIDs(ctx context.Context, tagIDs []string, page int, pageSize int) ([]*entity.Blog, int64, error)
-	RemoveTagsFromBlog(ctx context.Context, blogID string, tagIDs []string) error
+   RemoveTagsFromBlog(ctx context.Context, blogID string, tagIDs []string) error
+   // GetBlogsByTagID retrieves blogs for a single tag ID with filtering options
+   GetBlogsByTagID(ctx context.Context, tagID string, opts *BlogFilterOptions) ([]*entity.Blog, int64, error)
+   // GetBlogsByTagIDs retrieves blogs for multiple tag IDs with pagination
+   GetBlogsByTagIDs(ctx context.Context, tagIDs []string, page int, pageSize int) ([]*entity.Blog, int64, error)
+	HasViewedRecently(ctx context.Context, blogID, userID, ipAddress string) (bool, error)
+	RecordView(ctx context.Context, blogID, userID, ipAddress, userAgent string) error
+	AddUserLike(ctx context.Context, blogID, userID string, likeType string) error
+	RemoveUserLike(ctx context.Context, blogID, userID string) error
+	HasUserLiked(ctx context.Context, blogID, userID string) (string, bool, error)
+	IncrementLikeCount(ctx context.Context, blogID string) error
+	DecrementLikeCount(ctx context.Context, blogID string) error
+	GetRecentViewsByIP(ctx context.Context, ipAddress string, since time.Time) ([]entity.BlogView, error)
+	GetRecentViewsByUser(ctx context.Context, userID string, since time.Time) ([]entity.BlogView, error)
 }
 
 // BlogFilterOptions encapsulates filtering, pagination, and sorting parameters for blog retrieval.
@@ -35,4 +46,5 @@ type BlogFilterOptions struct {
 	MinLikes  *int
 	MaxLikes  *int
 	AuthorID  *string
+	TagIDs    []string
 }
