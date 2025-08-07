@@ -17,17 +17,19 @@ import (
 
 // BlogRepository represents the MongoDB implementation of the BlogRepository interface.
 type BlogRepository struct {
-	collection         *mongo.Collection // For blog posts
-	blogTagsCollection *mongo.Collection // For blog-tag relationships
-	usersCollection    *mongo.Collection // For accessing user data for search
+	collection          *mongo.Collection // For blog posts
+	blogTagsCollection  *mongo.Collection // For blog-tag relationships
+	usersCollection     *mongo.Collection // For accessing user data for search
+	blogViewsCollection *mongo.Collection // For tracking blog views
 }
 
 // NewBlogRepository creates and returns a new BlogRepository instance.
 func NewBlogRepository(db *mongo.Database) *BlogRepository {
 	return &BlogRepository{
-		collection:         db.Collection("blogs"),
-		blogTagsCollection: db.Collection("blog_tags"),
-		usersCollection:    db.Collection("users"),
+		collection:          db.Collection("blogs"),
+		blogTagsCollection:  db.Collection("blog_tags"),
+		usersCollection:     db.Collection("users"),
+		blogViewsCollection: db.Collection("blog_views"),
 	}
 }
 
@@ -60,7 +62,10 @@ func (r *BlogRepository) GetBlogByID(ctx context.Context, blogID string) (*entit
 
 // GetBlogs retrieves a list of blog posts based on filtering, pagination, and sorting options.
 func (r *BlogRepository) GetBlogs(ctx context.Context, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error) {
-	filter := bson.M{"isDeleted": false}
+   if len(opts.TagIDs) > 0 {
+	   return r.GetBlogsByTagIDs(ctx, opts.TagIDs, opts.Page, opts.PageSize)
+   }
+   filter := bson.M{"isDeleted": false}
 	findOptions := options.Find()
 
 	if opts.Page > 0 && opts.PageSize > 0 {
@@ -554,4 +559,150 @@ func (r *BlogRepository) GetBlogsByTagID(ctx context.Context, tagID string, opts
 	}
 
 	return blogs, totalBlogs, nil
+}
+
+// GetBlogsByTagIDs retrieves blogs that have any of the specified tag IDs.
+func (r *BlogRepository) GetBlogsByTagIDs(ctx context.Context, tagIDs []string, page int, pageSize int) ([]*entity.Blog, int64, error) {
+	if len(tagIDs) == 0 {
+		return []*entity.Blog{}, 0, nil
+	}
+
+	// Find all blog IDs associated with the given tag IDs
+	filter := bson.M{"tagId": bson.M{"$in": tagIDs}}
+	cursor, err := r.blogTagsCollection.Find(ctx, filter)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to find blog-tag associations: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	blogIDSet := make(map[string]struct{})
+	for cursor.Next(ctx) {
+		var blogTag entity.BlogTag
+		if err := cursor.Decode(&blogTag); err == nil {
+			blogIDSet[blogTag.BlogID] = struct{}{}
+		}
+	}
+
+	if len(blogIDSet) == 0 {
+		return []*entity.Blog{}, 0, nil
+	}
+
+	var blogIDs []string
+	for id := range blogIDSet {
+		blogIDs = append(blogIDs, id)
+	}
+
+	// Now fetch the blogs with those IDs
+	blogFilter := bson.M{
+		"id":        bson.M{"$in": blogIDs},
+		"isDeleted": false,
+	}
+	findOptions := options.Find().
+		SetSkip(int64((page - 1) * pageSize)).
+		SetLimit(int64(pageSize)).
+		SetSort(bson.M{"createdAt": -1}) // Default sort
+
+	blogCursor, err := r.collection.Find(ctx, blogFilter, findOptions)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to retrieve blogs by tag IDs: %w", err)
+	}
+	defer blogCursor.Close(ctx)
+
+	var blogs []*entity.Blog
+	if err = blogCursor.All(ctx, &blogs); err != nil {
+		return nil, 0, fmt.Errorf("failed to decode blogs by tag IDs: %w", err)
+	}
+
+	totalCount, err := r.collection.CountDocuments(ctx, blogFilter)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count blogs by tag IDs: %w", err)
+	}
+
+	return blogs, totalCount, nil
+}
+
+// HasViewedRecently checks if a user (by user ID or IP address) has viewed a blog within the last 24 hours.
+func (r *BlogRepository) HasViewedRecently(ctx context.Context, blogID, userID, ipAddress string) (bool, error) {
+	// Build a filter that checks for a recent view either by the authenticated user ID
+	// or by the IP address for anonymous users.
+	filter := bson.M{
+		"blog_id": blogID,
+		"$or": []bson.M{
+			{"ip_address": ipAddress},
+		},
+	}
+
+	// If a user is logged in, include their ID in the check.
+	// This ensures that if the same user views from a different IP, they are still only counted once.
+	if userID != "" {
+		filter["$or"] = append(filter["$or"].([]bson.M), bson.M{"user_id": userID})
+	}
+
+	count, err := r.blogViewsCollection.CountDocuments(ctx, filter)
+	if err != nil {
+		return false, fmt.Errorf("failed to check for recent blog view: %w", err)
+	}
+	return count > 0, nil
+}
+
+// RecordView records a user's view of a blog, including IP address and user agent.
+func (r *BlogRepository) RecordView(ctx context.Context, blogID, userID, ipAddress, userAgent string) error {
+	view := entity.BlogView{
+		BlogID:    blogID,
+		UserID:    userID,
+		IPAddress: ipAddress,
+		UserAgent: userAgent,
+		ViewedAt:  time.Now(),
+	}
+	_, err := r.blogViewsCollection.InsertOne(ctx, view)
+	if err != nil {
+		return fmt.Errorf("failed to record blog view: %w", err)
+	}
+	return nil
+}
+
+// GetRecentViewsByIP retrieves all views from a specific IP address within a given time frame.
+func (r *BlogRepository) GetRecentViewsByIP(ctx context.Context, ipAddress string, since time.Time) ([]entity.BlogView, error) {
+	filter := bson.M{
+		"ip_address": ipAddress,
+		"viewed_at":  bson.M{"$gte": since},
+	}
+
+	cursor, err := r.blogViewsCollection.Find(ctx, filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve recent views by IP: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var views []entity.BlogView
+	if err = cursor.All(ctx, &views); err != nil {
+		return nil, fmt.Errorf("failed to decode recent views: %w", err)
+	}
+
+	return views, nil
+}
+
+// GetRecentViewsByUser retrieves all views from a specific user ID within a given time frame.
+func (r *BlogRepository) GetRecentViewsByUser(ctx context.Context, userID string, since time.Time) ([]entity.BlogView, error) {
+	if userID == "" {
+		return []entity.BlogView{}, nil // No user to look up
+	}
+
+	filter := bson.M{
+		"user_id":   userID,
+		"viewed_at": bson.M{"$gte": since},
+	}
+
+	cursor, err := r.blogViewsCollection.Find(ctx, filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve recent views by user: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var views []entity.BlogView
+	if err = cursor.All(ctx, &views); err != nil {
+		return nil, fmt.Errorf("failed to decode recent views: %w", err)
+	}
+
+	return views, nil
 }
