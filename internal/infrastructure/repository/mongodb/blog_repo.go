@@ -300,9 +300,10 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 
 	// Determine the sort field, adding a prefix for joined collections if necessary.
 	sortField := opts.SortBy
-	if sortField == "" {
+	switch sortField {
+	case "":
 		sortField = "created_at"
-	} else if sortField == "username" || sortField == "first_name" || sortField == "last_name" {
+	case "username", "first_name", "last_name":
 		sortField = "authorDetails." + sortField
 	}
 

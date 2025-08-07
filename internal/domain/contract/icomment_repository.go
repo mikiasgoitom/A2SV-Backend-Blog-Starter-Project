@@ -18,7 +18,9 @@ type PaginationMeta struct {
 	HasNext     bool  `json:"has_next"`
 	HasPrevious bool  `json:"has_previous"`
 }
+
 var MaxCommentDepth = 5
+
 type ICommentRepository interface {
 	// Core CRUD operations
 	Create(ctx context.Context, comment *entity.Comment) error

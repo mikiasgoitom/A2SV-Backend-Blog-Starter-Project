@@ -510,10 +510,10 @@ func (h *CommentHandler) GetCommentReplies(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"replies": thread.Replies,
 		"pagination": gin.H{
-			"page":       page,
-			"page_size":  pageSize,
-			"total":      len(thread.Replies),
-			"has_more":   false,
+			"page":      page,
+			"page_size": pageSize,
+			"total":     len(thread.Replies),
+			"has_more":  false,
 		},
 	})
 }
@@ -565,18 +565,8 @@ func (h *CommentHandler) GetBlogCommentsCount(c *gin.Context) {
 		return
 	}
 
-	// Get optional user ID
-	var userID *string
-	if userIDStr, exists := c.Get("user_id"); exists {
-		uid := userIDStr.(string)
-		userID = &uid
-	} else if userIDStr, exists := c.Get("userID"); exists {
-		uid := userIDStr.(string)
-		userID = &uid
-	}
-
 	// Use a dedicated count method to get the total number of comments
-	commentCount, err := h.commentUC.GetBlogCommentsCount(c.Request.Context(), blogID, userID)
+	commentCount, err := h.commentUC.GetBlogCommentsCount(c.Request.Context(), blogID)
 	if err != nil {
 		if err.Error() == "blog not found" {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -588,8 +578,7 @@ func (h *CommentHandler) GetBlogCommentsCount(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"blog_id":       blogID,
-		"comment_count": comments.Pagination.TotalItems,
-		"direct_comments": len(comments.Comments),
+		"comment_count": commentCount,
 	})
 }
 
@@ -736,15 +725,15 @@ func (h *CommentHandler) GetCommentStatistics(c *gin.Context) {
 	depth := h.calculateThreadDepth(thread, 1)
 
 	c.JSON(http.StatusOK, gin.H{
-		"comment_id":    commentID,
-		"like_count":    comment.LikeCount,
-		"reply_count":   comment.ReplyCount,
-		"thread_depth":  depth,
-		"is_liked":      comment.IsLiked,
-		"author_id":     comment.AuthorID,
-		"created_at":    comment.CreatedAt,
-		"updated_at":    comment.UpdatedAt,
-		"status":        comment.Status,
+		"comment_id":   commentID,
+		"like_count":   comment.LikeCount,
+		"reply_count":  comment.ReplyCount,
+		"thread_depth": depth,
+		"is_liked":     comment.IsLiked,
+		"author_id":    comment.AuthorID,
+		"created_at":   comment.CreatedAt,
+		"updated_at":   comment.UpdatedAt,
+		"status":       comment.Status,
 	})
 }
 
@@ -783,10 +772,10 @@ func (h *CommentHandler) BulkDeleteComments(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"deleted_count": deletedCount,
+		"deleted_count":   deletedCount,
 		"total_requested": len(req.CommentIDs),
-		"errors": errors,
-		"reason": req.Reason,
+		"errors":          errors,
+		"reason":          req.Reason,
 	})
 }
 
