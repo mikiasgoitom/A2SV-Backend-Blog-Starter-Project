@@ -114,6 +114,13 @@ type IUserUseCase interface {
 	LoginWithOAuth(ctx context.Context, firstName, lastName, email string) (string, string, error)
 }
 
+type ILikeUseCase interface {
+	ToggleLike(ctx context.Context, userID, targetID string, targetType entity.TargetType) error
+	ToggleDislike(ctx context.Context, userID, targetID string, targetType entity.TargetType) error
+	GetUserReaction(ctx context.Context, userID, targetID string) (*entity.Like, error)
+	GetReactionCounts(ctx context.Context, targetID string) (likes, dislikes int64, err error)
+}
+
 // type BlogUseCase interface {
 // 	CreateBlog(ctx context.Context, blog entity.Blog) (*entity.Blog, error)
 //  GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error)
