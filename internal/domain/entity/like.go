@@ -2,7 +2,14 @@ package entity
 
 import (
 	"time"
+
 )
+// LikeType represents the type of reaction (like or dislike)
+type LikeType string
+
+const (
+	LIKE_TYPE_LIKE    LikeType = "like"
+	LIKE_TYPE_DISLIKE LikeType = "dislike"
 
 // LikeType represents the type of reaction (like or dislike)
 type LikeType string
@@ -14,6 +21,9 @@ const (
 
 // Like represents a like on a blog post or comment
 type Like struct {
+	ID         string     `json:"id" db:"id"`
+	UserID     string     `json:"user_id" db:"user_id"`
+	TargetID   string     `json:"target_id" db:"target_id"`
 	ID         string     `json:"id" db:"id"`
 	UserID     string     `json:"user_id" db:"user_id"`
 	TargetID   string     `json:"target_id" db:"target_id"`
@@ -31,3 +41,4 @@ const (
 	TargetTypeBlog    TargetType = "blog"
 	TargetTypeComment TargetType = "comment"
 )
+
