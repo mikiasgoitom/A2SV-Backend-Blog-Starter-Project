@@ -575,8 +575,8 @@ func (h *CommentHandler) GetBlogCommentsCount(c *gin.Context) {
 		userID = &uid
 	}
 
-	// Get comments to count them (in a real implementation, you'd have a separate count method)
-	comments, err := h.commentUC.GetBlogComments(c.Request.Context(), blogID, 1, 1000, userID)
+	// Use a dedicated count method to get the total number of comments
+	commentCount, err := h.commentUC.GetBlogCommentsCount(c.Request.Context(), blogID, userID)
 	if err != nil {
 		if err.Error() == "blog not found" {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
