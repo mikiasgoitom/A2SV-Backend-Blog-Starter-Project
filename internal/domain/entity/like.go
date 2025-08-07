@@ -2,15 +2,14 @@ package entity
 
 import (
 	"time"
-)
 
+)
 // LikeType represents the type of reaction (like or dislike)
 type LikeType string
 
 const (
 	LIKE_TYPE_LIKE    LikeType = "like"
 	LIKE_TYPE_DISLIKE LikeType = "dislike"
-)
 
 // Like represents a like on a blog post or comment
 type Like struct {
