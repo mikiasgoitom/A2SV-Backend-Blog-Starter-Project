@@ -10,7 +10,7 @@ import (
 // IBlogRepository provides methods for managing blog data in the database.
 type IBlogRepository interface {
 	CreateBlog(ctx context.Context, blog *entity.Blog) error
-	GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error)
+	GetBlogBySlug(ctx context.Context, slug string) (*entity.Blog, error)
 	GetBlogs(ctx context.Context, filterOptions *BlogFilterOptions) ([]*entity.Blog, int64, error)
 	UpdateBlog(ctx context.Context, blogID string, updates map[string]interface{}) error
 	DeleteBlog(ctx context.Context, blogID string) error
@@ -23,8 +23,8 @@ type IBlogRepository interface {
 	IncrementCommentCount(ctx context.Context, blogID string) error
 	DecrementCommentCount(ctx context.Context, blogID string) error
 	GetBlogCounts(ctx context.Context, blogID string) (viewCount, likeCount, dislikeCount, commentCount int, err error)
-	AddTagsToBlog(ctx context.Context, blogID string, tagIDs []string) error
-	RemoveTagsFromBlog(ctx context.Context, blogID string, tagIDs []string) error
+	AddTagsToBlog(ctx context.Context, blogSlug string, tagIDs []string) error
+	RemoveTagsFromBlog(ctx context.Context, blogSlug string, tagIDs []string) error
 	GetBlogsByTagIDs(ctx context.Context, tagIDs []string, page int, pageSize int) ([]*entity.Blog, int64, error)
 }
 
