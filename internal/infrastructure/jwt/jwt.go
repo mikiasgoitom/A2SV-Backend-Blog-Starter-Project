@@ -23,7 +23,7 @@ func NewJWTManager(scrt string) *JWTManager {
 }
 
 func (j *JWTManager) GenerateAccessToken(userID, userRole string) (string, error) {
-	expirationTime := time.Now().Add(15 * time.Minute)
+	expirationTime := time.Now().Add(360 * time.Minute)
 
 	claims := contract.CustomClaims{
 		Role: userRole,

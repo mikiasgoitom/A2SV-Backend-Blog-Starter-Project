@@ -16,12 +16,10 @@ type IBlogRepository interface {
 	DeleteBlog(ctx context.Context, blogID string) error
 	SearchBlogs(ctx context.Context, query string, filterOptions *BlogFilterOptions) ([]*entity.Blog, int64, error)
 	IncrementViewCount(ctx context.Context, blogID string) error
-	IncrementLikeCount(ctx context.Context, blogID string) error
-	DecrementLikeCount(ctx context.Context, blogID string) error
-	IncrementDislikeCount(ctx context.Context, blogID string) error
-	DecrementDislikeCount(ctx context.Context, blogID string) error
-	IncrementCommentCount(ctx context.Context, blogID string) error
-	DecrementCommentCount(ctx context.Context, blogID string) error
+	// IncrementDislikeCount(ctx context.Context, blogID string) error
+	// DecrementDislikeCount(ctx context.Context, blogID string) error
+	// IncrementCommentCount(ctx context.Context, blogID string) error
+	// DecrementCommentCount(ctx context.Context, blogID string) error
 	GetBlogCounts(ctx context.Context, blogID string) (viewCount, likeCount, dislikeCount, commentCount int, err error)
 	AddTagsToBlog(ctx context.Context, blogID string, tagIDs []string) error
    RemoveTagsFromBlog(ctx context.Context, blogID string, tagIDs []string) error

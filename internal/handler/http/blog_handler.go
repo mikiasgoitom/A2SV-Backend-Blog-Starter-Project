@@ -69,7 +69,6 @@ func (h *BlogHandler) CreateBlogHandler(cxt *gin.Context) {
 
 // GetBlogsHandler
 func (h *BlogHandler) GetBlogsHandler(cxt *gin.Context) {
-	
 	// 1. get the page size and page number
 	pageStr := cxt.DefaultQuery("page", "1")
 	pageSizeStr := cxt.DefaultQuery("pageSize", "10")

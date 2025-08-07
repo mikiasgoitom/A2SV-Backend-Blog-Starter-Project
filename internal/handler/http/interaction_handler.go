@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -24,6 +25,8 @@ func (h *InteractionHandler) LikeBlogHandler(c *gin.Context) {
 		ErrorHandler(c, http.StatusUnauthorized, "User not authenticated")
 		return
 	}
+
+	fmt.Print("handler")
 
 	userIDStr, ok := userID.(string)
 	if !ok {

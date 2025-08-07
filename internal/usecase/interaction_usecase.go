@@ -33,12 +33,14 @@ func NewInteractionUseCase(blogRepo contract.IBlogRepository, logger AppLogger) 
 }
 
 func (uc *InteractionUseCaseImpl) LikeBlog(ctx context.Context, blogID, userID string) error {
+	fmt.Print("interaction usecase")
 	if blogID == "" {
 		return errors.New("blog ID is required")
 	}
 	if userID == "" {
 		return errors.New("user ID is required")
 	}
+
 
 	// Check if the user has already liked the blog
 	likeType, hasLiked, err := uc.blogRepo.HasUserLiked(ctx, blogID, userID)
@@ -59,6 +61,7 @@ func (uc *InteractionUseCaseImpl) LikeBlog(ctx context.Context, blogID, userID s
 
 	// Increment the like count
 	if err := uc.blogRepo.IncrementLikeCount(ctx, blogID); err != nil {
+
 		uc.logger.Errorf("failed to increment like count: %v", err)
 		return fmt.Errorf("failed to increment like count: %w", err)
 	}

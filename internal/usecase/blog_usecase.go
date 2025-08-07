@@ -107,7 +107,6 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 	if pageSize < 1 {
 		pageSize = 10
 	}
-
 	filterOptions := &contract.BlogFilterOptions{
 		Page:      page,
 		PageSize:  pageSize,
@@ -429,3 +428,4 @@ func (uc *BlogUseCaseImpl) SearchAndFilterBlogs(
     }
     return blogEntities, int(totalCount), page, totalPages, nil
 }
+
