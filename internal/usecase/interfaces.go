@@ -87,6 +87,7 @@ type AppLogger interface {
 	Debugf(format string, args ...interface{})
 	Infof(format string, args ...interface{})
 	Warnf(format string, args ...interface{})
+	Warningf(format string, args ...interface{})
 	Errorf(format string, args ...interface{})
 	Fatalf(format string, args ...interface{})
 }
@@ -113,22 +114,3 @@ type IUserUseCase interface {
 	GetUserByID(ctx context.Context, userID string) (*entity.User, error)
 	LoginWithOAuth(ctx context.Context, firstName, lastName, email string) (string, string, error)
 }
-
-// type BlogUseCase interface {
-// 	CreateBlog(ctx context.Context, blog entity.Blog) (*entity.Blog, error)
-//  GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error)
-//  UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, slug *string, status *entity.BlogStatus, publishedAt *time.Time, featuredImageID *string, isDeleted *bool) (*entity.Blog, error)
-//  TrackBlogPopularity(ctx context.Context, blogID, userID string, action BlogAction) (viewCount, likeCount, dislikeCount, commentCount int, err error)
-//  DeleteBlog(ctx context.Context, blogID, userID string, isAdmin bool) (bool, error)
-//
-//  GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder SortOrder, dateFrom *time.Time, dateTo *time.Time) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
-//  SearchAndFilterBlogs(ctx context.Context, query string, page, pageSize int, searchBy string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, minLikes *int, authorID *string) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
-//  GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error)
-//  UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, slug *string, status *entity.BlogStatus, publishedAt *time.Time, featuredImageID *string, isDeleted *bool) (*entity.Blog, error)
-//  TrackBlogPopularity(ctx context.Context, blogID, userID string, action BlogAction) (viewCount, likeCount, dislikeCount, commentCount int, err error)
-//  DeleteBlog(ctx context.Context, blogID, userID string, isAdmin bool) (bool, error)
-//
-//  GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder SortOrder, dateFrom *time.Time, dateTo *time.Time) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
-//  SearchAndFilterBlogs(ctx context.Context, query string, page, pageSize int, searchBy string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, minLikes *int, authorID *string) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
-
-// }
