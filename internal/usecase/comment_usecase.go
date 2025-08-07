@@ -24,7 +24,7 @@ func NewCommentUseCase(
     commentRepo contract.ICommentRepository,
     blogRepo contract.IBlogRepository,
     userRepo contract.IUserRepository,
-)  usecasecontract.ICommentUseCase {
+) usecasecontract.ICommentUseCase {
     return &commentUseCase{
         commentRepo: commentRepo,
         blogRepo:    blogRepo,
