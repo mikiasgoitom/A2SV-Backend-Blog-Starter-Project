@@ -99,7 +99,6 @@ func (r *BlogRepository) CreateBlog(ctx context.Context, blog *entity.Blog) erro
 
 // GetBlogByID retrieves a single blog post by its unique ID.
 func (r *BlogRepository) GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error) {
-func (r *BlogRepository) GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error) {
 	var blog entity.Blog
 	filter := bson.M{"id": blogID, "is_deleted": false}
 
@@ -466,7 +465,6 @@ func (r *BlogRepository) DecrementCommentCount(ctx context.Context, blogID strin
 
 // GetBlogCounts returns the current counts for a blog post.
 func (r *BlogRepository) GetBlogCounts(ctx context.Context, blogID string) (viewCount, likeCount, dislikeCount, commentCount int, err error) {
-func (r *BlogRepository) GetBlogCounts(ctx context.Context, blogID string) (viewCount, likeCount, dislikeCount, commentCount int, err error) {
 	var blog entity.Blog
 	filter := bson.M{"id": blogID, "is_deleted": false}
 	err = r.collection.FindOne(ctx, filter).Decode(&blog)
@@ -480,7 +478,6 @@ func (r *BlogRepository) GetBlogCounts(ctx context.Context, blogID string) (view
 }
 
 // AddTagsToBlog associates one or more tags with a blog post.
-func (r *BlogRepository) AddTagsToBlog(ctx context.Context, blogID string, tagIDs []string) error {
 func (r *BlogRepository) AddTagsToBlog(ctx context.Context, blogID string, tagIDs []string) error {
 	if len(tagIDs) == 0 {
 		return nil
@@ -523,7 +520,6 @@ func (r *BlogRepository) AddTagsToBlog(ctx context.Context, blogID string, tagID
 }
 
 // RemoveTagsFromBlog disassociates one or more tags from a blog post.
-func (r *BlogRepository) RemoveTagsFromBlog(ctx context.Context, blogID string, tagIDs []string) error {
 func (r *BlogRepository) RemoveTagsFromBlog(ctx context.Context, blogID string, tagIDs []string) error {
 	if len(tagIDs) == 0 {
 		return nil
