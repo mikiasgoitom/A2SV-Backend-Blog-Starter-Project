@@ -99,15 +99,31 @@ func (r *BlogRepository) CreateBlog(ctx context.Context, blog *entity.Blog) erro
 	return nil
 }
 
-// GetBlogByID retrieves a single blog post by its unique ID.
+// GetBlogByID retrieves a single blog post by its unique id.
 func (r *BlogRepository) GetBlogByID(ctx context.Context, blogID string) (*entity.Blog, error) {
 	var blog entity.Blog
-	filter := bson.M{"id": blogID, "is_deleted": false}
+	filter := bson.M{"_id": blogID, "is_deleted": false}
 
 	err := r.collection.FindOne(ctx, filter).Decode(&blog)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, fmt.Errorf("blog with ID %s not found or has been deleted: %w", blogID, err)
+			return nil, fmt.Errorf("blog with id '%s' not found or has been deleted: %w", blogID, err)
+		}
+		return nil, fmt.Errorf("failed to retrieve blog post: %w", err)
+	}
+
+	return &blog, nil
+}
+
+// GetBlogBySlug retrieves a single blog post by its unique slug.
+func (r *BlogRepository) GetBlogBySlug(ctx context.Context, slug string) (*entity.Blog, error) {
+	var blog entity.Blog
+	filter := bson.M{"slug": slug, "is_deleted": false}
+
+	err := r.collection.FindOne(ctx, filter).Decode(&blog)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, fmt.Errorf("blog with slug '%s' not found or has been deleted: %w", slug, err)
 		}
 		return nil, fmt.Errorf("failed to retrieve blog post: %w", err)
 	}
@@ -131,7 +147,7 @@ func (r *BlogRepository) GetBlogs(ctx context.Context, opts *contract.BlogFilter
             bson.M{
                 "$lookup": bson.M{
                     "from":         "blog_tags",
-                    "localField":   "id",
+                    "localField":   "_id",
                     "foreignField": "blog_id",
                     "as":           "tags",
                 },
@@ -215,7 +231,7 @@ func (r *BlogRepository) GetBlogs(ctx context.Context, opts *contract.BlogFilter
 
 func (r *BlogRepository) UpdateBlog(ctx context.Context, blogID string, updates map[string]interface{}) error {
 	updates["updated_at"] = time.Now()
-	filter := bson.M{"id": blogID, "is_deleted": false}
+	filter := bson.M{"_id": blogID, "is_deleted": false}
 	update := bson.M{"$set": updates}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
@@ -224,7 +240,7 @@ func (r *BlogRepository) UpdateBlog(ctx context.Context, blogID string, updates 
 	}
 	if res.ModifiedCount == 0 {
 		var blog entity.Blog
-		err := r.collection.FindOne(ctx, bson.M{"id": blogID}).Decode(&blog)
+		err := r.collection.FindOne(ctx, bson.M{"_id": blogID}).Decode(&blog)
 		if err != nil && errors.Is(err, mongo.ErrNoDocuments) {
 			return fmt.Errorf("blog post with ID %s not found", blogID)
 		}
@@ -235,7 +251,7 @@ func (r *BlogRepository) UpdateBlog(ctx context.Context, blogID string, updates 
 }
 
 func (r *BlogRepository) DeleteBlog(ctx context.Context, blogID string) error {
-	filter := bson.M{"id": blogID, "is_deleted": false}
+	filter := bson.M{"_id": blogID, "is_deleted": false}
 	update := bson.M{"$set": bson.M{"is_deleted": true, "updated_at": time.Now()}}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
@@ -244,7 +260,7 @@ func (r *BlogRepository) DeleteBlog(ctx context.Context, blogID string) error {
 	}
 	if res.ModifiedCount == 0 {
 		var blog entity.Blog
-		err := r.collection.FindOne(ctx, bson.M{"id": blogID}).Decode(&blog)
+		err := r.collection.FindOne(ctx, bson.M{"_id": blogID}).Decode(&blog)
 		if err != nil && errors.Is(err, mongo.ErrNoDocuments) {
 			return fmt.Errorf("blog post with ID %s not found", blogID)
 		}
@@ -281,7 +297,7 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 		{"$lookup": bson.M{
 			"from":         "users",
 			"localField":   "author_id",
-			"foreignField": "id",
+			"foreignField": "_id",
 			"as":           "authorDetails",
 		}},
 		{"$unwind": "$authorDetails"},
@@ -294,7 +310,7 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 			bson.M{
 				"$lookup": bson.M{
 					"from":         "blog_tags",
-					"localField":   "id",
+					"localField":   "_id",
 					"foreignField": "blog_id",
 					"as":           "blogTags",
 				},
@@ -369,7 +385,7 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 
 // IncrementViewCount increments the view count of a specific blog post.
 func (r *BlogRepository) IncrementViewCount(ctx context.Context, blogID string) error {
-	filter := bson.M{"id": blogID, "is_deleted": false}
+	filter := bson.M{"_id": blogID, "is_deleted": false}
 	update := bson.M{"$inc": bson.M{"view_count": 1}}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
@@ -385,7 +401,7 @@ func (r *BlogRepository) IncrementViewCount(ctx context.Context, blogID string) 
 
 // IncrementLikeCount increments the like count of a specific blog post.
 func (r *BlogRepository) IncrementLikeCount(ctx context.Context, blogID string) error {
-	filter := bson.M{"id": blogID, "is_deleted": false}
+	filter := bson.M{"_id": blogID, "is_deleted": false}
 	update := bson.M{"$inc": bson.M{"like_count": 1}}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
@@ -401,7 +417,7 @@ func (r *BlogRepository) IncrementLikeCount(ctx context.Context, blogID string) 
 
 // DecrementLikeCount decrements the like count of a specific blog post.
 func (r *BlogRepository) DecrementLikeCount(ctx context.Context, blogID string) error {
-	filter := bson.M{"id": blogID, "is_deleted": false}
+	filter := bson.M{"_id": blogID, "is_deleted": false}
 	update := bson.M{"$inc": bson.M{"like_count": -1}}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
@@ -415,10 +431,10 @@ func (r *BlogRepository) DecrementLikeCount(ctx context.Context, blogID string) 
 	return nil
 }
 
-// // IncrementDislikeCount increments the dislike count of a specific blog post.
-// func (r *BlogRepository) IncrementDislikeCount(ctx context.Context, blogID string) error {
-// 	filter := bson.M{"id": blogID, "is_deleted": false}
-// 	update := bson.M{"$inc": bson.M{"dislike_count": 1}}
+// IncrementDislikeCount increments the dislike count of a specific blog post.
+func (r *BlogRepository) IncrementDislikeCount(ctx context.Context, blogID string) error {
+	filter := bson.M{"_id": blogID, "is_deleted": false}
+	update := bson.M{"$inc": bson.M{"dislike_count": 1}}
 
 // 	res, err := r.collection.UpdateOne(ctx, filter, update)
 // 	if err != nil {
@@ -431,10 +447,10 @@ func (r *BlogRepository) DecrementLikeCount(ctx context.Context, blogID string) 
 // 	return nil
 // }
 
-// // DecrementDislikeCount decrements the dislike count of a specific blog post.
-// func (r *BlogRepository) DecrementDislikeCount(ctx context.Context, blogID string) error {
-// 	filter := bson.M{"id": blogID, "is_deleted": false}
-// 	update := bson.M{"$inc": bson.M{"dislike_count": -1}}
+// DecrementDislikeCount decrements the dislike count of a specific blog post.
+func (r *BlogRepository) DecrementDislikeCount(ctx context.Context, blogID string) error {
+	filter := bson.M{"_id": blogID, "is_deleted": false}
+	update := bson.M{"$inc": bson.M{"dislike_count": -1}}
 
 // 	res, err := r.collection.UpdateOne(ctx, filter, update)
 // 	if err != nil {
@@ -447,10 +463,10 @@ func (r *BlogRepository) DecrementLikeCount(ctx context.Context, blogID string) 
 // 	return nil
 // }
 
-// // IncrementCommentCount increments the comment count of a specific blog post.
-// func (r *BlogRepository) IncrementCommentCount(ctx context.Context, blogID string) error {
-// 	filter := bson.M{"id": blogID, "is_deleted": false}
-// 	update := bson.M{"$inc": bson.M{"comment_count": 1}}
+// IncrementCommentCount increments the comment count of a specific blog post.
+func (r *BlogRepository) IncrementCommentCount(ctx context.Context, blogID string) error {
+	filter := bson.M{"_id": blogID, "is_deleted": false}
+	update := bson.M{"$inc": bson.M{"comment_count": 1}}
 
 // 	res, err := r.collection.UpdateOne(ctx, filter, update)
 // 	if err != nil {
@@ -463,10 +479,10 @@ func (r *BlogRepository) DecrementLikeCount(ctx context.Context, blogID string) 
 // 	return nil
 // }
 
-// // DecrementCommentCount decrements the comment count of a specific blog post.
-// func (r *BlogRepository) DecrementCommentCount(ctx context.Context, blogID string) error {
-// 	filter := bson.M{"id": blogID, "is_deleted": false}
-// 	update := bson.M{"$inc": bson.M{"comment_count": -1}}
+// DecrementCommentCount decrements the comment count of a specific blog post.
+func (r *BlogRepository) DecrementCommentCount(ctx context.Context, blogID string) error {
+	filter := bson.M{"_id": blogID, "is_deleted": false}
+	update := bson.M{"$inc": bson.M{"comment_count": -1}}
 
 // 	res, err := r.collection.UpdateOne(ctx, filter, update)
 // 	if err != nil {
@@ -482,7 +498,7 @@ func (r *BlogRepository) DecrementLikeCount(ctx context.Context, blogID string) 
 // GetBlogCounts returns the current counts for a blog post.
 func (r *BlogRepository) GetBlogCounts(ctx context.Context, blogID string) (viewCount, likeCount, dislikeCount, commentCount int, err error) {
 	var blog entity.Blog
-	filter := bson.M{"id": blogID, "is_deleted": false}
+	filter := bson.M{"_id": blogID, "is_deleted": false}
 	err = r.collection.FindOne(ctx, filter).Decode(&blog)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
@@ -494,13 +510,13 @@ func (r *BlogRepository) GetBlogCounts(ctx context.Context, blogID string) (view
 }
 
 // AddTagsToBlog associates one or more tags with a blog post.
-func (r *BlogRepository) AddTagsToBlog(ctx context.Context, blogID string, tagIDs []string) error {
+func (r *BlogRepository) AddTagsToBlog(ctx context.Context, blogSlug string, tagIDs []string) error {
 	if len(tagIDs) == 0 {
 		return nil
 	}
 
-	// Check if the blog exists and is not deleted
-	_, err := r.GetBlogByID(ctx, blogID)
+	// Check if the blog exists and is not deleted using its slug
+	blog, err := r.GetBlogBySlug(ctx, blogSlug)
 	if err != nil {
 		return fmt.Errorf("blog not found: %w", err)
 	}
@@ -509,7 +525,7 @@ func (r *BlogRepository) AddTagsToBlog(ctx context.Context, blogID string, tagID
 	var blogTags []interface{}
 	for _, tagIDStr := range tagIDs {
 		blogTag := entity.BlogTag{
-			BlogID: blogID,
+			BlogID: blog.ID,
 			TagID:  tagIDStr,
 		}
 		blogTags = append(blogTags, blogTag)
@@ -523,7 +539,7 @@ func (r *BlogRepository) AddTagsToBlog(ctx context.Context, blogID string, tagID
 		if writeException, ok := err.(mongo.BulkWriteException); ok {
 			for _, e := range writeException.WriteErrors {
 				if e.Code == 11000 {
-					fmt.Printf("Warning: Duplicate blog-tag association for blog %s and tag with index %d. Error: %v\n", blogID, e.Index, e)
+					fmt.Printf("Warning: Duplicate blog-tag association for blog %s and tag with index %d. Error: %v\n", blog.ID, e.Index, e)
 				} else {
 					return fmt.Errorf("failed to add tags: %w", err)
 				}
@@ -536,20 +552,20 @@ func (r *BlogRepository) AddTagsToBlog(ctx context.Context, blogID string, tagID
 }
 
 // RemoveTagsFromBlog disassociates one or more tags from a blog post.
-func (r *BlogRepository) RemoveTagsFromBlog(ctx context.Context, blogID string, tagIDs []string) error {
+func (r *BlogRepository) RemoveTagsFromBlog(ctx context.Context, blogSlug string, tagIDs []string) error {
 	if len(tagIDs) == 0 {
 		return nil
 	}
 
-	// Check if the blog exists and is not deleted
-	_, err := r.GetBlogByID(ctx, blogID)
+	// Check if the blog exists and is not deleted using its slug
+	blog, err := r.GetBlogBySlug(ctx, blogSlug)
 	if err != nil {
 		return fmt.Errorf("blog not found: %w", err)
 	}
 
 	// Prepare filter for deletion
 	filter := bson.M{
-		"blog_id": blogID,
+		"blog_id": blog.ID,
 		"tag_id":  bson.M{"$in": tagIDs},
 	}
 
@@ -574,7 +590,7 @@ func (r *BlogRepository) GetBlogsByTagID(ctx context.Context, tagID string, opts
 		{"$lookup": bson.M{
 			"from":         "blogs",
 			"localField":   "blogId",
-			"foreignField": "id",
+			"foreignField": "_id",
 			"as":           "blogDetails",
 		}},
 		// Unwind the blogDetails array (each blog_tag document will now have a blogDetails object)
@@ -670,7 +686,7 @@ func (r *BlogRepository) GetBlogsByTagIDs(ctx context.Context, tagIDs []string, 
 
 	// Now fetch the blogs with those IDs
 	blogFilter := bson.M{
-		"id":        bson.M{"$in": blogIDs},
+		"_id":        bson.M{"$in": blogIDs},
 		"isDeleted": false,
 	}
 	findOptions := options.Find().
