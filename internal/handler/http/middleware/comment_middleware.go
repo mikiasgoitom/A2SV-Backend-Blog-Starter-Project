@@ -12,7 +12,7 @@ func ValidateEditTimeWindow(windowMinutes int) gin.HandlerFunc {
 		// This middleware would typically check the comment's creation time
 		// against the current time to ensure it's within the edit window
 		// For now, we'll set a flag that the handler can use
-		
+
 		c.Set("edit_window_minutes", windowMinutes)
 		c.Set("edit_deadline_check", true)
 		c.Next()
@@ -35,7 +35,7 @@ func PreventSpam() gin.HandlerFunc {
 		// 1. Check for duplicate content from the same user in the last X minutes
 		// 2. Implement rate limiting per user
 		// 3. Check for suspicious patterns
-		
+
 		// For now, we'll just add a header to indicate spam prevention is active
 		c.Header("X-Spam-Protection", "active")
 		c.Next()
@@ -54,13 +54,13 @@ func ValidateNestedDepth(maxDepth int) gin.HandlerFunc {
 func LogCommentActivity() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		
+
 		// Process request
 		c.Next()
-		
+
 		// Log after processing
 		duration := time.Since(start)
-		
+
 		// In a real implementation, you'd log to your logging system
 		// For now, we'll just add response headers
 		c.Header("X-Processing-Time", duration.String())

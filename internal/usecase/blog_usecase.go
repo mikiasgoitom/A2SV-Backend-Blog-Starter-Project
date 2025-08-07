@@ -274,7 +274,7 @@ func (uc *BlogUseCaseImpl) TrackBlogPopularity(ctx context.Context, blogID, user
 
 	return viewCount, likeCount, dislikeCount, commentCount, nil
 }
-func (uc *BlogUseCaseImpl) SearchAndFilterBlogs(ctx context.Context, query string, searchBy string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, maxViews *int, minLikes *int, maxLikes *int, authorID *string, page int, pageSize int) ([]entity.Blog, error, int, int, int) {
+func (uc *BlogUseCaseImpl) SearchAndFilterBlogs(ctx context.Context, query string, searchBy string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, maxViews *int, minLikes *int, maxLikes *int, authorID *string, page int, pageSize int) ([]entity.Blog, int, int, int, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -291,7 +291,7 @@ func (uc *BlogUseCaseImpl) SearchAndFilterBlogs(ctx context.Context, query strin
 		blogs, totalCount, err = uc.blogRepo.GetBlogsByTagIDs(ctx, tags, page, pageSize)
 		if err != nil {
 			uc.logger.Errorf("failed to get blogs by tag IDs: %v", err)
-			return nil, fmt.Errorf("failed to get blogs by tag IDs: %w", err), 0, 0, 0
+			return nil, 0, 0, 0, fmt.Errorf("failed to get blogs by tag IDs: %w", err)
 		}
 	} else {
 		filterOptions := &contract.BlogFilterOptions{
@@ -317,7 +317,7 @@ func (uc *BlogUseCaseImpl) SearchAndFilterBlogs(ctx context.Context, query strin
 
 		if err != nil {
 			uc.logger.Errorf("failed to search and filter blogs: %v", err)
-			return nil, fmt.Errorf("failed to search and filter blogs: %w", err), 0, 0, 0
+			return nil, 0, 0, 0, fmt.Errorf("failed to search and filter blogs: %w", err)
 		}
 	}
 
@@ -342,7 +342,7 @@ func (uc *BlogUseCaseImpl) SearchAndFilterBlogs(ctx context.Context, query strin
 		blogEntities = append(blogEntities, *blog)
 	}
 
-	return blogEntities, nil, int(totalCount), page, totalPages
+	return blogEntities, int(totalCount), page, totalPages, nil
 }
 
 // GetRecommendedBlogs gets recommended blogs for a user
