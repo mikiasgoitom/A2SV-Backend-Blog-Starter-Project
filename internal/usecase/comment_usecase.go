@@ -374,7 +374,7 @@ func (uc *commentUseCase) toCommentResponse(ctx context.Context, comment *entity
         ParentID:   comment.ParentID,
         TargetID:   comment.TargetID,
         AuthorID:   comment.AuthorID,
-        AuthorName: author.Username, // Assuming User entity has Name field
+        AuthorName: author.Username, // Using User entity's Username field
         Content:    comment.Content,
         Status:     comment.Status,
         LikeCount:  comment.LikeCount,
