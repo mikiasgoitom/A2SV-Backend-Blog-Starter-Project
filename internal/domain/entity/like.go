@@ -3,7 +3,6 @@ package entity
 import (
 	"time"
 )
-
 // LikeType represents the type of reaction (like or dislike)
 type LikeType string
 
