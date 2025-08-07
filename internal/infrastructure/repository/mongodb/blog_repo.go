@@ -399,42 +399,42 @@ func (r *BlogRepository) IncrementViewCount(ctx context.Context, blogID string) 
 	return nil
 }
 
-// IncrementLikeCount increments the like count of a specific blog post.
-func (r *BlogRepository) IncrementLikeCount(ctx context.Context, blogID string) error {
-	filter := bson.M{"_id": blogID, "is_deleted": false}
-	update := bson.M{"$inc": bson.M{"like_count": 1}}
+// // IncrementLikeCount increments the like count of a specific blog post.
+// func (r *BlogRepository) IncrementLikeCount(ctx context.Context, blogID string) error {
+// 	filter := bson.M{"_id": blogID, "is_deleted": false}
+// 	update := bson.M{"$inc": bson.M{"like_count": 1}}
 
-	res, err := r.collection.UpdateOne(ctx, filter, update)
-	if err != nil {
-		return fmt.Errorf("failed to increment like count: %w", err)
-	}
-	if res.ModifiedCount == 0 {
-		return errors.New("blog post not found")
-	}
+// 	res, err := r.collection.UpdateOne(ctx, filter, update)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to increment like count: %w", err)
+// 	}
+// 	if res.ModifiedCount == 0 {
+// 		return errors.New("blog post not found")
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
-// DecrementLikeCount decrements the like count of a specific blog post.
-func (r *BlogRepository) DecrementLikeCount(ctx context.Context, blogID string) error {
-	filter := bson.M{"_id": blogID, "is_deleted": false}
-	update := bson.M{"$inc": bson.M{"like_count": -1}}
+// // DecrementLikeCount decrements the like count of a specific blog post.
+// func (r *BlogRepository) DecrementLikeCount(ctx context.Context, blogID string) error {
+// 	filter := bson.M{"_id": blogID, "is_deleted": false}
+// 	update := bson.M{"$inc": bson.M{"like_count": -1}}
 
-	res, err := r.collection.UpdateOne(ctx, filter, update)
-	if err != nil {
-		return fmt.Errorf("failed to decrement like count: %w", err)
-	}
-	if res.ModifiedCount == 0 {
-		return errors.New("blog post not found")
-	}
+// 	res, err := r.collection.UpdateOne(ctx, filter, update)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to decrement like count: %w", err)
+// 	}
+// 	if res.ModifiedCount == 0 {
+// 		return errors.New("blog post not found")
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // IncrementDislikeCount increments the dislike count of a specific blog post.
-func (r *BlogRepository) IncrementDislikeCount(ctx context.Context, blogID string) error {
-	filter := bson.M{"_id": blogID, "is_deleted": false}
-	update := bson.M{"$inc": bson.M{"dislike_count": 1}}
+// func (r *BlogRepository) IncrementDislikeCount(ctx context.Context, blogID string) error {
+// 	filter := bson.M{"_id": blogID, "is_deleted": false}
+// 	update := bson.M{"$inc": bson.M{"dislike_count": 1}}
 
 // 	res, err := r.collection.UpdateOne(ctx, filter, update)
 // 	if err != nil {
@@ -448,9 +448,9 @@ func (r *BlogRepository) IncrementDislikeCount(ctx context.Context, blogID strin
 // }
 
 // DecrementDislikeCount decrements the dislike count of a specific blog post.
-func (r *BlogRepository) DecrementDislikeCount(ctx context.Context, blogID string) error {
-	filter := bson.M{"_id": blogID, "is_deleted": false}
-	update := bson.M{"$inc": bson.M{"dislike_count": -1}}
+// func (r *BlogRepository) DecrementDislikeCount(ctx context.Context, blogID string) error {
+// 	filter := bson.M{"_id": blogID, "is_deleted": false}
+// 	update := bson.M{"$inc": bson.M{"dislike_count": -1}}
 
 // 	res, err := r.collection.UpdateOne(ctx, filter, update)
 // 	if err != nil {
@@ -464,9 +464,9 @@ func (r *BlogRepository) DecrementDislikeCount(ctx context.Context, blogID strin
 // }
 
 // IncrementCommentCount increments the comment count of a specific blog post.
-func (r *BlogRepository) IncrementCommentCount(ctx context.Context, blogID string) error {
-	filter := bson.M{"_id": blogID, "is_deleted": false}
-	update := bson.M{"$inc": bson.M{"comment_count": 1}}
+// func (r *BlogRepository) IncrementCommentCount(ctx context.Context, blogID string) error {
+// 	filter := bson.M{"_id": blogID, "is_deleted": false}
+// 	update := bson.M{"$inc": bson.M{"comment_count": 1}}
 
 // 	res, err := r.collection.UpdateOne(ctx, filter, update)
 // 	if err != nil {
@@ -480,9 +480,9 @@ func (r *BlogRepository) IncrementCommentCount(ctx context.Context, blogID strin
 // }
 
 // DecrementCommentCount decrements the comment count of a specific blog post.
-func (r *BlogRepository) DecrementCommentCount(ctx context.Context, blogID string) error {
-	filter := bson.M{"_id": blogID, "is_deleted": false}
-	update := bson.M{"$inc": bson.M{"comment_count": -1}}
+// func (r *BlogRepository) DecrementCommentCount(ctx context.Context, blogID string) error {
+// 	filter := bson.M{"_id": blogID, "is_deleted": false}
+// 	update := bson.M{"$inc": bson.M{"comment_count": -1}}
 
 // 	res, err := r.collection.UpdateOne(ctx, filter, update)
 // 	if err != nil {
@@ -686,7 +686,7 @@ func (r *BlogRepository) GetBlogsByTagIDs(ctx context.Context, tagIDs []string, 
 
 	// Now fetch the blogs with those IDs
 	blogFilter := bson.M{
-		"_id":        bson.M{"$in": blogIDs},
+		"id":        bson.M{"$in": blogIDs},
 		"isDeleted": false,
 	}
 	findOptions := options.Find().

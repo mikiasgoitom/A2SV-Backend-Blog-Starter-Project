@@ -6,7 +6,7 @@ import (
 
 // Notification represents a notification sent to a user
 type Notification struct {
-	ID              string           `json:"id" bson:"id"`
+	ID              string           `json:"id" bson:"_id"`
 	RecipientUserID string           `json:"recipient_user_id" bson:"recipient_user_id"`
 	SenderUserID    *string          `json:"sender_user_id" bson:"sender_user_id"`
 	Type            NotificationType `json:"type" bson:"type"`

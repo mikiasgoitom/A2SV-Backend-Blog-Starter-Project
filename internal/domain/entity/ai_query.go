@@ -6,7 +6,7 @@ import (
 
 // AIQuery represents an AI interaction/query
 type AIQuery struct {
-	ID        string    `json:"id" bson:"id"`
+	ID        string    `json:"id" bson:"_id"`
 	UserID    *string   `json:"user_id" bson:"user_id"`
 	Prompt    string    `json:"prompt" bson:"prompt"`
 	Response  string    `json:"response" bson:"response"`

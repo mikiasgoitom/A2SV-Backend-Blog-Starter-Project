@@ -6,7 +6,7 @@ import (
 
 // Package represents a subscription plan or feature package
 type Package struct {
-	ID          string    `json:"id" bson:"id"`
+	ID          string    `json:"id" bson:"_id"`
 	Name        string    `json:"name" bson:"name"`
 	Description string    `json:"description" bson:"description"`
 	Price       float64   `json:"price" bson:"price"`

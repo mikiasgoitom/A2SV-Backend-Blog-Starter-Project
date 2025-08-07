@@ -43,7 +43,7 @@ func (r *LikeRepository) CreateReaction(ctx context.Context, like *entity.Like) 
 
 	// Fields to set ONLY on initial insert (when upsert: true creates a new document)
 	setOnInsertFields := bson.M{
-		"id":         uuid.New().String(),
+		"_id":         uuid.New().String(),
 		"created_at": time.Now(),
 	}
 
@@ -73,7 +73,7 @@ func (r *LikeRepository) CreateReaction(ctx context.Context, like *entity.Like) 
 
 // DeleteReaction marks a reaction record as deleted (soft delete) by its unique ID.
 func (r *LikeRepository) DeleteReaction(ctx context.Context, reactionID string) error {
-	filter := bson.M{"id": reactionID, "is_deleted": false}
+	filter := bson.M{"_id": reactionID, "is_deleted": false}
 	update := bson.M{"$set": bson.M{"is_deleted": true, "updated_at": time.Now()}}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
