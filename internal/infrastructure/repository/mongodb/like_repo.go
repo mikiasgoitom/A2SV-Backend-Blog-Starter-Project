@@ -3,11 +3,14 @@ package mongodb
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // LikeRepository represents the MongoDB implementation of the ILikeRepository interface.
@@ -22,59 +25,121 @@ func NewLikeRepository(db *mongo.Database) *LikeRepository {
 	}
 }
 
-// CreateLike inserts a new like record into the database.
-func (r *LikeRepository) CreateLike(ctx context.Context, like *entity.Like) error {
-	like.CreatedAt = time.Now()
-	_, err := r.collection.InsertOne(ctx, like)
+// CreateReaction creates or updates a user's reaction (like/dislike) on a target.
+func (r *LikeRepository) CreateReaction(ctx context.Context, like *entity.Like) error {
+	// Filter to find an existing reaction by this user on this target.
+	filter := bson.M{
+		"user_id":     like.UserID,
+		"target_id":   like.TargetID,
+		"target_type": like.TargetType,
+	}
+
+	// Fields to set/update on the document.
+	updateFields := bson.M{
+		"type":       like.Type,
+		"is_deleted": false,
+		"updated_at": time.Now(),
+	}
+
+	// Fields to set ONLY on initial insert (when upsert: true creates a new document)
+	setOnInsertFields := bson.M{
+		"id":         uuid.New().String(),
+		"created_at": time.Now(),
+	}
+
+	updateDoc := bson.M{
+		"$set":         updateFields,
+		"$setOnInsert": setOnInsertFields,
+	}
+
+	opts := options.Update().SetUpsert(true)
+
+	res, err := r.collection.UpdateOne(ctx, filter, updateDoc, opts)
 	if err != nil {
-		var writeException mongo.WriteException
-		if errors.As(err, &writeException) {
-			for _, e := range writeException.WriteErrors {
-				if e.Code == 11000 {
-					return errors.New("like already exists for this user and target")
-				}
-			}
+		return fmt.Errorf("failed to create or update reaction record: %w", err)
+	}
+
+	if res.UpsertedID != nil {
+		if id, ok := res.UpsertedID.(string); ok {
+			like.ID = id
+		} else {
+			return fmt.Errorf("upserted ID is not a string, got type %T", res.UpsertedID)
 		}
-		return errors.New("failed to create like")
+		like.CreatedAt = setOnInsertFields["created_at"].(time.Time)
 	}
+
 	return nil
 }
 
-// DeleteLike deletes a like record from the database by its ID.
-func (r *LikeRepository) DeleteLike(ctx context.Context, likeID string) error {
-	filter := bson.M{"id": likeID}
+// DeleteReaction marks a reaction record as deleted (soft delete) by its unique ID.
+func (r *LikeRepository) DeleteReaction(ctx context.Context, reactionID string) error {
+	filter := bson.M{"id": reactionID, "is_deleted": false}
+	update := bson.M{"$set": bson.M{"is_deleted": true, "updated_at": time.Now()}}
 
-	res, err := r.collection.DeleteOne(ctx, filter)
+	res, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return errors.New("failed to delete like")
+		return fmt.Errorf("failed to delete reaction: %w", err)
 	}
-	if res.DeletedCount == 0 {
-		return errors.New("like not found")
+	if res.ModifiedCount == 0 {
+		return errors.New("reaction not found")
 	}
 	return nil
 }
 
-// GetLikeByUserIDAndTargetID retrieves a like record by the user ID and target ID.
-func (r *LikeRepository) GetLikeByUserIDAndTargetID(ctx context.Context, userID, targetID string) (*entity.Like, error) {
+// GetReactionByUserIDAndTargetID retrieves any active reaction (like or dislike) by a specific user on a specific target.
+func (r *LikeRepository) GetReactionByUserIDAndTargetID(ctx context.Context, userID, targetID string) (*entity.Like, error) {
 	var like entity.Like
-	filter := bson.M{"user_id": userID, "target_id": targetID}
+	// Filter for active reactions
+	filter := bson.M{"user_id": userID, "target_id": targetID, "is_deleted": false}
 
 	err := r.collection.FindOne(ctx, filter).Decode(&like)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, errors.New("like not found")
+			return nil, errors.New("reaction not found")
 		}
-		return nil, errors.New("failed to retrieve like")
+		return nil, fmt.Errorf("failed to retrieve reaction: %w", err)
 	}
 	return &like, nil
 }
 
-// CountLikesByTargetID counts the number of likes for a specific target (blog or comment).
+// GetReactionByUserIDTargetIDAndType retrieves a specific type of active reaction (like or dislike) by a user on a target.
+func (r *LikeRepository) GetReactionByUserIDTargetIDAndType(ctx context.Context, userID, targetID string, reactionType entity.LikeType) (*entity.Like, error) {
+	var like entity.Like
+	filter := bson.M{
+		"user_id":    userID,
+		"target_id":  targetID,
+		"type":       reactionType,
+		"is_deleted": false,
+	}
+
+	err := r.collection.FindOne(ctx, filter).Decode(&like)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errors.New("reaction not found")
+		}
+		return nil, fmt.Errorf("failed to retrieve specific reaction: %w", err)
+	}
+	return &like, nil
+}
+
+// CountLikesByTargetID counts the number of active 'like' reactions for a specific target.
 func (r *LikeRepository) CountLikesByTargetID(ctx context.Context, targetID string) (int64, error) {
-	filter := bson.M{"target_id": targetID}
+	// Filter to count only active 'likes'
+	filter := bson.M{"target_id": targetID, "type": entity.LIKE_TYPE_LIKE, "is_deleted": false}
 	count, err := r.collection.CountDocuments(ctx, filter)
 	if err != nil {
-		return 0, errors.New("failed to count likes")
+		return 0, fmt.Errorf("failed to count active likes: %w", err)
+	}
+	return count, nil
+}
+
+// CountDislikesByTargetID counts the number of active 'dislike' reactions for a specific target.
+func (r *LikeRepository) CountDislikesByTargetID(ctx context.Context, targetID string) (int64, error) {
+	// Filter to count only active 'dislikes'
+	filter := bson.M{"target_id": targetID, "type": entity.LIKE_TYPE_DISLIKE, "is_deleted": false}
+	count, err := r.collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count active dislikes: %w", err)
 	}
 	return count, nil
 }
