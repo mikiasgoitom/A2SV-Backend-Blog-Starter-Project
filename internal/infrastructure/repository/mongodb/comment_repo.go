@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/uuidgen"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -125,7 +126,7 @@ func (r *CommentRepository) Delete(ctx context.Context, id string) error {
 }
 
 // Listing Operations
-func (r *CommentRepository) GetTopLevelComments(ctx context.Context, blogID string, pagination Pagination) (comments []*entity.Comment, total int64, err error) {
+func (r *CommentRepository) GetTopLevelComments(ctx context.Context, blogID string, pagination contract.Pagination) (comments []*entity.Comment, total int64, err error) {
 	if pagination.Page < 1 || pagination.PageSize < 1 {
 		return nil, 0, ErrInvalidPagination
 	}
@@ -191,7 +192,7 @@ func (r *CommentRepository) GetCommentThread(ctx context.Context, parentID strin
 	return thread, nil
 }
 
-func (r *CommentRepository) GetCommentsByUser(ctx context.Context, userID string, pagination Pagination) ([]*entity.Comment, int64, error) {
+func (r *CommentRepository) GetCommentsByUser(ctx context.Context, userID string, pagination contract.Pagination) ([]*entity.Comment, int64, error) {
 	if pagination.Page < 1 || pagination.PageSize < 1 {
 		return nil, 0, ErrInvalidPagination
 	}
@@ -381,7 +382,7 @@ func (r *CommentRepository) ReportComment(ctx context.Context, report *entity.Co
 	return nil
 }
 
-func (r *CommentRepository) GetCommentReports(ctx context.Context, pagination Pagination) ([]*entity.CommentReport, int64, error) {
+func (r *CommentRepository) GetCommentReports(ctx context.Context, pagination contract.Pagination) ([]*entity.CommentReport, int64, error) {
 	if pagination.Page < 1 || pagination.PageSize < 1 {
 		return nil, 0, ErrInvalidPagination
 	}
@@ -474,7 +475,7 @@ func (r *CommentRepository) validateParentTargetLogic(ctx context.Context, comme
 }
 
 func (r *CommentRepository) getRepliesRecursively(ctx context.Context, parentID string, depth int) ([]*entity.CommentThread, error) {
-	if depth > MaxCommentDepth { // Prevent excessive nesting
+	if depth > contract.MaxCommentDepth { // Prevent excessive nesting
 		return []*entity.CommentThread{}, nil
 	}
 
