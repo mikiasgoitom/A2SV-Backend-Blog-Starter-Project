@@ -44,7 +44,7 @@ func (r *TagRepository) CreateTag(ctx context.Context, tag *entity.Tag) error {
 // GetTagByID retrieves a single tag by its unique ID.
 func (r *TagRepository) GetTagByID(ctx context.Context, tagID string) (*entity.Tag, error) {
 	var tag entity.Tag
-	filter := bson.M{"id": tagID}
+	filter := bson.M{"_id": tagID}
 
 	err := r.collection.FindOne(ctx, filter).Decode(&tag)
 	if err != nil {
@@ -88,7 +88,7 @@ func (r *TagRepository) GetAllTags(ctx context.Context) ([]*entity.Tag, error) {
 
 // UpdateTag updates the details of an existing tag by its ID.
 func (r *TagRepository) UpdateTag(ctx context.Context, tagID string, updates map[string]interface{}) error {
-	filter := bson.M{"id": tagID}
+	filter := bson.M{"_id": tagID}
 	update := bson.M{"$set": updates}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
@@ -103,7 +103,7 @@ func (r *TagRepository) UpdateTag(ctx context.Context, tagID string, updates map
 
 // DeleteTag deletes a tag record by its ID.
 func (r *TagRepository) DeleteTag(ctx context.Context, tagID string) error {
-	filter := bson.M{"id": tagID}
+	filter := bson.M{"_id": tagID}
 	res, err := r.collection.DeleteOne(ctx, filter)
 	if err != nil {
 		return fmt.Errorf("failed to delete tag: %w", err)

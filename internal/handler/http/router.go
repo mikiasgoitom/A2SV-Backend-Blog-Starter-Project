@@ -7,16 +7,20 @@ import (
 )
 
 type Router struct {
-	userHandler *UserHandler
-	userUsecase *usecase.UserUsecase
-	jwtService  usecase.JWTService
+	userHandler        *UserHandler
+	blogHandler        *BlogHandler
+	interactionHandler *InteractionHandler
+	userUsecase        *usecase.UserUsecase
+	jwtService         usecase.JWTService
 }
 
-func NewRouter(userUsecase *usecase.UserUsecase, jwtService usecase.JWTService) *Router {
+func NewRouter(userUsecase *usecase.UserUsecase, blogUsecase usecase.IBlogUseCase, interactionUsecase usecase.IInteractionUseCase, jwtService usecase.JWTService) *Router {
 	return &Router{
-		userHandler: NewUserHandler(userUsecase),
-		userUsecase: userUsecase,
-		jwtService:  jwtService,
+		userHandler:        NewUserHandler(userUsecase),
+		blogHandler:        NewBlogHandler(blogUsecase),
+		interactionHandler: NewInteractionHandler(interactionUsecase),
+		userUsecase:        userUsecase,
+		jwtService:         jwtService,
 	}
 }
 
@@ -41,6 +45,15 @@ func (r *Router) SetupRoutes(router *gin.Engine) {
 		users.GET("/:id", r.userHandler.GetUser)
 	}
 
+	// Public blog routes
+	blogs := v1.Group("/blogs")
+	{
+		blogs.GET("", r.blogHandler.GetBlogsHandler)
+		blogs.GET("/search", r.blogHandler.SearchAndFilterBlogsHandler)
+		blogs.GET("/popular", r.blogHandler.GetPopularBlogsHandler)
+		blogs.GET("/:slug", r.blogHandler.GetBlogDetailHandler)
+	}
+
 	// Protected routes (authentication required)
 	protected := v1.Group("/")
 	// Cast jwtService to the expected JWTManager type if needed
@@ -49,6 +62,17 @@ func (r *Router) SetupRoutes(router *gin.Engine) {
 		// Current user routes
 		protected.GET("/me", r.userHandler.GetCurrentUser)
 		protected.PUT("/me", r.userHandler.UpdateUser)
+
+		// Blog routes
+		protected.POST("/blogs", r.blogHandler.CreateBlogHandler)
+		protected.PUT("/blogs/:blogID", r.blogHandler.UpdateBlogHandler)
+		protected.DELETE("/blogs/:blogID", r.blogHandler.DeleteBlogHandler)
+
+		// Interaction routes
+		protected.POST("/blogs/:blogID/like", r.interactionHandler.LikeBlogHandler)
+		protected.DELETE("/blogs/:blogID/like", r.interactionHandler.UnlikeBlogHandler)
+		protected.POST("/blogs/:blogID/view", r.blogHandler.TrackBlogViewHandler)
+
 	}
 
 	// Logout route (no authentication required just accept the refresh token from the request body and invalidate the user session)

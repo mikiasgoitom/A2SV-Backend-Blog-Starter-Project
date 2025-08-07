@@ -49,6 +49,7 @@ func main() {
 	// Dependency Injection: Repositories
 	userRepo := mongodb.NewMongoUserRepository(mongoClient.Client.Database(dbName).Collection("users"))
 	tokenRepo := mongodb.NewTokenRepository(mongoClient.Client.Database(dbName).Collection("tokens"))
+	blogRepo := mongodb.NewBlogRepository(mongoClient.Client.Database(dbName))
 
 	// Dependency Injection: Services
 	hasher := passwordservice.NewHasher()
@@ -65,10 +66,11 @@ func main() {
 	uuidGenerator := uuidgen.NewGenerator()
 	appConfig := config.NewConfig()
 	userUsecase := usecase.NewUserUsecase(userRepo, tokenRepo, nil, hasher, jwtService, nil, appLogger, appConfig, appValidator, uuidGenerator)
-	// will add more usecases here as they are created
+	blogUsecase := usecase.NewBlogUseCase(blogRepo, uuidGenerator, appLogger)
+	interactionUsecase := usecase.NewInteractionUseCase(blogRepo, appLogger)
 
 	// Setup API routes
-	appRouter := handlerHttp.NewRouter(userUsecase, jwtService)
+	appRouter := handlerHttp.NewRouter(userUsecase, blogUsecase, interactionUsecase, jwtService)
 	appRouter.SetupRoutes(router)
 
 	// Start the server
