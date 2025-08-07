@@ -25,7 +25,7 @@ type IBlogRepository interface {
 	GetBlogCounts(ctx context.Context, blogID string) (viewCount, likeCount, dislikeCount, commentCount int, err error)
 	AddTagsToBlog(ctx context.Context, blogID string, tagIDs []string) error
 	RemoveTagsFromBlog(ctx context.Context, blogID string, tagIDs []string) error
-	GetBlogsByTagIDs(context.Context, []string, int, int) ([]*entity.Blog, int64, error)
+	GetBlogsByTagIDs(ctx context.Context, tagIDs []string, page int, pageSize int) ([]*entity.Blog, int64, error)
 }
 
 // BlogFilterOptions encapsulates filtering, pagination, and sorting parameters for blog retrieval.
