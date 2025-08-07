@@ -87,6 +87,7 @@ type AppLogger interface {
 	Debugf(format string, args ...interface{})
 	Infof(format string, args ...interface{})
 	Warnf(format string, args ...interface{})
+	Warningf(format string, args ...interface{})
 	Errorf(format string, args ...interface{})
 	Fatalf(format string, args ...interface{})
 }
@@ -139,3 +140,4 @@ type ILikeUseCase interface {
 //  SearchAndFilterBlogs(ctx context.Context, query string, page, pageSize int, searchBy string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, minLikes *int, authorID *string) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
 
 // }
+

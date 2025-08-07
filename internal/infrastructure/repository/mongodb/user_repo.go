@@ -101,7 +101,7 @@ func (r *MongoUserRepository) UpdateUserPassword(ctx context.Context, id string,
 }
 
 func (r *MongoUserRepository) DeleteUser(ctx context.Context, id string) error {
-	filter := bson.M{"id": id}
+	filter := bson.M{"_id": id}
 	_, err := r.collection.DeleteOne(ctx, filter)
 	return err
 }
