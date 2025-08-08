@@ -28,18 +28,25 @@ func NewUserAvatarRepository(db *mongo.Database) contract.IUserAvatarRepository 
 
 // CreateAvatarURI saves a new avatar URI for a user
 func (r *userAvatarRepository) CreateAvatarURI(ctx context.Context, userID, uri string) error {
+	fmt.Printf("Debug: userID=%s\n", userID)
+
 	filter := bson.M{"_id": userID}
 	update := bson.M{"$set": bson.M{"avatar_uri": uri}}
-	
+
+	fmt.Printf("Debug: filter=%v, update=%v\n", filter, update)
+
 	result, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
+		fmt.Printf("Debug: UpdateOne error=%v\n", err)
 		return fmt.Errorf("failed to create avatar URI: %w", err)
 	}
-	
+
+	fmt.Printf("Debug: MatchedCount=%d\n", result.MatchedCount)
+
 	if result.MatchedCount == 0 {
 		return fmt.Errorf("user not found")
 	}
-	
+
 	return nil
 }
 
@@ -48,7 +55,7 @@ func (r *userAvatarRepository) ReadAvatarURI(ctx context.Context, userID string)
 	var user struct {
 		AvatarURI string `bson:"avatar_uri"`
 	}
-	
+
 	filter := bson.M{"_id": userID}
 	err := r.collection.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
@@ -57,7 +64,7 @@ func (r *userAvatarRepository) ReadAvatarURI(ctx context.Context, userID string)
 		}
 		return "", fmt.Errorf("failed to read avatar URI: %w", err)
 	}
-	
+
 	return user.AvatarURI, nil
 }
 
@@ -65,16 +72,16 @@ func (r *userAvatarRepository) ReadAvatarURI(ctx context.Context, userID string)
 func (r *userAvatarRepository) UpdateAvatarURI(ctx context.Context, userID, newURI string) error {
 	filter := bson.M{"_id": userID}
 	update := bson.M{"$set": bson.M{"avatar_uri": newURI}}
-	
+
 	result, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return fmt.Errorf("failed to update avatar URI: %w", err)
 	}
-	
+
 	if result.MatchedCount == 0 {
 		return fmt.Errorf("user not found")
 	}
-	
+
 	return nil
 }
 
@@ -82,16 +89,16 @@ func (r *userAvatarRepository) UpdateAvatarURI(ctx context.Context, userID, newU
 func (r *userAvatarRepository) DeleteAvatarURI(ctx context.Context, userID string) error {
 	filter := bson.M{"_id": userID}
 	update := bson.M{"$unset": bson.M{"avatar_uri": ""}}
-	
+
 	result, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return fmt.Errorf("failed to delete avatar URI: %w", err)
 	}
-	
+
 	if result.MatchedCount == 0 {
 		return fmt.Errorf("user not found")
 	}
-	
+
 	return nil
 }
 
