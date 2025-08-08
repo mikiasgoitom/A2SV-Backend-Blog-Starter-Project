@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/dto"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
@@ -46,7 +47,7 @@ func (h *BlogHandler) CreateBlogHandler(cxt *gin.Context) {
 	// get the author id from the request body as user id which will be of any type
 	authorIDAny, exists := cxt.Get("userID")
 
-	if !exists{
+	if !exists {
 		ErrorHandler(cxt, http.StatusUnauthorized, "User not authenticated")
 		return
 	}
@@ -57,8 +58,8 @@ func (h *BlogHandler) CreateBlogHandler(cxt *gin.Context) {
 		ErrorHandler(cxt, http.StatusBadRequest, "Invalid user ID format in token")
 	}
 
-	_,err := h.blogUsecase.CreateBlog(cxt.Request.Context(), req.Title, req.Content, authorID, req.Slug, usecase.BlogStatus(req.Status), req.FeaturedImageID)
-	
+	_, err := h.blogUsecase.CreateBlog(cxt.Request.Context(), req.Title, req.Content, authorID, req.Slug, usecase.BlogStatus(req.Status), req.FeaturedImageID, req.Tags)
+
 	if err != nil {
 		ErrorHandler(cxt, http.StatusInternalServerError, "Failed to create blog")
 		return
@@ -118,22 +119,22 @@ func (h *BlogHandler) GetBlogsHandler(cxt *gin.Context) {
 	}
 
 	// call the usecase
-	blogs,totalCount, currentPage,totalPages, err := h.blogUsecase.GetBlogs(cxt.Request.Context(), page, pageSize, sortBy, sortOrder, dateFrom, dateTo)
+	blogs, totalCount, currentPage, totalPages, err := h.blogUsecase.GetBlogs(cxt.Request.Context(), page, pageSize, sortBy, sortOrder, dateFrom, dateTo)
 	if err != nil {
 		ErrorHandler(cxt, http.StatusInternalServerError, "Failed to get blog posts")
 		return
 	}
-	
+
 	var blogResponses []dto.BlogResponse
 	for _, blog := range blogs {
 		blogResponses = append(blogResponses, dto.ToBlogResponse(&blog))
 	}
 
 	responses := dto.PaginatedBlogResponse{
-		Blogs: blogResponses, 
-		TotalCount: totalCount,
+		Blogs:       blogResponses,
+		TotalCount:  totalCount,
 		CurrentPage: currentPage,
-		TotalPages: totalPages,
+		TotalPages:  totalPages,
 	}
 
 	SuccessHandler(cxt, http.StatusOK, responses)
@@ -152,7 +153,7 @@ func (h *BlogHandler) GetBlogDetailHandler(cxt *gin.Context) {
 }
 
 //  UpdateBlogHandler
-func (h *BlogHandler) UpdateBlogHandler(cxt *gin.Context)  {
+func (h *BlogHandler) UpdateBlogHandler(cxt *gin.Context) {
 	userIDAny, exists := cxt.Get("userID")
 	if !exists {
 		ErrorHandler(cxt, http.StatusUnauthorized, "User not authenticated")
@@ -166,13 +167,12 @@ func (h *BlogHandler) UpdateBlogHandler(cxt *gin.Context)  {
 
 	blogID := cxt.Param("blogID")
 
-
 	var req dto.UpdateBlogRequest
 	if err := BindAndValidate(cxt, &req); err != nil {
 		ErrorHandler(cxt, http.StatusBadRequest, "Bad request")
 		return
 	}
-	
+
 	blog, err := h.blogUsecase.UpdateBlog(cxt.Request.Context(), blogID, userID, req.Title, req.Content, (*usecase.BlogStatus)(req.Status), req.FeaturedImageID)
 
 	if err != nil {
@@ -193,14 +193,25 @@ func (h *BlogHandler) DeleteBlogHandler(cxt *gin.Context) {
 		return
 	}
 
-	var isAdmin bool 
+	var isAdmin bool
 	userRole, exists := cxt.Get("userRole")
 	if !exists {
 		ErrorHandler(cxt, http.StatusUnauthorized, "User Unauthorized")
 		return
 	}
-	if userRole.(string) == "admin" {
-		isAdmin = true
+	// userRole is likely entity.UserRole, compare as string
+	if role, ok := userRole.(string); ok {
+		if role == "admin" {
+			isAdmin = true
+		}
+	} else if roleEnum, ok := userRole.(entity.UserRole); ok {
+		if string(roleEnum) == "admin" {
+			isAdmin = true
+		}
+	} else if roleEnum, ok := userRole.(interface{ String() string }); ok {
+		if roleEnum.String() == "admin" {
+			isAdmin = true
+		}
 	}
 
 	ok, err := h.blogUsecase.DeleteBlog(cxt.Request.Context(), blogID, userID.(string), isAdmin)
@@ -220,7 +231,7 @@ func (h *BlogHandler) TrackBlogViewHandler(c *gin.Context) {
 
 	// User can be anonymous, so we don't fail if userID is not present.
 	userIDAny, _ := c.Get("userID")
-	userID, _ := userIDAny.(string) 
+	userID, _ := userIDAny.(string)
 
 	err := h.blogUsecase.TrackBlogView(c.Request.Context(), blogID, userID, ipAddress, userAgent)
 	if err != nil {
@@ -233,75 +244,82 @@ func (h *BlogHandler) TrackBlogViewHandler(c *gin.Context) {
 
 // SearchAndFilterBlogsHandler handles searching and filtering blogs
 func (h *BlogHandler) SearchAndFilterBlogsHandler(c *gin.Context) {
-   // Query and filter params
-   query := c.Query("q")
-   tags := c.QueryArray("tags")
-   var dateFrom, dateTo *time.Time
-   if v := c.Query("dateFrom"); v != "" {
-	   if t, err := time.Parse(time.RFC3339, v); err == nil {
-		   dateFrom = &t
-	   }
-   }
-   if v := c.Query("dateTo"); v != "" {
-	   if t, err := time.Parse(time.RFC3339, v); err == nil {
-		   dateTo = &t
-	   }
-   }
-   // Numeric filters
-   var minViews, maxViews, minLikes, maxLikes *int
-   if v := c.Query("minViews"); v != "" {
-	   if n, err := strconv.Atoi(v); err == nil { minViews = &n }
-   }
-   if v := c.Query("maxViews"); v != "" {
-	   if n, err := strconv.Atoi(v); err == nil { maxViews = &n }
-   }
-   if v := c.Query("minLikes"); v != "" {
-	   if n, err := strconv.Atoi(v); err == nil { minLikes = &n }
-   }
-   if v := c.Query("maxLikes"); v != "" {
-	   if n, err := strconv.Atoi(v); err == nil { maxLikes = &n }
-   }
-   // Author filter
-   var authorID *string
-   if v := c.Query("authorID"); v != "" {
-	   authorID = &v
-   }
-   // Pagination
-   page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-   pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-   // Call usecase
-   blogs, total, current, pages, err := h.blogUsecase.SearchAndFilterBlogs(c.Request.Context(), query, tags, dateFrom, dateTo, minViews, maxViews, minLikes, maxLikes, authorID, page, pageSize)
-   if err != nil {
-	   ErrorHandler(c, http.StatusInternalServerError, "Failed to search and filter blogs")
-	   return
-   }
-   // Map to response
-   var resp []dto.BlogResponse
-   for _, b := range blogs {
-	   resp = append(resp, dto.ToBlogResponse(&b))
-   }
-   result := dto.PaginatedBlogResponse{Blogs: resp, TotalCount: total, CurrentPage: current, TotalPages: pages}
-   SuccessHandler(c, http.StatusOK, result)
+	// Query and filter params
+	query := c.Query("q")
+	tags := c.QueryArray("tags")
+	var dateFrom, dateTo *time.Time
+	if v := c.Query("dateFrom"); v != "" {
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			dateFrom = &t
+		}
+	}
+	if v := c.Query("dateTo"); v != "" {
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			dateTo = &t
+		}
+	}
+	// Numeric filters
+	var minViews, maxViews, minLikes, maxLikes *int
+	if v := c.Query("minViews"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			minViews = &n
+		}
+	}
+	if v := c.Query("maxViews"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			maxViews = &n
+		}
+	}
+	if v := c.Query("minLikes"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			minLikes = &n
+		}
+	}
+	if v := c.Query("maxLikes"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			maxLikes = &n
+		}
+	}
+	// Author filter
+	var authorID *string
+	if v := c.Query("authorID"); v != "" {
+		authorID = &v
+	}
+	// Pagination
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	// Call usecase
+	blogs, total, current, pages, err := h.blogUsecase.SearchAndFilterBlogs(c.Request.Context(), query, tags, dateFrom, dateTo, minViews, maxViews, minLikes, maxLikes, authorID, page, pageSize)
+	if err != nil {
+		ErrorHandler(c, http.StatusInternalServerError, "Failed to search and filter blogs")
+		return
+	}
+	// Map to response
+	var resp []dto.BlogResponse
+	for _, b := range blogs {
+		resp = append(resp, dto.ToBlogResponse(&b))
+	}
+	result := dto.PaginatedBlogResponse{Blogs: resp, TotalCount: total, CurrentPage: current, TotalPages: pages}
+	SuccessHandler(c, http.StatusOK, result)
 }
 
 // GetPopularBlogsHandler handles retrieval of popular blogs
 func (h *BlogHandler) GetPopularBlogsHandler(c *gin.Context) {
-   page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-   pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-   blogs, total, current, pages, err := h.blogUsecase.GetPopularBlogs(c.Request.Context(), page, pageSize)
-   if err != nil {
-	   ErrorHandler(c, http.StatusInternalServerError, "Failed to get popular blogs")
-	   return
-   }
-   var resp []dto.BlogResponse
-   for _, b := range blogs {
-	   resp = append(resp, dto.ToBlogResponse(&b))
-   }
-   result := dto.PaginatedBlogResponse{Blogs: resp, TotalCount: total, CurrentPage: current, TotalPages: pages}
-   SuccessHandler(c, http.StatusOK, result)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	blogs, total, current, pages, err := h.blogUsecase.GetPopularBlogs(c.Request.Context(), page, pageSize)
+	if err != nil {
+		ErrorHandler(c, http.StatusInternalServerError, "Failed to get popular blogs")
+		return
+	}
+	var resp []dto.BlogResponse
+	for _, b := range blogs {
+		resp = append(resp, dto.ToBlogResponse(&b))
+	}
+	result := dto.PaginatedBlogResponse{Blogs: resp, TotalCount: total, CurrentPage: current, TotalPages: pages}
+	SuccessHandler(c, http.StatusOK, result)
 }
 
 // SearchAndFilterBlogsHandler
 
 // GetRecommendedBlogsHandler
-

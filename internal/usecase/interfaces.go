@@ -14,7 +14,7 @@ type UserRepository interface {
 	GetUserByID(ctx context.Context, id string) (*entity.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
 	GetUserByUsername(ctx context.Context, username string) (*entity.User, error)
-	UpdateUser(ctx context.Context, id string, updates map[string]interface{}) error
+	UpdateUser(ctx context.Context, user *entity.User) (*entity.User, error)
 	UpdateUserPassword(ctx context.Context, id string, hashedPassword string) error
 }
 

@@ -25,9 +25,9 @@ type BlogRepository struct {
 // NewBlogRepository creates and returns a new BlogRepository instance.
 func NewBlogRepository(db *mongo.Database) *BlogRepository {
 	return &BlogRepository{
-		collection:         db.Collection("blogs"),
-		blogTagsCollection: db.Collection("blog_tags"),
-		usersCollection:    db.Collection("users"),
+		collection:          db.Collection("blogs"),
+		blogTagsCollection:  db.Collection("blog_tags"),
+		usersCollection:     db.Collection("users"),
 		blogViewsCollection: db.Collection("blog_views"),
 	}
 }
@@ -134,74 +134,74 @@ func (r *BlogRepository) GetBlogBySlug(ctx context.Context, slug string) (*entit
 // GetBlogs retrieves a list of blog posts with filtering, sorting, and pagination options.
 func (r *BlogRepository) GetBlogs(ctx context.Context, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error) {
 
-    baseMatch := buildBaseMatchFilter(opts)
+	baseMatch := buildBaseMatchFilter(opts)
 
-    // Base pipeline stages for filtering
-    pipeline := []bson.M{
-        {"$match": baseMatch},
-    }
+	// Base pipeline stages for filtering
+	pipeline := []bson.M{
+		{"$match": baseMatch},
+	}
 
-    // Conditionally add stages for tag filtering
-    if len(opts.TagIDs) > 0 {
-        pipeline = append(pipeline,
-            bson.M{
-                "$lookup": bson.M{
-                    "from":         "blog_tags",
-                    "localField":   "_id",
-                    "foreignField": "blog_id",
-                    "as":           "tags",
-                },
-            },
-            bson.M{
-                "$addFields": bson.M{
-                    "has_tags": bson.M{
-                        "$gt": bson.A{
-                            bson.M{
-                                "$size": bson.M{
-                                    "$filter": bson.M{
-                                        "input": "$tags",
-                                        "as":    "tag",
-                                        "cond": bson.M{
-                                            "$in": bson.A{"$$tag.tag_id", opts.TagIDs},
-                                        },
-                                    },
-                                },
-                            },
-                            0,
-                        },
-                    },
-                },
-            },
-            // bson.M{"$match": bson.M{"has_tags": true}},
-            bson.M{"$project": bson.M{"tags": 0, "has_tags": 0}}, // Clean up helper fields
-        )
-    }
+	// Conditionally add stages for tag filtering - only when TagIDs are provided
+	if len(opts.TagIDs) > 0 {
+		pipeline = append(pipeline,
+			bson.M{
+				"$lookup": bson.M{
+					"from":         "blog_tags",
+					"localField":   "_id",
+					"foreignField": "blog_id",
+					"as":           "tags",
+				},
+			},
+			bson.M{
+				"$addFields": bson.M{
+					"has_required_tags": bson.M{
+						"$gt": bson.A{
+							bson.M{
+								"$size": bson.M{
+									"$filter": bson.M{
+										"input": "$tags",
+										"as":    "tag",
+										"cond": bson.M{
+											"$in": bson.A{"$$tag.tag_id", opts.TagIDs},
+										},
+									},
+								},
+							},
+							0,
+						},
+					},
+				},
+			},
+			bson.M{"$match": bson.M{"has_required_tags": true}},
+			bson.M{"$project": bson.M{"tags": 0, "has_required_tags": 0}}, // Clean up helper fields
+		)
+	}
 
-    // Define the sub-pipelines for $facet.
-    sortField := "created_at"
-    if opts.SortBy != "" {
-        sortField = opts.SortBy
-    }
+	// Define the sub-pipelines for $facet.
+	sortField := "created_at"
+	if opts.SortBy != "" {
+		sortField = opts.SortBy
+	}
 
-    // Create the facet stage separately.
-    facetStage := bson.M{
-        "$facet": bson.M{
-            "totalCount": bson.A{
-                bson.M{"$count": "total"},
-            },
-            "blogs": bson.A{
-                bson.M{"$sort": bson.M{sortField: getSortOrder(opts.SortOrder)}},
-                bson.M{"$skip": int64((opts.Page - 1) * opts.PageSize)},
-                bson.M{"$limit": int64(opts.PageSize)},
-            },
-        },
-    }
+	// Create the facet stage separately.
+	facetStage := bson.M{
+		"$facet": bson.M{
+			"totalCount": bson.A{
+				bson.M{"$count": "total"},
+			},
+			"blogs": bson.A{
+				bson.M{"$sort": bson.M{sortField: getSortOrder(opts.SortOrder)}},
+				bson.M{"$skip": int64((opts.Page - 1) * opts.PageSize)},
+				bson.M{"$limit": int64(opts.PageSize)},
+			},
+		},
+	}
 
-    // The full pipeline includes all filters, followed by the $facet stage.
-    fullPipeline := append(pipeline, facetStage)
+	// The full pipeline includes all filters, followed by the $facet stage.
+	fullPipeline := append(pipeline, facetStage)
 
-    cursor, err := r.collection.Aggregate(ctx, fullPipeline)
-    if err != nil {
+	cursor, err := r.collection.Aggregate(ctx, fullPipeline)
+	if err != nil {
 		return nil, 0, fmt.Errorf("failed to aggregate blogs: %w", err)
 	}
 	defer cursor.Close(ctx)
@@ -304,7 +304,7 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 		{"$match": bson.M{"$or": searchConditions}},
 	}
 
-	// If TagIDs are provided, add a $lookup to blog_tags and filter
+	// If TagIDs are provided, add a $lookup to blog_tags and filter for blogs that have ALL requested tags
 	if len(opts.TagIDs) > 0 {
 		pipeline = append(pipeline,
 			bson.M{
@@ -315,17 +315,26 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 					"as":           "blogTags",
 				},
 			},
-			bson.M{"$unwind": "$blogTags"},
-			bson.M{"$match": bson.M{"blogTags.tag_id": bson.M{"$in": opts.TagIDs}}},
-			// Use a group stage to get unique blogs after the unwind
 			bson.M{
-				"$group": bson.M{
-					"_id":  "$id",
-					"blog": bson.M{"$first": "$$ROOT"},
+				"$addFields": bson.M{
+					"blogTagIds": bson.M{
+						"$map": bson.M{
+							"input": "$blogTags",
+							"as":    "bt",
+							"in":    bson.M{"$toString": "$$bt.tag_id"},
+						},
+					},
 				},
 			},
-			// Replace the root with the original blog document
-			bson.M{"$replaceRoot": bson.M{"newRoot": "$blog"}},
+			bson.M{
+				"$addFields": bson.M{
+					"hasAllTags": bson.M{
+						"$setIsSubset": []interface{}{opts.TagIDs, "$blogTagIds"},
+					},
+				},
+			},
+			bson.M{"$match": bson.M{"hasAllTags": true}},
+			bson.M{"$project": bson.M{"blogTags": 0, "hasAllTags": 0}},
 		)
 	}
 
@@ -399,53 +408,53 @@ func (r *BlogRepository) IncrementViewCount(ctx context.Context, blogID string) 
 	return nil
 }
 
-// // IncrementLikeCount increments the like count of a specific blog post.
-// func (r *BlogRepository) IncrementLikeCount(ctx context.Context, blogID string) error {
-// 	filter := bson.M{"_id": blogID, "is_deleted": false}
-// 	update := bson.M{"$inc": bson.M{"like_count": 1}}
+// IncrementLikeCount increments the like count of a specific blog post.
+func (r *BlogRepository) IncrementLikeCount(ctx context.Context, blogID string) error {
+	filter := bson.M{"_id": blogID, "is_deleted": false}
+	update := bson.M{"$inc": bson.M{"like_count": 1}}
 
-// 	res, err := r.collection.UpdateOne(ctx, filter, update)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to increment like count: %w", err)
-// 	}
-// 	if res.ModifiedCount == 0 {
-// 		return errors.New("blog post not found")
-// 	}
+	res, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("failed to increment like count: %w", err)
+	}
+	if res.ModifiedCount == 0 {
+		return errors.New("blog post not found")
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
-// // DecrementLikeCount decrements the like count of a specific blog post.
-// func (r *BlogRepository) DecrementLikeCount(ctx context.Context, blogID string) error {
-// 	filter := bson.M{"_id": blogID, "is_deleted": false}
-// 	update := bson.M{"$inc": bson.M{"like_count": -1}}
+// DecrementLikeCount decrements the like count of a specific blog post.
+func (r *BlogRepository) DecrementLikeCount(ctx context.Context, blogID string) error {
+	filter := bson.M{"_id": blogID, "is_deleted": false}
+	update := bson.M{"$inc": bson.M{"like_count": -1}}
 
-// 	res, err := r.collection.UpdateOne(ctx, filter, update)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to decrement like count: %w", err)
-// 	}
-// 	if res.ModifiedCount == 0 {
-// 		return errors.New("blog post not found")
-// 	}
+	res, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("failed to decrement like count: %w", err)
+	}
+	if res.ModifiedCount == 0 {
+		return errors.New("blog post not found")
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
 // IncrementDislikeCount increments the dislike count of a specific blog post.
-// func (r *BlogRepository) IncrementDislikeCount(ctx context.Context, blogID string) error {
-// 	filter := bson.M{"_id": blogID, "is_deleted": false}
-// 	update := bson.M{"$inc": bson.M{"dislike_count": 1}}
+func (r *BlogRepository) IncrementDislikeCount(ctx context.Context, blogID string) error {
+	filter := bson.M{"_id": blogID, "is_deleted": false}
+	update := bson.M{"$inc": bson.M{"dislike_count": 1}}
 
-// 	res, err := r.collection.UpdateOne(ctx, filter, update)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to increment dislike count: %w", err)
-// 	}
-// 	if res.ModifiedCount == 0 {
-// 		return errors.New("blog post not found")
-// 	}
+	res, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("failed to increment dislike count: %w", err)
+	}
+	if res.ModifiedCount == 0 {
+		return errors.New("blog post not found")
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
 // DecrementDislikeCount decrements the dislike count of a specific blog post.
 // func (r *BlogRepository) DecrementDislikeCount(ctx context.Context, blogID string) error {
@@ -585,18 +594,18 @@ func (r *BlogRepository) GetBlogsByTagID(ctx context.Context, tagID string, opts
 	// Aggregation pipeline to join blog_tags with blogs
 	pipeline := []bson.M{
 		// Match blog_tags documents by the given tagId.
-		{"$match": bson.M{"tagId": tagID}},
+		{"$match": bson.M{"tag_id": tagID}},
 		// Look up the corresponding blog documents from the 'blogs' collection
 		{"$lookup": bson.M{
 			"from":         "blogs",
-			"localField":   "blogId",
+			"localField":   "blog_id",
 			"foreignField": "_id",
 			"as":           "blogDetails",
 		}},
 		// Unwind the blogDetails array (each blog_tag document will now have a blogDetails object)
 		{"$unwind": "$blogDetails"},
 		// Match only active (not deleted) blogs
-		{"$match": bson.M{"blogDetails.isDeleted": false}},
+		{"$match": bson.M{"blogDetails.is_deleted": false}},
 	}
 
 	// Add sorting
@@ -607,7 +616,7 @@ func (r *BlogRepository) GetBlogsByTagID(ctx context.Context, tagID string, opts
 		}
 		pipeline = append(pipeline, bson.M{"$sort": bson.M{fmt.Sprintf("blogDetails.%s", opts.SortBy): sortOrder}})
 	} else {
-		pipeline = append(pipeline, bson.M{"$sort": bson.M{"blogDetails.createdAt": -1}})
+		pipeline = append(pipeline, bson.M{"$sort": bson.M{"blogDetails.created_at": -1}})
 	}
 
 	// Count total documents before pagination
@@ -660,7 +669,7 @@ func (r *BlogRepository) GetBlogsByTagIDs(ctx context.Context, tagIDs []string, 
 	}
 
 	// Find all blog IDs associated with the given tag IDs
-	filter := bson.M{"tagId": bson.M{"$in": tagIDs}}
+	filter := bson.M{"tag_id": bson.M{"$in": tagIDs}}
 	cursor, err := r.blogTagsCollection.Find(ctx, filter)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to find blog-tag associations: %w", err)
@@ -686,13 +695,13 @@ func (r *BlogRepository) GetBlogsByTagIDs(ctx context.Context, tagIDs []string, 
 
 	// Now fetch the blogs with those IDs
 	blogFilter := bson.M{
-		"id":        bson.M{"$in": blogIDs},
-		"isDeleted": false,
+		"_id":        bson.M{"$in": blogIDs},
+		"is_deleted": false,
 	}
 	findOptions := options.Find().
 		SetSkip(int64((page - 1) * pageSize)).
 		SetLimit(int64(pageSize)).
-		SetSort(bson.M{"createdAt": -1}) // Default sort
+		SetSort(bson.M{"created_at": -1}) // Default sort
 
 	blogCursor, err := r.collection.Find(ctx, blogFilter, findOptions)
 	if err != nil {

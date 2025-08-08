@@ -75,7 +75,7 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 	existingUserByEmail, err := uc.userRepo.GetUserByEmail(ctx, email)
 	if err != nil && err.Error() != errUserNotFound {
 		uc.logger.Errorf("failed to check for existing user by email: %v", err)
-		return nil, fmt.Errorf(errInternalServer)
+		return nil, errors.New(errInternalServer)
 	}
 	if existingUserByEmail != nil {
 		return nil, fmt.Errorf("user with email %s already exists", email)
@@ -84,7 +84,7 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 	existingUserByUsername, err := uc.userRepo.GetUserByUsername(ctx, username)
 	if err != nil && err.Error() != errUserNotFound {
 		uc.logger.Errorf("failed to check for existing user by username: %v", err)
-		return nil, fmt.Errorf(errInternalServer)
+		return nil, errors.New(errInternalServer)
 	}
 	if existingUserByUsername != nil {
 		return nil, fmt.Errorf("user with username %s already exists", username)
@@ -488,10 +488,9 @@ func (uc *UserUsecase) VerifyEmail(ctx context.Context, token string) error {
 	}
 
 	// Activate the user's account.
-	updates := map[string]interface{}{
-		"is_active": true,
-	}
-	if err := uc.userRepo.UpdateUser(ctx, user.ID, updates); err != nil {
+	user.IsActive = true
+	_, err = uc.userRepo.UpdateUser(ctx, user)
+	if err != nil {
 		uc.logger.Errorf("failed to activate user %s: %v", user.ID, err)
 		return errors.New("failed to activate account")
 	}
@@ -550,10 +549,8 @@ func (uc *UserUsecase) PromoteUser(ctx context.Context, userID string) (*entity.
 
 	user.Role = entity.UserRoleAdmin
 
-	updates := map[string]interface{}{
-		"role": entity.UserRoleAdmin,
-	}
-	if err := uc.userRepo.UpdateUser(ctx, user.ID, updates); err != nil {
+	_, err = uc.userRepo.UpdateUser(ctx, user)
+	if err != nil {
 		uc.logger.Errorf("failed to promote user %s: %v", userID, err)
 		return nil, errors.New("failed to promote user")
 	}
@@ -578,10 +575,9 @@ func (uc *UserUsecase) DemoteUser(ctx context.Context, userID string) (*entity.U
 
 	user.Role = entity.UserRoleUser
 
-	updates := map[string]interface{}{
-		"role": entity.UserRoleUser,
-	}
-	if err := uc.userRepo.UpdateUser(ctx, user.ID, updates); err != nil {
+	user.Role = entity.UserRoleUser
+	_, err = uc.userRepo.UpdateUser(ctx, user)
+	if err != nil {
 		uc.logger.Errorf("failed to demote user %s: %v", userID, err)
 		return nil, errors.New("failed to demote user")
 	}
@@ -619,9 +615,35 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID string, updates
 	}
 
 	uc.logger.Infof("About to update user %s with updates: %+v", userID, updates)
-	uc.logger.Infof("About to update user %s with updates: %+v", userID, updates)
 
-	if err := uc.userRepo.UpdateUser(ctx, user.ID, updates); err != nil {
+	// Apply updates to user struct
+	for k, v := range updates {
+		switch k {
+		case "username":
+			if username, ok := v.(string); ok {
+				user.Username = username
+			}
+		case "first_name":
+			if firstName, ok := v.(string); ok {
+				user.FirstName = &firstName
+			}
+		case "last_name":
+			if lastName, ok := v.(string); ok {
+				user.LastName = &lastName
+			}
+		case "avatar_url":
+			if avatarURL, ok := v.(string); ok {
+				user.AvatarURL = &avatarURL
+			}
+		case "is_active":
+			if isActive, ok := v.(bool); ok {
+				user.IsActive = isActive
+			}
+		}
+	}
+	user.UpdatedAt = time.Now()
+	_, err = uc.userRepo.UpdateUser(ctx, user)
+	if err != nil {
 		uc.logger.Errorf("failed to update profile for user %s: %v", userID, err)
 		return nil, errors.New("failed to update profile")
 	}
@@ -644,7 +666,7 @@ func (uc *UserUsecase) LoginWithOAuth(ctx context.Context, firstName, lastName, 
 	user, err := uc.userRepo.GetUserByEmail(ctx, email)
 	if err != nil && err.Error() != errUserNotFound {
 		uc.logger.Errorf("failed to check for existing user by email: %v", err)
-		return "", "", fmt.Errorf(errInternalServer)
+		return "", "", errors.New(errInternalServer)
 	}
 
 	// If user does not exist, create a new one

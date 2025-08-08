@@ -14,11 +14,11 @@ type Router struct {
 	jwtService         usecase.JWTService
 }
 
-func NewRouter(userUsecase *usecase.UserUsecase, blogUsecase usecase.IBlogUseCase, interactionUsecase usecase.IInteractionUseCase, jwtService usecase.JWTService) *Router {
+func NewRouter(userUsecase *usecase.UserUsecase, blogUsecase usecase.IBlogUseCase, likeUsecase *usecase.LikeUsecase, jwtService usecase.JWTService) *Router {
 	return &Router{
 		userHandler:        NewUserHandler(userUsecase),
 		blogHandler:        NewBlogHandler(blogUsecase),
-		interactionHandler: NewInteractionHandler(interactionUsecase),
+		interactionHandler: NewInteractionHandler(likeUsecase),
 		userUsecase:        userUsecase,
 		jwtService:         jwtService,
 	}
@@ -71,6 +71,8 @@ func (r *Router) SetupRoutes(router *gin.Engine) {
 		// Interaction routes
 		protected.POST("/blogs/:blogID/like", r.interactionHandler.LikeBlogHandler)
 		protected.DELETE("/blogs/:blogID/like", r.interactionHandler.UnlikeBlogHandler)
+		protected.POST("/blogs/:blogID/dislike", r.interactionHandler.DislikeBlogHandler)
+		protected.DELETE("/blogs/:blogID/dislike", r.interactionHandler.UndislikeBlogHandler)
 		protected.POST("/blogs/:blogID/view", r.blogHandler.TrackBlogViewHandler)
 
 	}

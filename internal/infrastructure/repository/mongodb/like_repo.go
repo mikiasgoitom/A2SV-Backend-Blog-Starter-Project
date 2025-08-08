@@ -13,6 +13,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// ErrReactionNotFound is returned when a reaction is not found in the database.
+var ErrReactionNotFound = errors.New("reaction not found")
+
 // LikeRepository represents the MongoDB implementation of the ILikeRepository interface.
 type LikeRepository struct {
 	collection *mongo.Collection
@@ -43,7 +46,7 @@ func (r *LikeRepository) CreateReaction(ctx context.Context, like *entity.Like) 
 
 	// Fields to set ONLY on initial insert (when upsert: true creates a new document)
 	setOnInsertFields := bson.M{
-		"_id":         uuid.New().String(),
+		"_id":        uuid.New().String(),
 		"created_at": time.Now(),
 	}
 
@@ -81,7 +84,7 @@ func (r *LikeRepository) DeleteReaction(ctx context.Context, reactionID string) 
 		return fmt.Errorf("failed to delete reaction: %w", err)
 	}
 	if res.ModifiedCount == 0 {
-		return errors.New("reaction not found")
+		return ErrReactionNotFound
 	}
 	return nil
 }
@@ -95,7 +98,7 @@ func (r *LikeRepository) GetReactionByUserIDAndTargetID(ctx context.Context, use
 	err := r.collection.FindOne(ctx, filter).Decode(&like)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, errors.New("reaction not found")
+			return nil, ErrReactionNotFound
 		}
 		return nil, fmt.Errorf("failed to retrieve reaction: %w", err)
 	}
@@ -115,7 +118,7 @@ func (r *LikeRepository) GetReactionByUserIDTargetIDAndType(ctx context.Context,
 	err := r.collection.FindOne(ctx, filter).Decode(&like)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, errors.New("reaction not found")
+			return nil, ErrReactionNotFound
 		}
 		return nil, fmt.Errorf("failed to retrieve specific reaction: %w", err)
 	}
