@@ -4,15 +4,20 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	// "github.com/acme/avatar/config"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/config"
+
+	// "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/config"
+
+	// "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/config"
 	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
 )
 
@@ -82,13 +87,21 @@ func (u *userAvatarUseCase) CreateUserAvatar(ctx context.Context, userID string,
 	}
 
 	// Determine full URL for avatar
-	// Determine base URL from environment
-	baseURL := os.Getenv("APP_BASE_URL")
-	if baseURL == "" {
-		baseURL = "http://localhost:8080"
-	}
+	// Explicitly set baseURL to a valid URL
+	baseURL := os.Getenv("UPLOAD_BASE_URL")
+	log.Printf("DEBUG: Assigned baseURL: %s", baseURL)
+
+	// Unconditionally trim trailing slash from baseURL
+	baseURL = strings.TrimSuffix(baseURL, "/")
+
+	// Ensure avatarPath starts with a single slash
 	avatarPath := fmt.Sprintf("/uploads/avatar_uri/%s", filename)
+	if !strings.HasPrefix(avatarPath, "/") {
+		avatarPath = "/" + avatarPath
+	}
+
 	avatarURI := fmt.Sprintf("%s%s", baseURL, avatarPath)
+	log.Printf("DEBUG: Constructed avatarURI: %s", avatarURI)
 	// Save avatar URI to repository
 	if err := u.userAvatarRepo.CreateAvatarURI(ctx, userID, avatarURI); err != nil {
 		// Clean up file if database update fails
@@ -143,6 +156,7 @@ func (u *userAvatarUseCase) ReadUserAvatarMetadata(ctx context.Context, userID s
 
 // UpdateUserAvatar handles the upload of a new avatar and replaces the old one
 func (u *userAvatarUseCase) UpdateUserAvatar(ctx context.Context, userID string, file *multipart.FileHeader) (*entity.Media, error) {
+	log.Printf("find the user avatar usecase")
 	if file.Size > maxFileSize {
 		return nil, fmt.Errorf("file size exceeds maximum allowed size of 5MB")
 	}
@@ -197,10 +211,22 @@ func (u *userAvatarUseCase) UpdateUserAvatar(ctx context.Context, userID string,
 	}
 
 	// Determine full URL for avatar
-	baseURL := config.NewConfig().GetAppBaseURL()
+	baseURL := os.Getenv("UPLOAD_BASE_URL")
+	// baseURL := "C:/Users/learn/Desktop/A2SV-Backend-Blog-Starter-Project"
+	// uploadBaseURL := os.Getenv("UPLOAD_BASE_URL")
 	avatarPath := fmt.Sprintf("/uploads/avatar_uri/%s", filename)
+
+	// Ensure baseURL does not already include a trailing slash
+	baseURL = strings.TrimSuffix(baseURL, "/")
+
+	// Ensure avatarPath starts with a single slash
+	if !strings.HasPrefix(avatarPath, "/") {
+		avatarPath = "/" + avatarPath
+	}
+
 	avatarURI := fmt.Sprintf("%s%s", baseURL, avatarPath)
 	// Update avatar URI in repository
+	log.Printf("Updating avatar URI for user %s: %s", userID, avatarURI)
 	if err := u.userAvatarRepo.UpdateAvatarURI(ctx, userID, avatarURI); err != nil {
 		// Clean up file if database update fails
 		os.Remove(filePath)
