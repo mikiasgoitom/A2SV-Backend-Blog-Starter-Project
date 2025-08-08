@@ -53,8 +53,10 @@ func (r *Router) SetupRoutes(router *gin.Engine) {
 	users := v1.Group("/users")
 	{
 		users.GET("/:id", r.userHandler.GetUser)
-		// Avatar subroutes under /users/:userID/avatar
+		// Avatar subroutes under /users/:id/avatar
 		avatarHandler := NewUserAvatarHandler(r.userAvatarUsecase)
+		log.Println("DEBUG: Registering avatar routes...")
+		log.Println("DEBUG: Registering route /api/v1/users/:id/avatar")
 		avatarHandler.RegisterRoutes(users)
 	}
 
@@ -68,12 +70,6 @@ func (r *Router) SetupRoutes(router *gin.Engine) {
 		{
 			me.GET("", r.userHandler.GetCurrentUser)
 			me.PUT("", r.userHandler.UpdateUser)
-
-			// Avatar routes
-			log.Println("DEBUG: Attaching avatar routes to /me/avatar")
-			me.POST("/avatar", r.userHandler.UploadAvatar)
-			me.PUT("/avatar", r.userHandler.UploadAvatar)
-			me.DELETE("/avatar", r.userHandler.DeleteAvatar)
 		}
 	}
 
