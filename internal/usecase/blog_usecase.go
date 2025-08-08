@@ -148,7 +148,7 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 		totalPages++
 	}
 
-	return filteredBlogs, len(filteredBlogs), page, totalPages, nil
+	return filteredBlogs, int(totalCount), page, totalPages, nil
 }
 
 // GetBlogDetail retrieves a blog by its slug
