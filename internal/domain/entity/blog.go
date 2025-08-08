@@ -6,7 +6,7 @@ import (
 
 // Blog represents a blog post in the system
 type Blog struct {
-	ID              string     `json:"id" bson:"id"`
+	ID              string     `json:"id" bson:"_id"`
 	Title           string     `json:"title" bson:"title"`
 	Content         string     `json:"content" bson:"content"`
 	AuthorID        string     `json:"author_id" bson:"author_id"`
@@ -19,6 +19,7 @@ type Blog struct {
 	LikeCount       int        `json:"like_count" bson:"like_count"`
 	DislikeCount    int        `json:"dislike_count" bson:"dislike_count"`
 	CommentCount    int        `json:"comment_count" bson:"comment_count"`
+	Popularity      float64    `json:"popularity" bson:"popularity"`
 	FeaturedImageID *string    `json:"featured_image_id" bson:"featured_image_id"`
 	IsDeleted       bool       `json:"is_deleted" bson:"is_deleted"`
 }

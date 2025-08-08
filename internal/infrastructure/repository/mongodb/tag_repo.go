@@ -3,6 +3,7 @@ package mongodb
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
@@ -35,7 +36,7 @@ func (r *TagRepository) CreateTag(ctx context.Context, tag *entity.Tag) error {
 				}
 			}
 		}
-		return errors.New("failed to create tag")
+		return fmt.Errorf("failed to create tag: %w", err)
 	}
 	return nil
 }
@@ -43,14 +44,14 @@ func (r *TagRepository) CreateTag(ctx context.Context, tag *entity.Tag) error {
 // GetTagByID retrieves a single tag by its unique ID.
 func (r *TagRepository) GetTagByID(ctx context.Context, tagID string) (*entity.Tag, error) {
 	var tag entity.Tag
-	filter := bson.M{"id": tagID}
+	filter := bson.M{"_id": tagID}
 
 	err := r.collection.FindOne(ctx, filter).Decode(&tag)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors.New("tag not found")
 		}
-		return nil, errors.New("failed to retrieve tag")
+		return nil, fmt.Errorf("failed to retrieve tag: %w", err)
 	}
 	return &tag, nil
 }
@@ -65,34 +66,34 @@ func (r *TagRepository) GetTagByName(ctx context.Context, name string) (*entity.
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors.New("tag not found")
 		}
-		return nil, errors.New("failed to retrieve tag by name")
+		return nil, fmt.Errorf("failed to retrieve tag by name: %w", err)
 	}
 	return &tag, nil
 }
 
 // GetAllTags retrieves all tag records from the database.
 func (r *TagRepository) GetAllTags(ctx context.Context) ([]*entity.Tag, error) {
-	cursor, err := r.collection.Find(ctx, bson.M{}) // Empty filter to get all documents
+	cursor, err := r.collection.Find(ctx, bson.M{})
 	if err != nil {
-		return nil, errors.New("failed to retrieve tags")
+		return nil, fmt.Errorf("failed to retrieve tags: %w", err)
 	}
 	defer cursor.Close(ctx)
 
 	var tags []*entity.Tag
 	if err = cursor.All(ctx, &tags); err != nil {
-		return nil, errors.New("failed to decode tags")
+		return nil, fmt.Errorf("failed to decode tags: %w", err)
 	}
 	return tags, nil
 }
 
 // UpdateTag updates the details of an existing tag by its ID.
 func (r *TagRepository) UpdateTag(ctx context.Context, tagID string, updates map[string]interface{}) error {
-	filter := bson.M{"id": tagID}
+	filter := bson.M{"_id": tagID}
 	update := bson.M{"$set": updates}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return errors.New("failed to update tag")
+		return fmt.Errorf("failed to update tag: %w", err)
 	}
 	if res.ModifiedCount == 0 {
 		return errors.New("tag not found or no changes made")
@@ -102,10 +103,10 @@ func (r *TagRepository) UpdateTag(ctx context.Context, tagID string, updates map
 
 // DeleteTag deletes a tag record by its ID.
 func (r *TagRepository) DeleteTag(ctx context.Context, tagID string) error {
-	filter := bson.M{"id": tagID}
+	filter := bson.M{"_id": tagID}
 	res, err := r.collection.DeleteOne(ctx, filter)
 	if err != nil {
-		return errors.New("failed to delete tag")
+		return fmt.Errorf("failed to delete tag: %w", err)
 	}
 	if res.DeletedCount == 0 {
 		return errors.New("tag not found")

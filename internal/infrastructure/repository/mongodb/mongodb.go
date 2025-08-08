@@ -1,9 +1,11 @@
 package mongodb
 
 import (
+	"fmt"
 	"log"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/net/context"
@@ -30,7 +32,41 @@ func NewMongoDBClient(uri string) (*MongoDBClient, error) {
 		return nil, err
 	}
 
+	// Create indexes
+	if err := createIndexes(ctx, client.Database("blogdb")); err != nil {
+		log.Println("Failed to create indexes:", err)
+		// We can choose to return the error or just log it
+	}
+
 	return &MongoDBClient{Client: client}, nil
+}
+
+func createIndexes(ctx context.Context, db *mongo.Database) error {
+	// TTL index for blog_views
+	blogViewsCollection := db.Collection("blog_views")
+	ttlIndex := mongo.IndexModel{
+		Keys:    bson.M{"viewed_at": 1},
+		Options: options.Index().SetExpireAfterSeconds(24 * 60 * 60), // 24 hours
+	}
+	_, err := blogViewsCollection.Indexes().CreateOne(ctx, ttlIndex)
+	if err != nil {
+		return fmt.Errorf("failed to create TTL index for blog_views: %w", err)
+	}
+
+	// We can add other index creations here, for example, for users, blogs, etc.
+	// Example: Unique index for user email
+	// usersCollection := db.Collection("users")
+	// emailIndex := mongo.IndexModel{
+	// 	Keys:    bson.M{"email": 1},
+	// 	Options: options.Index().SetUnique(true),
+	// }
+	// _, err = usersCollection.Indexes().CreateOne(ctx, emailIndex)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to create unique index for users email: %w", err)
+	// }
+
+	log.Println("Successfully created database indexes.")
+	return nil
 }
 
 // Disconnect disconnects the MongoDB client

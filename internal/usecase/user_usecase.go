@@ -77,6 +77,7 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 	existingUserByEmail, err := uc.userRepo.GetUserByEmail(ctx, email)
 	if err != nil && err.Error() != errUserNotFound {
 		uc.logger.Errorf("failed to check for existing user by email: %v", err)
+		return nil, errors.New(errInternalServer)
 		return nil, fmt.Errorf("%s", errInternalServer)
 	}
 	if existingUserByEmail != nil {
@@ -86,6 +87,7 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 	existingUserByUsername, err := uc.userRepo.GetUserByUsername(ctx, username)
 	if err != nil && err.Error() != errUserNotFound {
 		uc.logger.Errorf("failed to check for existing user by username: %v", err)
+		return nil, errors.New(errInternalServer)
 		return nil, fmt.Errorf("%s", errInternalServer)
 	}
 	if existingUserByUsername != nil {
@@ -116,7 +118,7 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 		Email:        email,
 		PasswordHash: hashedPassword,
 		Role:         entity.UserRoleUser,
-		IsActive:     !uc.cfg.GetSendActivationEmail(), // Activate user immediately if email verification is off
+		IsActive:     !uc.config.GetSendActivationEmail(), // Activate user immediately if email verification is off
 		AvatarURL:    nil,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
@@ -131,7 +133,7 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 	}
 
 	// Send activation email if required, using config from injected ConfigProvider
-	if uc.cfg.GetSendActivationEmail() {
+	if uc.config.GetSendActivationEmail() {
 		// Generate email verification token
 		emailVerificationTokenString, err := uc.jwtService.GenerateEmailVerificationToken(user.ID)
 		if err != nil {
@@ -144,7 +146,7 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 				ID:        uc.uuidGenerator.NewUUID(),
 				UserID:    user.ID,
 				TokenHash: hashedEmailVerificationToken,
-				ExpiresAt: time.Now().Add(uc.cfg.GetEmailVerificationTokenExpiry()),
+				ExpiresAt: time.Now().Add(uc.config.GetEmailVerificationTokenExpiry()),
 				Used:      false,
 				CreatedAt: time.Now(),
 			}
@@ -153,7 +155,7 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 				uc.logger.Errorf("failed to store email verification token for user %s: %v", user.ID, err)
 				// Log but don't fail registration if token storage fails
 			} else {
-				activationLink := fmt.Sprintf("%s/verify-email?token=%s", uc.cfg.GetAppBaseURL(), emailVerificationTokenString)
+				activationLink := fmt.Sprintf("%s/verify-email?token=%s", uc.config.GetAppBaseURL(), emailVerificationTokenString)
 				if err := uc.mailService.SendActivationEmail(user.Email, user.Username, activationLink); err != nil {
 					uc.logger.Warnf("failed to send activation email to %s: %v", user.Email, err)
 				}
@@ -207,7 +209,7 @@ func (uc *UserUsecase) Login(ctx context.Context, email, password string) (*enti
 		return nil, "", "", errors.New("failed to generate token")
 	}
 
-	refreshTokenExpiry := uc.cfg.GetRefreshTokenExpiry()
+	refreshTokenExpiry := uc.config.GetRefreshTokenExpiry()
 	if refreshTokenExpiry <= 0 {
 		uc.logger.Errorf("invalid refresh token expiry configuration: %v", refreshTokenExpiry)
 		return nil, "", "", errors.New("invalid refresh token expiry configuration")
@@ -317,7 +319,7 @@ func (uc *UserUsecase) RefreshToken(ctx context.Context, refreshToken string) (s
 	newHashedRefreshToken := uc.hasher.HashString(newRefreshToken)
 
 	// Update the stored refresh token with the new hash and expiry.
-	err = uc.tokenRepo.UpdateToken(ctx, storedToken.ID, newHashedRefreshToken, time.Now().Add(uc.cfg.GetRefreshTokenExpiry()))
+	err = uc.tokenRepo.UpdateToken(ctx, storedToken.ID, newHashedRefreshToken, time.Now().Add(uc.config.GetRefreshTokenExpiry()))
 	if err != nil {
 		uc.logger.Errorf("failed to update refresh token in db: %v", err)
 		return "", "", errors.New("failed to update token")
@@ -470,10 +472,8 @@ func (uc *UserUsecase) PromoteUser(ctx context.Context, userID string) (*entity.
 
 	user.Role = entity.UserRoleAdmin
 
-	updates := map[string]interface{}{
-		"role": entity.UserRoleAdmin,
-	}
-	if err := uc.userRepo.UpdateUser(ctx, user.ID, updates); err != nil {
+	_, err = uc.userRepo.UpdateUser(ctx, user)
+	if err != nil {
 		uc.logger.Errorf("failed to promote user %s: %v", userID, err)
 		return nil, errors.New("failed to promote user")
 	}
@@ -498,10 +498,9 @@ func (uc *UserUsecase) DemoteUser(ctx context.Context, userID string) (*entity.U
 
 	user.Role = entity.UserRoleUser
 
-	updates := map[string]interface{}{
-		"role": entity.UserRoleUser,
-	}
-	if err := uc.userRepo.UpdateUser(ctx, user.ID, updates); err != nil {
+	user.Role = entity.UserRoleUser
+	_, err = uc.userRepo.UpdateUser(ctx, user)
+	if err != nil {
 		uc.logger.Errorf("failed to demote user %s: %v", userID, err)
 		return nil, errors.New("failed to demote user")
 	}
@@ -539,9 +538,35 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID string, updates
 	}
 
 	uc.logger.Infof("About to update user %s with updates: %+v", userID, updates)
-	uc.logger.Infof("About to update user %s with updates: %+v", userID, updates)
 
-	if err := uc.userRepo.UpdateUser(ctx, user.ID, updates); err != nil {
+	// Apply updates to user struct
+	for k, v := range updates {
+		switch k {
+		case "username":
+			if username, ok := v.(string); ok {
+				user.Username = username
+			}
+		case "first_name":
+			if firstName, ok := v.(string); ok {
+				user.FirstName = &firstName
+			}
+		case "last_name":
+			if lastName, ok := v.(string); ok {
+				user.LastName = &lastName
+			}
+		case "avatar_url":
+			if avatarURL, ok := v.(string); ok {
+				user.AvatarURL = &avatarURL
+			}
+		case "is_active":
+			if isActive, ok := v.(bool); ok {
+				user.IsActive = isActive
+			}
+		}
+	}
+	user.UpdatedAt = time.Now()
+	_, err = uc.userRepo.UpdateUser(ctx, user)
+	if err != nil {
 		uc.logger.Errorf("failed to update profile for user %s: %v", userID, err)
 		return nil, errors.New("failed to update profile")
 	}
@@ -564,7 +589,7 @@ func (uc *UserUsecase) LoginWithOAuth(ctx context.Context, firstName, lastName, 
 	user, err := uc.userRepo.GetUserByEmail(ctx, email)
 	if err != nil && err.Error() != errUserNotFound {
 		uc.logger.Errorf("failed to check for existing user by email: %v", err)
-		return "", "", fmt.Errorf(errInternalServer)
+		return "", "", errors.New(errInternalServer)
 	}
 
 	// If user does not exist, create a new one
@@ -615,7 +640,7 @@ func (uc *UserUsecase) LoginWithOAuth(ctx context.Context, firstName, lastName, 
 		return "", "", errors.New("failed to generate token")
 	}
 
-	refreshTokenExpiry := uc.cfg.GetRefreshTokenExpiry()
+	refreshTokenExpiry := uc.config.GetRefreshTokenExpiry()
 	if refreshTokenExpiry <= 0 {
 		uc.logger.Errorf("invalid refresh token expiry configuration: %v", refreshTokenExpiry)
 		return "", "", errors.New("invalid refresh token expiry configuration")
