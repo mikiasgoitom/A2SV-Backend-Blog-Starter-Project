@@ -3,6 +3,7 @@ package mongodb
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -96,12 +97,25 @@ func (r *MongoUserRepository) UpdateUser(ctx context.Context, id string, updates
 func (r *MongoUserRepository) UpdateUserPassword(ctx context.Context, id string, hashedPassword string) error {
 	filter := bson.M{"_id": id}
 	update := bson.M{"$set": bson.M{"password_hash": hashedPassword}}
-	_, err := r.collection.UpdateOne(ctx, filter, update)
-	return err
+	count, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+
+	if count.MatchedCount == 0 {
+		return fmt.Errorf("failed to fetch user with id:%s", id)
+	}
+	return nil
 }
 
 func (r *MongoUserRepository) DeleteUser(ctx context.Context, id string) error {
 	filter := bson.M{"id": id}
-	_, err := r.collection.DeleteOne(ctx, filter)
-	return err
+	count, err := r.collection.DeleteOne(ctx, filter)
+	if err != nil {
+		return err
+	}
+	if count.DeletedCount == 0 {
+		return fmt.Errorf("failed to fetch user with id:%s", id)
+	}
+	return nil
 }

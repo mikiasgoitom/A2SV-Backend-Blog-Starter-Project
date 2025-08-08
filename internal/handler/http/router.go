@@ -7,16 +7,18 @@ import (
 )
 
 type Router struct {
-	userHandler *UserHandler
-	userUsecase *usecase.UserUsecase
-	jwtService  usecase.JWTService
+	userHandler  *UserHandler
+	emailHandler *EmailHandler
+	userUsecase  *usecase.UserUsecase
+	jwtService   usecase.JWTService
 }
 
-func NewRouter(userUsecase *usecase.UserUsecase, jwtService usecase.JWTService) *Router {
+func NewRouter(userUsecase *usecase.UserUsecase, jwtService usecase.JWTService, emailHandler *EmailHandler) *Router {
 	return &Router{
-		userHandler: NewUserHandler(userUsecase),
-		userUsecase: userUsecase,
-		jwtService:  jwtService,
+		userHandler:  NewUserHandler(userUsecase),
+		userUsecase:  userUsecase,
+		jwtService:   jwtService,
+		emailHandler: emailHandler,
 	}
 }
 
@@ -29,10 +31,12 @@ func (r *Router) SetupRoutes(router *gin.Engine) {
 	{
 		auth.POST("/register", r.userHandler.CreateUser)
 		auth.POST("/login", r.userHandler.Login)
-		auth.POST("/verify-email", r.userHandler.VerifyEmail)
+		auth.GET("/verify-email", r.emailHandler.HandleVerifyEmailToken)
 		auth.POST("/forgot-password", r.userHandler.ForgotPassword)
 		auth.POST("/reset-password", r.userHandler.ResetPassword)
 		auth.POST("/refresh-token", r.userHandler.RefreshToken)
+
+		auth.POST("/request-verification-email", r.emailHandler.HandleRequestEmailVerification)
 	}
 
 	// Public user routes

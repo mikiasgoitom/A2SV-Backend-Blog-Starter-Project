@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"time"
 
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
@@ -30,23 +29,6 @@ type BlogRepository interface {
 	GetTrendingBlogs(ctx context.Context, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error)
 }
 
-// TokenRepository provides methods for managing tokens in the database.
-type TokenRepository interface {
-	CreateToken(ctx context.Context, token *entity.Token) error
-	GetTokenByUserID(ctx context.Context, userID string) (*entity.Token, error)
-	DeleteToken(ctx context.Context, tokenID string) error
-	UpdateToken(ctx context.Context, tokenID string, tokenHash string, expiry time.Time) error
-}
-
-// EmailVerificationTokenRepository defines methods for interacting with email verification token data persistence.
-type EmailVerificationTokenRepository interface {
-	CreateEmailVerificationToken(ctx context.Context, token *entity.EmailVerificationToken) error
-	GetEmailVerificationTokenByUserID(ctx context.Context, userID string) (*entity.EmailVerificationToken, error)
-	GetEmailVerificationTokenByTokenHash(ctx context.Context, tokenHash string) (*entity.EmailVerificationToken, error)
-	DeleteEmailVerificationToken(ctx context.Context, id string) error
-	UpdateEmailVerificationTokenUsedStatus(ctx context.Context, id string, used bool) error
-}
-
 // Hasher provides methods for securely hashing and verifying passwords and other strings.
 type Hasher interface {
 	HashPassword(password string) (string, error)
@@ -65,21 +47,6 @@ type JWTService interface {
 	ParsePasswordResetToken(token string) (*entity.Claims, error)
 	GenerateEmailVerificationToken(userID string) (string, error)
 	ParseEmailVerificationToken(token string) (*entity.Claims, error)
-}
-
-// MailService defines the interface for sending emails.
-type MailService interface {
-	SendActivationEmail(toEmail, username, activationLink string) error
-	SendPasswordResetEmail(toEmail, username, resetLink string) error
-}
-
-// ConfigProvider defines the interface for accessing application configuration.
-type ConfigProvider interface {
-	GetSendActivationEmail() bool
-	GetAppBaseURL() string
-	GetRefreshTokenExpiry() time.Duration
-	GetPasswordResetTokenExpiry() time.Duration
-	GetEmailVerificationTokenExpiry() time.Duration
 }
 
 // AppLogger defines the interface for logging messages.
@@ -104,7 +71,7 @@ type IUserUseCase interface {
 	Authenticate(ctx context.Context, accessToken string) (*entity.User, error)
 	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
 	ForgotPassword(ctx context.Context, email string) error
-	ResetPassword(ctx context.Context, resetToken, newPassword string) error
+	ResetPassword(ctx context.Context, verifier, resetToken, newPassword string) error
 	VerifyEmail(ctx context.Context, token string) error
 	Logout(ctx context.Context, refreshToken string) error
 	PromoteUser(ctx context.Context, userID string) (*entity.User, error)

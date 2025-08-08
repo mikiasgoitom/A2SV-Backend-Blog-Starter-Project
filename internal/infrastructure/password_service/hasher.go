@@ -48,11 +48,6 @@ func (h *Hasher) HashString(s string) string {
 	return fmt.Sprintf("%x", hash)
 }
 
-func (h *Hasher) CheckPasswordHash(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
-}
-
 func (h *Hasher) CheckHash(s, hash string) bool {
 	// Use SHA256 to compare token hashes
 	expectedHash := h.HashString(s)

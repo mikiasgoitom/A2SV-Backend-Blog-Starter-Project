@@ -2,16 +2,15 @@ package entity
 
 import (
 	"time"
-
 )
 
 // Media represents an uploaded media file
 type Media struct {
-	ID               string    `json:"id" db:"id"`
-	FileName         string    `json:"file_name" db:"file_name"`
-	URL              string    `json:"url" db:"url"`
-	MimeType         string    `json:"mime_type" db:"mime_type"`
-	FileSize         int64     `json:"file_size" db:"file_size"`
-	UploadedByUserID string    `json:"uploaded_by_user_id" db:"uploaded_by_user_id"`
-	CreatedAt        time.Time `json:"created_at" db:"created_at"`
+	ID               string    `json:"id" bson:"id"`
+	FileName         string    `json:"file_name" bson:"file_name"`
+	URL              string    `json:"url" bson:"url"`
+	MimeType         string    `json:"mime_type" bson:"mime_type"`
+	FileSize         int64     `json:"file_size" bson:"file_size"`
+	UploadedByUserID string    `json:"uploaded_by_user_id" bson:"uploaded_by_user_id"`
+	CreatedAt        time.Time `json:"created_at" bson:"created_at"`
 }
