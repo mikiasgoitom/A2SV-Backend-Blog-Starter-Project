@@ -1,17 +1,21 @@
 package mongodb
 
+
+
 import (
 	"context"
 	"errors"
 	"fmt"
 	"time"
-
 	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+// ErrReactionNotFound is returned when a reaction is not found in the database.
+var ErrReactionNotFound = errors.New("reaction not found")
 
 // LikeRepository represents the MongoDB implementation of the ILikeRepository interface.
 type LikeRepository struct {
@@ -81,7 +85,7 @@ func (r *LikeRepository) DeleteReaction(ctx context.Context, reactionID string) 
 		return fmt.Errorf("failed to delete reaction: %w", err)
 	}
 	if res.ModifiedCount == 0 {
-		return errors.New("reaction not found")
+		return ErrReactionNotFound
 	}
 	return nil
 }
@@ -95,7 +99,7 @@ func (r *LikeRepository) GetReactionByUserIDAndTargetID(ctx context.Context, use
 	err := r.collection.FindOne(ctx, filter).Decode(&like)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, errors.New("reaction not found")
+			return nil, ErrReactionNotFound
 		}
 		return nil, fmt.Errorf("failed to retrieve reaction: %w", err)
 	}
@@ -115,7 +119,7 @@ func (r *LikeRepository) GetReactionByUserIDTargetIDAndType(ctx context.Context,
 	err := r.collection.FindOne(ctx, filter).Decode(&like)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, errors.New("reaction not found")
+			return nil, ErrReactionNotFound
 		}
 		return nil, fmt.Errorf("failed to retrieve specific reaction: %w", err)
 	}
