@@ -1,8 +1,8 @@
 {
   "info": {
-    "_postman_id": "a2sv-g6-blog",
-    "name": "G6 Blog API",
-    "description": "Postman collection for the G6 Blog Starter Project API.",
+    "_postman_id": "a2sv-g6-blog-updated",
+    "name": "G6 Blog API (Updated)",
+    "description": "Postman collection for the G6 Blog Starter Project API. Includes all endpoints as of August 2025.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -17,11 +17,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"johndoe\",\n  \"email\": \"johndoe@example.com\",\n  \"password\": \"Password123!\",\n  \"firstname\": \"John\",\n  \"lastname\": \"Doe\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/register",
@@ -40,11 +36,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"johndoe@example.com\",\n  \"password\": \"Password123!\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/login",
@@ -63,11 +55,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"token\": \"<your_email_verification_token_here>\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/verify-email",
@@ -86,11 +74,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"johndoe@example.com\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/forgot-password",
@@ -109,11 +93,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"token\": \"<your_reset_token_here>\",\n  \"password\": \"NewPass123!\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/reset-password",
@@ -132,11 +112,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refresh_token\": \"<your_refresh_token_here>\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/refresh-token",
@@ -161,11 +137,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refresh_token\": \"<your_refresh_token_here>\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/logout",
@@ -212,10 +184,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "users", ":id"],
               "variable": [
-                {
-                  "key": "id",
-                  "value": "123e4567-e89b-12d3-a456-426614174000"
-                }
+                { "key": "id", "value": "123e4567-e89b-12d3-a456-426614174000" }
               ]
             },
             "description": "Retrieves a specific user's profile by their ID. Requires authentication."
@@ -256,11 +225,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"johndoe-updated\",\n  \"firstname\": \"JohnUpdated\",\n  \"lastname\": \"DoeUpdated\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/me",
@@ -273,16 +238,273 @@
         }
       ],
       "description": "Endpoints for managing user profiles."
+    },
+    {
+      "name": "Blog Management",
+      "item": [
+        {
+          "name": "Get Blogs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blogs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "blogs"]
+            },
+            "description": "Retrieves a paginated list of blogs. Supports sorting and filtering."
+          },
+          "response": []
+        },
+        {
+          "name": "Search and Filter Blogs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blogs/search?q=example&tags=tag1&tags=tag2&page=1&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "blogs", "search"],
+              "query": [
+                { "key": "q", "value": "example" },
+                { "key": "tags", "value": "tag1" },
+                { "key": "tags", "value": "tag2" },
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "10" }
+              ]
+            },
+            "description": "Searches and filters blogs by query, tags, date, views, likes, author, and pagination.\n\n**To filter by multiple tags, use repeated query parameters:**\n\n`?tags=tag1&tags=tag2` (not `tags=tag1,tag2`).\n\nExample: `GET /api/v1/blogs/search?q=example&tags=tag1&tags=tag2&page=1&pageSize=10` will return blogs that have both tag1 and tag2."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Popular Blogs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blogs/popular?page=1&pageSize=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "blogs", "popular"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "10" }
+              ]
+            },
+            "description": "Retrieves popular blogs sorted by view count."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Blog Detail",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blogs/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "blogs", ":slug"],
+              "variable": [{ "key": "slug", "value": "example-blog-slug" }]
+            },
+            "description": "Retrieves details of a blog by its slug."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Blog",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My Blog\",\n  \"content\": \"Blog content...\",\n  \"slug\": \"my-blog\",\n  \"status\": \"published\",\n  \"tags\": [\"tag1\", \"tag2\"],\n  \"featured_image_id\": \"<optional_image_id>\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blogs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "blogs"]
+            },
+            "description": "Creates a new blog post. Requires authentication.\n\nRequest Body Example:\n```json\n{\n  \"title\": \"My Blog\",\n  \"content\": \"Blog content...\",\n  \"slug\": \"my-blog\",\n  \"status\": \"published\",\n  \"tags\": [\"tag1\", \"tag2\"],\n  \"featured_image_id\": \"<optional_image_id>\"\n}\n```\n- `title` (string, required): Blog title.\n- `content` (string, required): Blog content.\n- `slug` (string, required): Blog slug.\n- `status` (string, required): Blog status (`draft`, `published`, `archived`).\n- `tags` (array of string, optional): List of tag IDs to associate with the blog.\n- `featured_image_id` (string, optional): ID of the featured image.\n\nResponse: 201 Created, message: Blog created successfully."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Blog",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Blog\",\n  \"content\": \"Updated content...\",\n  \"status\": \"published\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blogs/:blogID",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "blogs", ":blogID"],
+              "variable": [
+                {
+                  "key": "blogID",
+                  "value": "123e4567-e89b-12d3-a456-426614174000"
+                }
+              ]
+            },
+            "description": "Updates a blog post by ID. Requires authentication.\n\nRequest Body Example:\n```json\n{\n  \"title\": \"Updated Blog\",\n  \"content\": \"Updated content...\",\n  \"status\": \"published\"\n}\n```\n- `title` (string, optional): New blog title.\n- `content` (string, optional): New blog content.\n- `status` (string, required): Blog status (`draft`, `published`, `archived`).\n\nResponse: 200 OK, returns updated blog object."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Blog",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blogs/:blogID",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "blogs", ":blogID"],
+              "variable": [
+                {
+                  "key": "blogID",
+                  "value": "123e4567-e89b-12d3-a456-426614174000"
+                }
+              ]
+            },
+            "description": "Deletes a blog post by ID. Requires authentication."
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints for managing blogs."
+    },
+    {
+      "name": "Blog Interactions",
+      "item": [
+        {
+          "name": "Like Blog",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blogs/:blogID/like",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "blogs", ":blogID", "like"],
+              "variable": [{ "key": "blogID", "value": "<blog_id>" }]
+            },
+            "description": "Likes a blog post. Requires authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "Unlike Blog",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blogs/:blogID/like",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "blogs", ":blogID", "like"],
+              "variable": [{ "key": "blogID", "value": "<blog_id>" }]
+            },
+            "description": "Unlikes a blog post. Requires authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "Dislike Blog",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blogs/:blogID/dislike",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "blogs", ":blogID", "dislike"],
+              "variable": [{ "key": "blogID", "value": "<blog_id>" }]
+            },
+            "description": "Dislikes a blog post. Requires authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "Undislike Blog",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blogs/:blogID/dislike",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "blogs", ":blogID", "dislike"],
+              "variable": [{ "key": "blogID", "value": "<blog_id>" }]
+            },
+            "description": "Removes a dislike from a blog post. Requires authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "Track Blog View",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blogs/:blogID/view",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "blogs", ":blogID", "view"],
+              "variable": [{ "key": "blogID", "value": "<blog_id>" }]
+            },
+            "description": "Tracks a view for a blog post. Requires authentication."
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints for blog interactions (like, unlike, dislike, undislike, view)."
     }
   ],
   "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:8080"
-    },
-    {
-      "key": "accessToken",
-      "value": ""
-    }
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "accessToken", "value": "" }
   ]
 }

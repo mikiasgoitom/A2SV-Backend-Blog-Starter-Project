@@ -16,18 +16,28 @@ import (
 
 // BlogRepository represents the MongoDB implementation of the BlogRepository interface.
 type BlogRepository struct {
-	collection         *mongo.Collection // For blog posts
-	blogTagsCollection *mongo.Collection // For blog-tag relationships
-	usersCollection    *mongo.Collection // For accessing user data for search
+	collection          *mongo.Collection // For blog posts
+	blogTagsCollection  *mongo.Collection // For blog-tag relationships
+	usersCollection     *mongo.Collection // For accessing user data for search
+	blogViewsCollection *mongo.Collection // For tracking blog views
 }
 
 // NewBlogRepository creates and returns a new BlogRepository instance.
 func NewBlogRepository(db *mongo.Database) *BlogRepository {
 	return &BlogRepository{
-		collection:         db.Collection("blogs"),
-		blogTagsCollection: db.Collection("blog_tags"),
-		usersCollection:    db.Collection("users"),
+		collection:          db.Collection("blogs"),
+		blogTagsCollection:  db.Collection("blog_tags"),
+		usersCollection:     db.Collection("users"),
+		blogViewsCollection: db.Collection("blog_views"),
 	}
+}
+
+// getSortOrder is a helper to convert sort order string to an integer.
+func getSortOrder(sortOrder string) int {
+	if sortOrder == "asc" {
+		return 1
+	}
+	return -1
 }
 
 // buildBaseMatchFilter creates a bson.M filter from BlogFilterOptions.
@@ -78,14 +88,6 @@ func buildBaseMatchFilter(opts *contract.BlogFilterOptions) bson.M {
 	return baseMatch
 }
 
-// getSortOrder is a helper to convert sort order string to an integer.
-func getSortOrder(sortOrder string) int {
-	if sortOrder == "asc" {
-		return 1
-	}
-	return -1
-}
-
 // CreateBlog inserts a new blog post record into the database.
 func (r *BlogRepository) CreateBlog(ctx context.Context, blog *entity.Blog) error {
 	blog.CreatedAt = time.Now()
@@ -131,6 +133,7 @@ func (r *BlogRepository) GetBlogBySlug(ctx context.Context, slug string) (*entit
 
 // GetBlogs retrieves a list of blog posts with filtering, sorting, and pagination options.
 func (r *BlogRepository) GetBlogs(ctx context.Context, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error) {
+
 	baseMatch := buildBaseMatchFilter(opts)
 
 	// Base pipeline stages for filtering
@@ -138,7 +141,7 @@ func (r *BlogRepository) GetBlogs(ctx context.Context, opts *contract.BlogFilter
 		{"$match": baseMatch},
 	}
 
-	// Conditionally add stages for tag filtering
+	// Conditionally add stages for tag filtering - only when TagIDs are provided
 	if len(opts.TagIDs) > 0 {
 		pipeline = append(pipeline,
 			bson.M{
@@ -146,20 +149,31 @@ func (r *BlogRepository) GetBlogs(ctx context.Context, opts *contract.BlogFilter
 					"from":         "blog_tags",
 					"localField":   "_id",
 					"foreignField": "blog_id",
-					"as":           "blogTags",
+					"as":           "tags",
 				},
 			},
-			bson.M{"$unwind": "$blogTags"},
-			bson.M{"$match": bson.M{"blogTags.tag_id": bson.M{"$in": opts.TagIDs}}},
-			// Use a group stage to get unique blogs after the unwind
 			bson.M{
-				"$group": bson.M{
-					"_id":  "$id",
-					"blog": bson.M{"$first": "$$ROOT"},
+				"$addFields": bson.M{
+					"has_required_tags": bson.M{
+						"$gt": bson.A{
+							bson.M{
+								"$size": bson.M{
+									"$filter": bson.M{
+										"input": "$tags",
+										"as":    "tag",
+										"cond": bson.M{
+											"$in": bson.A{"$$tag.tag_id", opts.TagIDs},
+										},
+									},
+								},
+							},
+							0,
+						},
+					},
 				},
 			},
-			// Replace the root with the original blog document
-			bson.M{"$replaceRoot": bson.M{"newRoot": "$blog"}},
+			bson.M{"$match": bson.M{"has_required_tags": true}},
+			bson.M{"$project": bson.M{"tags": 0, "has_required_tags": 0}}, // Clean up helper fields
 		)
 	}
 
@@ -169,21 +183,22 @@ func (r *BlogRepository) GetBlogs(ctx context.Context, opts *contract.BlogFilter
 		sortField = opts.SortBy
 	}
 
-	// The full pipeline includes all filters, followed by the $facet stage.
-	fullPipeline := append(pipeline,
-		bson.M{
-			"$facet": bson.M{
-				"totalCount": bson.A{
-					bson.M{"$count": "total"},
-				},
-				"blogs": bson.A{
-					bson.M{"$sort": bson.M{sortField: getSortOrder(opts.SortOrder)}},
-					bson.M{"$skip": int64((opts.Page - 1) * opts.PageSize)},
-					bson.M{"$limit": int64(opts.PageSize)},
-				},
+	// Create the facet stage separately.
+	facetStage := bson.M{
+		"$facet": bson.M{
+			"totalCount": bson.A{
+				bson.M{"$count": "total"},
+			},
+			"blogs": bson.A{
+				bson.M{"$sort": bson.M{sortField: getSortOrder(opts.SortOrder)}},
+				bson.M{"$skip": int64((opts.Page - 1) * opts.PageSize)},
+				bson.M{"$limit": int64(opts.PageSize)},
 			},
 		},
-	)
+	}
+
+	// The full pipeline includes all filters, followed by the $facet stage.
+	fullPipeline := append(pipeline, facetStage)
 
 	cursor, err := r.collection.Aggregate(ctx, fullPipeline)
 	if err != nil {
@@ -289,7 +304,7 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 		{"$match": bson.M{"$or": searchConditions}},
 	}
 
-	// If TagIDs are provided, add a $lookup to blog_tags and filter
+	// If TagIDs are provided, add a $lookup to blog_tags and filter for blogs that have ALL requested tags
 	if len(opts.TagIDs) > 0 {
 		pipeline = append(pipeline,
 			bson.M{
@@ -300,17 +315,26 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 					"as":           "blogTags",
 				},
 			},
-			bson.M{"$unwind": "$blogTags"},
-			bson.M{"$match": bson.M{"blogTags.tag_id": bson.M{"$in": opts.TagIDs}}},
-			// Use a group stage to get unique blogs after the unwind
 			bson.M{
-				"$group": bson.M{
-					"_id":  "$id",
-					"blog": bson.M{"$first": "$$ROOT"},
+				"$addFields": bson.M{
+					"blogTagIds": bson.M{
+						"$map": bson.M{
+							"input": "$blogTags",
+							"as":    "bt",
+							"in":    bson.M{"$toString": "$$bt.tag_id"},
+						},
+					},
 				},
 			},
-			// Replace the root with the original blog document
-			bson.M{"$replaceRoot": bson.M{"newRoot": "$blog"}},
+			bson.M{
+				"$addFields": bson.M{
+					"hasAllTags": bson.M{
+						"$setIsSubset": []interface{}{opts.TagIDs, "$blogTagIds"},
+					},
+				},
+			},
+			bson.M{"$match": bson.M{"hasAllTags": true}},
+			bson.M{"$project": bson.M{"blogTags": 0, "hasAllTags": 0}},
 		)
 	}
 
@@ -433,52 +457,52 @@ func (r *BlogRepository) IncrementDislikeCount(ctx context.Context, blogID strin
 }
 
 // DecrementDislikeCount decrements the dislike count of a specific blog post.
-func (r *BlogRepository) DecrementDislikeCount(ctx context.Context, blogID string) error {
-	filter := bson.M{"_id": blogID, "is_deleted": false}
-	update := bson.M{"$inc": bson.M{"dislike_count": -1}}
+// func (r *BlogRepository) DecrementDislikeCount(ctx context.Context, blogID string) error {
+// 	filter := bson.M{"_id": blogID, "is_deleted": false}
+// 	update := bson.M{"$inc": bson.M{"dislike_count": -1}}
 
-	res, err := r.collection.UpdateOne(ctx, filter, update)
-	if err != nil {
-		return fmt.Errorf("failed to decrement dislike count: %w", err)
-	}
-	if res.ModifiedCount == 0 {
-		return errors.New("blog post not found")
-	}
+// 	res, err := r.collection.UpdateOne(ctx, filter, update)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to decrement dislike count: %w", err)
+// 	}
+// 	if res.ModifiedCount == 0 {
+// 		return errors.New("blog post not found")
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // IncrementCommentCount increments the comment count of a specific blog post.
-func (r *BlogRepository) IncrementCommentCount(ctx context.Context, blogID string) error {
-	filter := bson.M{"_id": blogID, "is_deleted": false}
-	update := bson.M{"$inc": bson.M{"comment_count": 1}}
+// func (r *BlogRepository) IncrementCommentCount(ctx context.Context, blogID string) error {
+// 	filter := bson.M{"_id": blogID, "is_deleted": false}
+// 	update := bson.M{"$inc": bson.M{"comment_count": 1}}
 
-	res, err := r.collection.UpdateOne(ctx, filter, update)
-	if err != nil {
-		return fmt.Errorf("failed to increment comment count: %w", err)
-	}
-	if res.ModifiedCount == 0 {
-		return errors.New("blog post not found")
-	}
+// 	res, err := r.collection.UpdateOne(ctx, filter, update)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to increment comment count: %w", err)
+// 	}
+// 	if res.ModifiedCount == 0 {
+// 		return errors.New("blog post not found")
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // DecrementCommentCount decrements the comment count of a specific blog post.
-func (r *BlogRepository) DecrementCommentCount(ctx context.Context, blogID string) error {
-	filter := bson.M{"_id": blogID, "is_deleted": false}
-	update := bson.M{"$inc": bson.M{"comment_count": -1}}
+// func (r *BlogRepository) DecrementCommentCount(ctx context.Context, blogID string) error {
+// 	filter := bson.M{"_id": blogID, "is_deleted": false}
+// 	update := bson.M{"$inc": bson.M{"comment_count": -1}}
 
-	res, err := r.collection.UpdateOne(ctx, filter, update)
-	if err != nil {
-		return fmt.Errorf("failed to decrement comment count: %w", err)
-	}
-	if res.ModifiedCount == 0 {
-		return errors.New("blog post not found")
-	}
+// 	res, err := r.collection.UpdateOne(ctx, filter, update)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to decrement comment count: %w", err)
+// 	}
+// 	if res.ModifiedCount == 0 {
+// 		return errors.New("blog post not found")
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // GetBlogCounts returns the current counts for a blog post.
 func (r *BlogRepository) GetBlogCounts(ctx context.Context, blogID string) (viewCount, likeCount, dislikeCount, commentCount int, err error) {
@@ -563,4 +587,223 @@ func (r *BlogRepository) RemoveTagsFromBlog(ctx context.Context, blogSlug string
 	}
 
 	return nil
+}
+
+// GetBlogsByTagID retrieves a list of blog posts associated with a specific tag ID, applying pagination and sorting options.
+func (r *BlogRepository) GetBlogsByTagID(ctx context.Context, tagID string, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error) {
+	// Aggregation pipeline to join blog_tags with blogs
+	pipeline := []bson.M{
+		// Match blog_tags documents by the given tagId.
+		{"$match": bson.M{"tag_id": tagID}},
+		// Look up the corresponding blog documents from the 'blogs' collection
+		{"$lookup": bson.M{
+			"from":         "blogs",
+			"localField":   "blog_id",
+			"foreignField": "_id",
+			"as":           "blogDetails",
+		}},
+		// Unwind the blogDetails array (each blog_tag document will now have a blogDetails object)
+		{"$unwind": "$blogDetails"},
+		// Match only active (not deleted) blogs
+		{"$match": bson.M{"blogDetails.is_deleted": false}},
+	}
+
+	// Add sorting
+	if opts.SortBy != "" {
+		sortOrder := 1
+		if opts.SortOrder == "desc" {
+			sortOrder = -1
+		}
+		pipeline = append(pipeline, bson.M{"$sort": bson.M{fmt.Sprintf("blogDetails.%s", opts.SortBy): sortOrder}})
+	} else {
+		pipeline = append(pipeline, bson.M{"$sort": bson.M{"blogDetails.created_at": -1}})
+	}
+
+	// Count total documents before pagination
+	countPipeline := append(pipeline, bson.M{"$count": "total"})
+	countCursor, err := r.blogTagsCollection.Aggregate(ctx, countPipeline)
+	if err != nil {
+		return nil, 0, errors.New("failed to count blogs by tag")
+	}
+	defer countCursor.Close(ctx)
+
+	var countResult []struct {
+		Total int64 `bson:"total"`
+	}
+	if err = countCursor.All(ctx, &countResult); err != nil {
+		return nil, 0, errors.New("failed to decode count result")
+	}
+
+	totalBlogs := int64(0)
+	if len(countResult) > 0 {
+		totalBlogs = countResult[0].Total
+	}
+
+	// Add pagination to the main pipeline
+	if opts.Page > 0 && opts.PageSize > 0 {
+		pipeline = append(pipeline, bson.M{"$skip": int64((opts.Page - 1) * opts.PageSize)})
+		pipeline = append(pipeline, bson.M{"$limit": int64(opts.PageSize)})
+	}
+
+	// Project to shape the output as an entity.Blog
+	pipeline = append(pipeline, bson.M{"$replaceRoot": bson.M{"newRoot": "$blogDetails"}})
+
+	cursor, err := r.blogTagsCollection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, 0, errors.New("failed to retrieve blogs by tag")
+	}
+	defer cursor.Close(ctx)
+
+	var blogs []*entity.Blog
+	if err = cursor.All(ctx, &blogs); err != nil {
+		return nil, 0, fmt.Errorf("failed to decode blogs by tag: %w", err)
+	}
+
+	return blogs, totalBlogs, nil
+}
+
+// GetBlogsByTagIDs retrieves blogs that have any of the specified tag IDs.
+func (r *BlogRepository) GetBlogsByTagIDs(ctx context.Context, tagIDs []string, page int, pageSize int) ([]*entity.Blog, int64, error) {
+	if len(tagIDs) == 0 {
+		return []*entity.Blog{}, 0, nil
+	}
+
+	// Find all blog IDs associated with the given tag IDs
+	filter := bson.M{"tag_id": bson.M{"$in": tagIDs}}
+	cursor, err := r.blogTagsCollection.Find(ctx, filter)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to find blog-tag associations: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	blogIDSet := make(map[string]struct{})
+	for cursor.Next(ctx) {
+		var blogTag entity.BlogTag
+		if err := cursor.Decode(&blogTag); err == nil {
+			blogIDSet[blogTag.BlogID] = struct{}{}
+		}
+	}
+
+	if len(blogIDSet) == 0 {
+		return []*entity.Blog{}, 0, nil
+	}
+
+	var blogIDs []string
+	for id := range blogIDSet {
+		blogIDs = append(blogIDs, id)
+	}
+
+	// Now fetch the blogs with those IDs
+	blogFilter := bson.M{
+		"_id":        bson.M{"$in": blogIDs},
+		"is_deleted": false,
+	}
+	findOptions := options.Find().
+		SetSkip(int64((page - 1) * pageSize)).
+		SetLimit(int64(pageSize)).
+		SetSort(bson.M{"created_at": -1}) // Default sort
+
+	blogCursor, err := r.collection.Find(ctx, blogFilter, findOptions)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to retrieve blogs by tag IDs: %w", err)
+	}
+	defer blogCursor.Close(ctx)
+
+	var blogs []*entity.Blog
+	if err = blogCursor.All(ctx, &blogs); err != nil {
+		return nil, 0, fmt.Errorf("failed to decode blogs by tag IDs: %w", err)
+	}
+
+	totalCount, err := r.collection.CountDocuments(ctx, blogFilter)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count blogs by tag IDs: %w", err)
+	}
+
+	return blogs, totalCount, nil
+}
+
+// HasViewedRecently checks if a user (by user ID or IP address) has viewed a blog within the last 24 hours.
+func (r *BlogRepository) HasViewedRecently(ctx context.Context, blogID, userID, ipAddress string) (bool, error) {
+	// Build a filter that checks for a recent view either by the authenticated user ID
+	// or by the IP address for anonymous users.
+	filter := bson.M{
+		"blog_id": blogID,
+		"$or": []bson.M{
+			{"ip_address": ipAddress},
+		},
+	}
+
+	// If a user is logged in, include their ID in the check.
+	// This ensures that if the same user views from a different IP, they are still only counted once.
+	if userID != "" {
+		filter["$or"] = append(filter["$or"].([]bson.M), bson.M{"user_id": userID})
+	}
+
+	count, err := r.blogViewsCollection.CountDocuments(ctx, filter)
+	if err != nil {
+		return false, fmt.Errorf("failed to check for recent blog view: %w", err)
+	}
+	return count > 0, nil
+}
+
+// RecordView records a user's view of a blog, including IP address and user agent.
+func (r *BlogRepository) RecordView(ctx context.Context, blogID, userID, ipAddress, userAgent string) error {
+	view := entity.BlogView{
+		BlogID:    blogID,
+		UserID:    userID,
+		IPAddress: ipAddress,
+		UserAgent: userAgent,
+		ViewedAt:  time.Now(),
+	}
+	_, err := r.blogViewsCollection.InsertOne(ctx, view)
+	if err != nil {
+		return fmt.Errorf("failed to record blog view: %w", err)
+	}
+	return nil
+}
+
+// GetRecentViewsByIP retrieves all views from a specific IP address within a given time frame.
+func (r *BlogRepository) GetRecentViewsByIP(ctx context.Context, ipAddress string, since time.Time) ([]entity.BlogView, error) {
+	filter := bson.M{
+		"ip_address": ipAddress,
+		"viewed_at":  bson.M{"$gte": since},
+	}
+
+	cursor, err := r.blogViewsCollection.Find(ctx, filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve recent views by IP: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var views []entity.BlogView
+	if err = cursor.All(ctx, &views); err != nil {
+		return nil, fmt.Errorf("failed to decode recent views: %w", err)
+	}
+
+	return views, nil
+}
+
+// GetRecentViewsByUser retrieves all views from a specific user ID within a given time frame.
+func (r *BlogRepository) GetRecentViewsByUser(ctx context.Context, userID string, since time.Time) ([]entity.BlogView, error) {
+	if userID == "" {
+		return []entity.BlogView{}, nil // No user to look up
+	}
+
+	filter := bson.M{
+		"user_id":   userID,
+		"viewed_at": bson.M{"$gte": since},
+	}
+
+	cursor, err := r.blogViewsCollection.Find(ctx, filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve recent views by user: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var views []entity.BlogView
+	if err = cursor.All(ctx, &views); err != nil {
+		return nil, fmt.Errorf("failed to decode recent views: %w", err)
+	}
+
+	return views, nil
 }

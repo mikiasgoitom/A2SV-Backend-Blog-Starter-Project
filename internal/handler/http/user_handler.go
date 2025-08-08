@@ -30,9 +30,6 @@ type UserHandler struct {
 	userUsecase usecase.IUserUseCase
 }
 
-// Ensure UserHandler implements UserHandlerInterface
-var _ UserHandlerInterface = (*UserHandler)(nil)
-
 func NewUserHandler(userUsecase usecase.IUserUseCase) *UserHandler {
 	return &UserHandler{
 		userUsecase: userUsecase,

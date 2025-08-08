@@ -4,20 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
-	"time"
 )
 
-type BlogUseCase interface {
-	CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status BlogStatus, featuredImageID *string) (*entity.Blog, error)
-	GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder SortOrder, dateFrom *time.Time, dateTo *time.Time) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
-	UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, slug *string, status *BlogStatus, publishedAt *time.Time, featuredImageID *string, isDeleted *bool) (*entity.Blog, error)
-	DeleteBlog(ctx context.Context, blogID, userID string, isAdmin bool) (bool, error)
-	SearchAndFilterBlogs(ctx context.Context, query string, searchBy string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, maxViews *int, minLikes *int, maxLikes *int, authorID *string, page int, pageSize int) (blogs []entity.Blog, err error, totalCount int, currentPage int, totalPages int)
-	TrackBlogPopularity(ctx context.Context, blogID, userID string, action BlogAction) (viewCount, likeCount, dislikeCount, commentCount int, err error)
-	GetRecommendedBlogs(ctx context.Context, userID string, page, pageSize int) (blogs []entity.Blog, err error)
-}
+// SortOrder defines sorting direction for list queries
 type SortOrder string
 
 const (
@@ -25,15 +19,19 @@ const (
 	SortOrderDESC SortOrder = "desc"
 )
 
-type BlogAction string
+// IBlogUseCase defines blog-related business logic
+type IBlogUseCase interface {
+	CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status BlogStatus, featuredImageID *string, tags []string) (*entity.Blog, error)
+	GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder SortOrder, dateFrom *time.Time, dateTo *time.Time) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
+	GetBlogDetail(cnt context.Context, slug string) (blog entity.Blog, err error)
+	UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, status *BlogStatus, featuredImageID *string) (*entity.Blog, error)
+	DeleteBlog(ctx context.Context, blogID, userID string, isAdmin bool) (bool, error)
+	SearchAndFilterBlogs(ctx context.Context, query string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, maxViews *int, minLikes *int, maxLikes *int, authorID *string, page int, pageSize int) ([]entity.Blog, int, int, int, error)
+	TrackBlogView(ctx context.Context, blogID, userID, ipAddress, userAgent string) error
+	GetPopularBlogs(ctx context.Context, page, pageSize int) ([]entity.Blog, int, int, int, error)
+}
 
-const (
-	BlogActionView    BlogAction = "view"
-	BlogActionLike    BlogAction = "like"
-	BlogActionDislike BlogAction = "dislike"
-	BlogActionComment BlogAction = "comment"
-)
-
+// BlogStatus defines the state of a blog post
 type BlogStatus string
 
 const (
@@ -59,7 +57,7 @@ func NewBlogUseCase(blogRepo contract.IBlogRepository, uuidgenrator contract.IUU
 }
 
 // CreateBlog creates a new blog post
-func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status BlogStatus, featuredImageID *string) (*entity.Blog, error) {
+func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status BlogStatus, featuredImageID *string, tags []string) (*entity.Blog, error) {
 	if title == "" {
 		return nil, errors.New("title is required")
 	}
@@ -69,8 +67,10 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 	if authorID == "" {
 		return nil, errors.New("author ID is required")
 	}
+
+	// If slug is not provided, generate it from the title
 	if slug == "" {
-		return nil, errors.New("slug is required")
+		slug = strings.ReplaceAll(strings.ToLower(title), " ", "-")
 	}
 
 	blog := &entity.Blog{
@@ -78,11 +78,15 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 		Title:           title,
 		Content:         content,
 		AuthorID:        authorID,
-		Slug:            slug,
+		Slug:            slug + "-" + uc.uuidgen.NewUUID(), // A UUID is always appended to ensure the final slug is unique
 		Status:          entity.BlogStatus(status),
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 		ViewCount:       0,
+		LikeCount:       0,
+		DislikeCount:    0,
+		CommentCount:    0,
+		Popularity:      calculatePopularity(0, 0, 0, 0),
 		FeaturedImageID: featuredImageID,
 		IsDeleted:       false,
 	}
@@ -96,6 +100,14 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 		uc.logger.Errorf("failed to create blog: %v", err)
 		return nil, fmt.Errorf("failed to create blog: %w", err)
 	}
+	// Add tags to blog if provided
+	if len(tags) > 0 {
+		err := uc.blogRepo.AddTagsToBlog(ctx, blog.Slug, tags)
+		if err != nil {
+			uc.logger.Errorf("Failed to add tags to blog: %v", err)
+			// Not returning error here to allow blog creation to succeed even if tag association fails
+		}
+	}
 
 	return blog, nil
 }
@@ -108,7 +120,6 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 	if pageSize < 1 {
 		pageSize = 10
 	}
-
 	filterOptions := &contract.BlogFilterOptions{
 		Page:      page,
 		PageSize:  pageSize,
@@ -118,10 +129,18 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 		DateTo:    dateTo,
 	}
 
+	// Only return published or archived blogs (not drafts)
 	blogs, totalCount, err := uc.blogRepo.GetBlogs(ctx, filterOptions)
 	if err != nil {
 		uc.logger.Errorf("failed to get blogs: %v", err)
 		return nil, 0, 0, 0, fmt.Errorf("failed to get blogs: %w", err)
+	}
+
+	var filteredBlogs []entity.Blog
+	for _, blog := range blogs {
+		if blog.Status == entity.BlogStatusPublished || blog.Status == entity.BlogStatusArchived {
+			filteredBlogs = append(filteredBlogs, *blog)
+		}
 	}
 
 	totalPages := int(totalCount) / pageSize
@@ -129,16 +148,31 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 		totalPages++
 	}
 
-	var blogEntities []entity.Blog
-	for _, blog := range blogs {
-		blogEntities = append(blogEntities, *blog)
-	}
+	return filteredBlogs, int(totalCount), page, totalPages, nil
+}
 
-	return blogEntities, int(totalCount), page, totalPages, nil
+// GetBlogDetail retrieves a blog by its slug
+func (uc *BlogUseCaseImpl) GetBlogDetail(ctx context.Context, slug string) (entity.Blog, error) {
+	if slug == "" {
+		return entity.Blog{}, errors.New("slug is required")
+	}
+	blog, err := uc.blogRepo.GetBlogBySlug(ctx, slug)
+	if err != nil {
+		uc.logger.Errorf("failed to get blog by slug: %v", err)
+		return entity.Blog{}, fmt.Errorf("failed to get blog: %w", err)
+	}
+	if blog == nil || blog.IsDeleted {
+		return entity.Blog{}, errors.New("blog not found")
+	}
+	// Only allow published or archived blogs to be fetched by slug
+	if blog.Status != entity.BlogStatusPublished && blog.Status != entity.BlogStatusArchived {
+		return entity.Blog{}, errors.New("blog not found")
+	}
+	return *blog, nil
 }
 
 // UpdateBlog updates an existing blog post
-func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, slug *string, status *BlogStatus, publishedAt *time.Time, featuredImageID *string, isDeleted *bool) (*entity.Blog, error) {
+func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, status *BlogStatus, featuredImageID *string) (*entity.Blog, error) {
 	if blogID == "" {
 		return nil, errors.New("blog ID is required")
 	}
@@ -165,13 +199,14 @@ func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID stri
 
 	if title != nil {
 		updates["title"] = *title
+		// Generate a new slug from the new title
+		newSlug := strings.ReplaceAll(strings.ToLower(*title), " ", "-")
+		updates["slug"] = newSlug + "-" + uc.uuidgen.NewUUID()
 	}
 	if content != nil {
 		updates["content"] = *content
 	}
-	if slug != nil {
-		updates["slug"] = *slug
-	}
+
 	if status != nil {
 		updates["status"] = entity.BlogStatus(*status)
 		if *status == BlogStatusPublished && blog.PublishedAt == nil {
@@ -179,21 +214,17 @@ func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID stri
 			updates["published_at"] = &now
 		}
 	}
-	if publishedAt != nil {
-		updates["published_at"] = *publishedAt
-	}
+
 	if featuredImageID != nil {
 		updates["featured_image_id"] = *featuredImageID
 	}
-	if isDeleted != nil {
-		updates["is_deleted"] = *isDeleted
-	}
 
-	updates["updated_at"] = time.Now()
-
-	if err := uc.blogRepo.UpdateBlog(ctx, blogID, updates); err != nil {
-		uc.logger.Errorf("failed to update blog: %v", err)
-		return nil, fmt.Errorf("failed to update blog: %w", err)
+	if len(updates) > 0 {
+		updates["updated_at"] = time.Now()
+		if err := uc.blogRepo.UpdateBlog(ctx, blogID, updates); err != nil {
+			uc.logger.Errorf("failed to update blog: %v", err)
+			return nil, fmt.Errorf("failed to update blog: %w", err)
+		}
 	}
 
 	// Return updated blog
@@ -237,119 +268,100 @@ func (uc *BlogUseCaseImpl) DeleteBlog(ctx context.Context, blogID, userID string
 	return true, nil
 }
 
-// TrackBlogPopularity tracks blog interactions
-func (uc *BlogUseCaseImpl) TrackBlogPopularity(ctx context.Context, blogID, userID string, action BlogAction) (int, int, int, int, error) {
+// TrackBlogView tracks a view on a blog post, ensuring it's authentic by checking user ID, IP address, and User-Agent.
+
+// isBot returns true if the User-Agent string matches common bot patterns.
+func isBot(userAgent string) bool {
+	ua := strings.ToLower(userAgent)
+	botSignatures := []string{"bot", "spider", "crawl", "slurp", "curl", "wget", "python-requests", "httpclient", "feedfetcher", "mediapartners-google"}
+	for _, sig := range botSignatures {
+		if strings.Contains(ua, sig) {
+			return true
+		}
+	}
+	return false
+}
+func (uc *BlogUseCaseImpl) TrackBlogView(ctx context.Context, blogID, userID, ipAddress, userAgent string) error {
 	if blogID == "" {
-		return 0, 0, 0, 0, errors.New("blog ID is required")
+		return errors.New("blog ID is required")
 	}
 
-	blog, err := uc.blogRepo.GetBlogByID(ctx, blogID)
+	// For a view to be considered unique, either the userID (if logged in) or the IP address must be provided.
+	if userID == "" && ipAddress == "" {
+		return errors.New("unable to track view without user ID or IP address")
+	}
+
+	// 1. Basic Bot Detection
+	if isBot(userAgent) {
+		uc.logger.Infof("Bot detected, view not counted for blog %s. User-Agent: %s", blogID, userAgent)
+		return nil
+	}
+
+	// 2. Check for recent view from this user/IP for this specific blog post
+	hasViewed, err := uc.blogRepo.HasViewedRecently(ctx, blogID, userID, ipAddress)
 	if err != nil {
-		uc.logger.Errorf("failed to get blog: %v", err)
-		return 0, 0, 0, 0, fmt.Errorf("failed to get blog: %w", err)
+		uc.logger.Errorf("failed to check for recent blog view: %v", err)
+		return fmt.Errorf("failed to check for recent blog view: %w", err)
 	}
-	if blog == nil {
-		return 0, 0, 0, 0, errors.New("blog not found")
+	if hasViewed {
+		return nil // Already viewed this post recently
 	}
 
-	viewCount := blog.ViewCount
-	likeCount := 0
-	dislikeCount := 0
-	commentCount := 0
+	// 3. Advanced Velocity & Rotation Checks
+	// Define time windows for checks
+	shortWindow := time.Now().Add(-5 * time.Minute)   // for rapid-fire views - 5 minutes
+	mediumWindow := time.Now().Add(-60 * time.Minute) // for IP rotation     - 60 minutes
 
-	switch action {
-	case BlogActionView:
-		if err := uc.blogRepo.IncrementViewCount(ctx, blogID); err != nil {
-			uc.logger.Errorf("failed to increment view count: %v", err)
-			return 0, 0, 0, 0, fmt.Errorf("failed to increment view count: %w", err)
+	// Fetch recent activity
+	ipViews, err := uc.blogRepo.GetRecentViewsByIP(ctx, ipAddress, shortWindow)
+	if err != nil {
+		return fmt.Errorf("failed to get recent views by IP: %w", err)
+	}
+	userViews, err := uc.blogRepo.GetRecentViewsByUser(ctx, userID, mediumWindow)
+	if err != nil {
+		return fmt.Errorf("failed to get recent views by user: %w", err)
+	}
+
+	// IP Velocity Check: Has this IP viewed too many different blogs in the last 5 minutes?
+	const maxIpVelocity = 10 // Max 10 views from one IP in 5 mins
+	if len(ipViews) > maxIpVelocity {
+		uc.logger.Warningf("High IP velocity detected for %s. Views: %d", ipAddress, len(ipViews))
+		return errors.New("suspicious activity detected: high view velocity")
+	}
+
+	// User-IP Rotation Check: Has this user account used too many IPs in the last hour?
+	if userID != "" {
+		const maxUserIPs = 5 // Max 5 different IPs for one user in 1 hour
+		ipSet := make(map[string]struct{})
+		for _, view := range userViews {
+			ipSet[view.IPAddress] = struct{}{}
 		}
-		viewCount++
-	case BlogActionLike:
-		likeCount++
-	case BlogActionDislike:
-		dislikeCount++
-	case BlogActionComment:
-		commentCount++
-	}
-
-	return viewCount, likeCount, dislikeCount, commentCount, nil
-}
-func (uc *BlogUseCaseImpl) SearchAndFilterBlogs(ctx context.Context, query string, searchBy string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, maxViews *int, minLikes *int, maxLikes *int, authorID *string, page int, pageSize int) ([]entity.Blog, int, int, int, error) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 {
-		pageSize = 10
-	}
-
-	var blogs []*entity.Blog
-	var totalCount int64
-	var err error
-
-	if len(tags) > 0 {
-		// Fetch blogs by tag IDs
-		blogs, totalCount, err = uc.blogRepo.GetBlogsByTagIDs(ctx, tags, page, pageSize)
-		if err != nil {
-			uc.logger.Errorf("failed to get blogs by tag IDs: %v", err)
-			return nil, 0, 0, 0, fmt.Errorf("failed to get blogs by tag IDs: %w", err)
-		}
-	} else {
-		filterOptions := &contract.BlogFilterOptions{
-			Page:      page,
-			PageSize:  pageSize,
-			SortBy:    "created_at",
-			SortOrder: "desc",
-			DateFrom:  dateFrom,
-			DateTo:    dateTo,
-			MinViews:  minViews,
-			MaxViews:  maxViews,
-			MinLikes:  minLikes,
-			MaxLikes:  maxLikes,
-			AuthorID:  authorID,
-		}
-
-		// Use SearchBlogs if query is provided, otherwise use GetBlogs
-		if query != "" {
-			blogs, totalCount, err = uc.blogRepo.SearchBlogs(ctx, query, filterOptions)
-		} else {
-			blogs, totalCount, err = uc.blogRepo.GetBlogs(ctx, filterOptions)
-		}
-
-		if err != nil {
-			uc.logger.Errorf("failed to search and filter blogs: %v", err)
-			return nil, 0, 0, 0, fmt.Errorf("failed to search and filter blogs: %w", err)
+		if len(ipSet) > maxUserIPs {
+			uc.logger.Warningf("High IP rotation detected for user %s. IPs used: %d", userID, len(ipSet))
+			return errors.New("suspicious activity detected: high IP rotation")
 		}
 	}
 
-	// Post-processing for additional filters
-	var filteredBlogs []*entity.Blog
-	for _, blog := range blogs {
-		// Skip deleted blogs
-		if blog.IsDeleted {
-			continue
-		}
-
-		filteredBlogs = append(filteredBlogs, blog)
+	// If all checks pass, increment the view count and record the view
+	if err := uc.blogRepo.IncrementViewCount(ctx, blogID); err != nil {
+		uc.logger.Errorf("failed to increment view count: %v", err)
+		return fmt.Errorf("failed to increment view count: %w", err)
 	}
 
-	totalPages := int(totalCount) / pageSize
-	if int(totalCount)%pageSize != 0 {
-		totalPages++
+	if err := uc.blogRepo.RecordView(ctx, blogID, userID, ipAddress, userAgent); err != nil {
+		uc.logger.Errorf("failed to record user view: %v", err)
+		return fmt.Errorf("failed to record user view: %w", err)
 	}
 
-	var blogEntities []entity.Blog
-	for _, blog := range filteredBlogs {
-		blogEntities = append(blogEntities, *blog)
+	// Update popularity after view
+	if err := uc.UpdateBlogPopularity(ctx, blogID); err != nil {
+		uc.logger.Errorf("failed to update blog popularity after view: %v", err)
 	}
-
-	return blogEntities, int(totalCount), page, totalPages, nil
+	return nil
 }
 
-// GetRecommendedBlogs gets recommended blogs for a user
-func (uc *BlogUseCaseImpl) GetRecommendedBlogs(ctx context.Context, userID string, page, pageSize int) ([]entity.Blog, error) {
-	if userID == "" {
-		return nil, errors.New("user ID is required")
-	}
+// GetPopularBlogs returns blogs sorted by view count (descending), paginated.
+func (uc *BlogUseCaseImpl) GetPopularBlogs(ctx context.Context, page, pageSize int) ([]entity.Blog, int, int, int, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -360,14 +372,19 @@ func (uc *BlogUseCaseImpl) GetRecommendedBlogs(ctx context.Context, userID strin
 	filterOptions := &contract.BlogFilterOptions{
 		Page:      page,
 		PageSize:  pageSize,
-		SortBy:    "view_count",
+		SortBy:    "popularity",
 		SortOrder: "desc",
 	}
 
-	blogs, _, err := uc.blogRepo.GetBlogs(ctx, filterOptions)
+	blogs, totalCount, err := uc.blogRepo.GetBlogs(ctx, filterOptions)
 	if err != nil {
-		uc.logger.Errorf("failed to get recommended blogs: %v", err)
-		return nil, fmt.Errorf("failed to get recommended blogs: %w", err)
+		uc.logger.Errorf("failed to get popular blogs: %v", err)
+		return nil, 0, 0, 0, fmt.Errorf("failed to get popular blogs: %w", err)
+	}
+
+	totalPages := int(totalCount) / pageSize
+	if int(totalCount)%pageSize != 0 {
+		totalPages++
 	}
 
 	var blogEntities []entity.Blog
@@ -375,5 +392,78 @@ func (uc *BlogUseCaseImpl) GetRecommendedBlogs(ctx context.Context, userID strin
 		blogEntities = append(blogEntities, *blog)
 	}
 
-	return blogEntities, nil
+	return blogEntities, int(totalCount), page, totalPages, nil
+}
+
+// SearchAndFilterBlogs implements advanced search and filtering for blogs.
+func (uc *BlogUseCaseImpl) SearchAndFilterBlogs(
+	ctx context.Context,
+	query string,
+	tags []string,
+	dateFrom *time.Time,
+	dateTo *time.Time,
+	minViews *int,
+	maxViews *int,
+	minLikes *int,
+	maxLikes *int,
+	authorID *string,
+	page int,
+	pageSize int,
+) ([]entity.Blog, int, int, int, error) {
+	filterOptions := &contract.BlogFilterOptions{
+		Page:     page,
+		PageSize: pageSize,
+		DateFrom: dateFrom,
+		DateTo:   dateTo,
+		MinViews: minViews,
+		MaxViews: maxViews,
+		MinLikes: minLikes,
+		MaxLikes: maxLikes,
+		AuthorID: authorID,
+		TagIDs:   tags,
+	}
+	var blogs []*entity.Blog
+	var totalCount int64
+	var err error
+	if query != "" {
+		blogs, totalCount, err = uc.blogRepo.SearchBlogs(ctx, query, filterOptions)
+	} else {
+		blogs, totalCount, err = uc.blogRepo.GetBlogs(ctx, filterOptions)
+	}
+	if err != nil {
+		uc.logger.Errorf("failed to search/filter blogs: %v", err)
+		return nil, 0, 0, 0, fmt.Errorf("failed to search/filter blogs: %w", err)
+	}
+	totalPages := int(totalCount) / pageSize
+	if int(totalCount)%pageSize != 0 {
+		totalPages++
+	}
+	var blogEntities []entity.Blog
+	for _, blog := range blogs {
+		blogEntities = append(blogEntities, *blog)
+	}
+	return blogEntities, int(totalCount), page, totalPages, nil
+}
+
+// calculatePopularity computes the popularity score for a blog
+func calculatePopularity(views, likes, dislikes, comments int) float64 {
+	// You can tune these weights as needed
+	const (
+		viewWeight    = 1.0
+		likeWeight    = 3.0
+		dislikeWeight = -2.0
+		commentWeight = 2.0
+	)
+	return float64(views)*viewWeight + float64(likes)*likeWeight + float64(dislikes)*dislikeWeight + float64(comments)*commentWeight
+}
+
+// UpdateBlogPopularity fetches counts and updates the popularity field in the DB
+func (uc *BlogUseCaseImpl) UpdateBlogPopularity(ctx context.Context, blogID string) error {
+	views, likes, dislikes, comments, err := uc.blogRepo.GetBlogCounts(ctx, blogID)
+	if err != nil {
+		return err
+	}
+	popularity := calculatePopularity(views, likes, dislikes, comments)
+	updates := map[string]interface{}{"popularity": popularity}
+	return uc.blogRepo.UpdateBlog(ctx, blogID, updates)
 }

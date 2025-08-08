@@ -38,7 +38,7 @@ func (r *MediaRepository) CreateMedia(ctx context.Context, media *entity.Media) 
 func (r *MediaRepository) GetMediaByID(ctx context.Context, mediaID string) (*entity.Media, error) {
 	var media entity.Media
 	filter := bson.M{
-		"id":         mediaID,
+		"_id":        mediaID,
 		"is_deleted": false,
 	}
 
@@ -101,7 +101,7 @@ func (r *MediaRepository) GetMedia(ctx context.Context, params GetMediaParams) (
 // UpdateMedia updates an existing media record by its ID.
 func (r *MediaRepository) UpdateMedia(ctx context.Context, mediaID string, updates bson.M) error {
 	filter := bson.M{
-		"id":         mediaID,
+		"_id":        mediaID,
 		"is_deleted": false,
 	}
 
@@ -116,7 +116,7 @@ func (r *MediaRepository) UpdateMedia(ctx context.Context, mediaID string, updat
 
 	if res.ModifiedCount == 0 {
 		var media entity.Media
-		err := r.collection.FindOne(ctx, bson.M{"id": mediaID}).Decode(&media)
+		err := r.collection.FindOne(ctx, bson.M{"_id": mediaID}).Decode(&media)
 		if err != nil && errors.Is(err, mongo.ErrNoDocuments) {
 			return fmt.Errorf("media record with ID %s not found", mediaID)
 		}
@@ -128,7 +128,7 @@ func (r *MediaRepository) UpdateMedia(ctx context.Context, mediaID string, updat
 
 // DeleteMedia soft deletes a media record by its ID.
 func (r *MediaRepository) DeleteMedia(ctx context.Context, mediaID string) error {
-	filter := bson.M{"id": mediaID, "is_deleted": false}
+	filter := bson.M{"_id": mediaID, "is_deleted": false}
 	update := bson.M{
 		"$set": bson.M{
 			"is_deleted": true,
@@ -142,7 +142,7 @@ func (r *MediaRepository) DeleteMedia(ctx context.Context, mediaID string) error
 
 	if res.ModifiedCount == 0 {
 		var media entity.Media
-		err := r.collection.FindOne(ctx, bson.M{"id": mediaID}).Decode(&media)
+		err := r.collection.FindOne(ctx, bson.M{"_id": mediaID}).Decode(&media)
 		if err != nil && errors.Is(err, mongo.ErrNoDocuments) {
 			return fmt.Errorf("media record with ID %s not found", mediaID)
 		}
@@ -154,7 +154,7 @@ func (r *MediaRepository) DeleteMedia(ctx context.Context, mediaID string) error
 
 // AssociateMediaWithBlog sets the BlogID for a media record.
 func (r *MediaRepository) AssociateMediaWithBlog(ctx context.Context, mediaID, blogID string) error {
-	filter := bson.M{"id": mediaID, "is_deleted": false}
+	filter := bson.M{"_id": mediaID, "is_deleted": false}
 	update := bson.M{"$set": bson.M{"blog_id": blogID}}
 	res, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
@@ -167,7 +167,7 @@ func (r *MediaRepository) AssociateMediaWithBlog(ctx context.Context, mediaID, b
 }
 
 func (r *MediaRepository) RemoveMediaFromBlog(ctx context.Context, mediaID string) error {
-	filter := bson.M{"id": mediaID, "is_deleted": false}
+	filter := bson.M{"_id": mediaID, "is_deleted": false}
 	update := bson.M{"$unset": bson.M{"blog_id": ""}}
 	res, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {

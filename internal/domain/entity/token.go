@@ -9,7 +9,7 @@ import (
 
 // Token represents an authentication token (access or refresh)
 type Token struct {
-	ID        string    `bson:"_id,omitempty" json:"id"`
+	ID        string    `bson:"_id,omitempty" json:"_id"`
 	UserID    string    `bson:"user_id" json:"user_id"`
 	TokenType TokenType `bson:"token_type" json:"token_type"`
 	TokenHash string    `bson:"token_hash" json:"-"`
