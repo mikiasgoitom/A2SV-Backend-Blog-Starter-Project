@@ -33,7 +33,7 @@ type UserUsecase struct {
 
 // NewUserUsecase creates a new UserUsecase instance.
 func NewUserUsecase(
-   userRepo UserRepository,
+	userRepo UserRepository,
 	tokenRepo TokenRepository,
 	emailVerificationTokenRepo EmailVerificationTokenRepository,
 	hasher Hasher,
@@ -75,7 +75,7 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 	existingUserByEmail, err := uc.userRepo.GetUserByEmail(ctx, email)
 	if err != nil && err.Error() != errUserNotFound {
 		uc.logger.Errorf("failed to check for existing user by email: %v", err)
-	   return nil, errors.New(errInternalServer)
+		return nil, errors.New(errInternalServer)
 	}
 	if existingUserByEmail != nil {
 		return nil, fmt.Errorf("user with email %s already exists", email)
@@ -84,7 +84,7 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 	existingUserByUsername, err := uc.userRepo.GetUserByUsername(ctx, username)
 	if err != nil && err.Error() != errUserNotFound {
 		uc.logger.Errorf("failed to check for existing user by username: %v", err)
-	   return nil, errors.New(errInternalServer)
+		return nil, errors.New(errInternalServer)
 	}
 	if existingUserByUsername != nil {
 		return nil, fmt.Errorf("user with username %s already exists", username)
@@ -488,12 +488,12 @@ func (uc *UserUsecase) VerifyEmail(ctx context.Context, token string) error {
 	}
 
 	// Activate the user's account.
-   user.IsActive = true
-   _, err = uc.userRepo.UpdateUser(ctx, user)
-   if err != nil {
-	   uc.logger.Errorf("failed to activate user %s: %v", user.ID, err)
-	   return errors.New("failed to activate account")
-   }
+	user.IsActive = true
+	_, err = uc.userRepo.UpdateUser(ctx, user)
+	if err != nil {
+		uc.logger.Errorf("failed to activate user %s: %v", user.ID, err)
+		return errors.New("failed to activate account")
+	}
 
 	// Mark the email verification token as used after successful verification.
 	if err := uc.emailVerificationTokenRepo.UpdateEmailVerificationTokenUsedStatus(ctx, storedEmailToken.ID, true); err != nil {
@@ -549,12 +549,12 @@ func (uc *UserUsecase) PromoteUser(ctx context.Context, userID string) (*entity.
 
 	user.Role = entity.UserRoleAdmin
 
-   user.Role = entity.UserRoleAdmin
-   _, err = uc.userRepo.UpdateUser(ctx, user)
-   if err != nil {
-	   uc.logger.Errorf("failed to promote user %s: %v", userID, err)
-	   return nil, errors.New("failed to promote user")
-   }
+	user.Role = entity.UserRoleAdmin
+	_, err = uc.userRepo.UpdateUser(ctx, user)
+	if err != nil {
+		uc.logger.Errorf("failed to promote user %s: %v", userID, err)
+		return nil, errors.New("failed to promote user")
+	}
 
 	return user, nil
 }
@@ -576,12 +576,12 @@ func (uc *UserUsecase) DemoteUser(ctx context.Context, userID string) (*entity.U
 
 	user.Role = entity.UserRoleUser
 
-   user.Role = entity.UserRoleUser
-   _, err = uc.userRepo.UpdateUser(ctx, user)
-   if err != nil {
-	   uc.logger.Errorf("failed to demote user %s: %v", userID, err)
-	   return nil, errors.New("failed to demote user")
-   }
+	user.Role = entity.UserRoleUser
+	_, err = uc.userRepo.UpdateUser(ctx, user)
+	if err != nil {
+		uc.logger.Errorf("failed to demote user %s: %v", userID, err)
+		return nil, errors.New("failed to demote user")
+	}
 
 	return user, nil
 }
@@ -618,37 +618,37 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID string, updates
 	uc.logger.Infof("About to update user %s with updates: %+v", userID, updates)
 	uc.logger.Infof("About to update user %s with updates: %+v", userID, updates)
 
-   // Apply updates to user struct
-   for k, v := range updates {
-	   switch k {
-	   case "username":
-		   if username, ok := v.(string); ok {
-			   user.Username = username
-		   }
-	   case "first_name":
-		   if firstName, ok := v.(string); ok {
-			   user.FirstName = &firstName
-		   }
-	   case "last_name":
-		   if lastName, ok := v.(string); ok {
-			   user.LastName = &lastName
-		   }
-	   case "avatar_url":
-		   if avatarURL, ok := v.(string); ok {
-			   user.AvatarURL = &avatarURL
-		   }
-	   case "is_active":
-		   if isActive, ok := v.(bool); ok {
-			   user.IsActive = isActive
-		   }
-	   }
-   }
-   user.UpdatedAt = time.Now()
-   _, err = uc.userRepo.UpdateUser(ctx, user)
-   if err != nil {
-	   uc.logger.Errorf("failed to update profile for user %s: %v", userID, err)
-	   return nil, errors.New("failed to update profile")
-   }
+	// Apply updates to user struct
+	for k, v := range updates {
+		switch k {
+		case "username":
+			if username, ok := v.(string); ok {
+				user.Username = username
+			}
+		case "first_name":
+			if firstName, ok := v.(string); ok {
+				user.FirstName = &firstName
+			}
+		case "last_name":
+			if lastName, ok := v.(string); ok {
+				user.LastName = &lastName
+			}
+		case "avatar_url":
+			if avatarURL, ok := v.(string); ok {
+				user.AvatarURL = &avatarURL
+			}
+		case "is_active":
+			if isActive, ok := v.(bool); ok {
+				user.IsActive = isActive
+			}
+		}
+	}
+	user.UpdatedAt = time.Now()
+	_, err = uc.userRepo.UpdateUser(ctx, user)
+	if err != nil {
+		uc.logger.Errorf("failed to update profile for user %s: %v", userID, err)
+		return nil, errors.New("failed to update profile")
+	}
 
 	uc.logger.Infof("User %s updated successfully", userID)
 
@@ -668,7 +668,7 @@ func (uc *UserUsecase) LoginWithOAuth(ctx context.Context, firstName, lastName, 
 	user, err := uc.userRepo.GetUserByEmail(ctx, email)
 	if err != nil && err.Error() != errUserNotFound {
 		uc.logger.Errorf("failed to check for existing user by email: %v", err)
-	   return "", "", errors.New(errInternalServer)
+		return "", "", errors.New(errInternalServer)
 	}
 
 	// If user does not exist, create a new one

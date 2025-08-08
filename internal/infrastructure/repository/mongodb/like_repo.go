@@ -46,7 +46,7 @@ func (r *LikeRepository) CreateReaction(ctx context.Context, like *entity.Like) 
 
 	// Fields to set ONLY on initial insert (when upsert: true creates a new document)
 	setOnInsertFields := bson.M{
-		"_id":         uuid.New().String(),
+		"_id":        uuid.New().String(),
 		"created_at": time.Now(),
 	}
 

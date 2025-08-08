@@ -15,21 +15,22 @@ import (
 type SortOrder string
 
 const (
-   SortOrderASC  SortOrder = "asc"
-   SortOrderDESC SortOrder = "desc"
+	SortOrderASC  SortOrder = "asc"
+	SortOrderDESC SortOrder = "desc"
 )
 
 // IBlogUseCase defines blog-related business logic
 type IBlogUseCase interface {
-CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status BlogStatus, featuredImageID *string, tags []string) (*entity.Blog, error)
+	CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status BlogStatus, featuredImageID *string, tags []string) (*entity.Blog, error)
 	GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder SortOrder, dateFrom *time.Time, dateTo *time.Time) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
 	GetBlogDetail(cnt context.Context, slug string) (blog entity.Blog, err error)
 	UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, status *BlogStatus, featuredImageID *string) (*entity.Blog, error)
 	DeleteBlog(ctx context.Context, blogID, userID string, isAdmin bool) (bool, error)
-   SearchAndFilterBlogs(ctx context.Context, query string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, maxViews *int, minLikes *int, maxLikes *int, authorID *string, page int, pageSize int) ([]entity.Blog, int, int, int, error)
-   TrackBlogView(ctx context.Context, blogID, userID, ipAddress, userAgent string) error
-   GetPopularBlogs(ctx context.Context, page, pageSize int) ([]entity.Blog, int, int, int, error)
+	SearchAndFilterBlogs(ctx context.Context, query string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, maxViews *int, minLikes *int, maxLikes *int, authorID *string, page int, pageSize int) ([]entity.Blog, int, int, int, error)
+	TrackBlogView(ctx context.Context, blogID, userID, ipAddress, userAgent string) error
+	GetPopularBlogs(ctx context.Context, page, pageSize int) ([]entity.Blog, int, int, int, error)
 }
+
 // BlogStatus defines the state of a blog post
 type BlogStatus string
 
@@ -72,23 +73,23 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 		slug = strings.ReplaceAll(strings.ToLower(title), " ", "-")
 	}
 
-   blog := &entity.Blog{
-	   ID:              uc.uuidgen.NewUUID(),
-	   Title:           title,
-	   Content:         content,
-	   AuthorID:        authorID,
-	   Slug:            slug + "-" + uc.uuidgen.NewUUID(), // A UUID is always appended to ensure the final slug is unique
-	   Status:          entity.BlogStatus(status),
-	   CreatedAt:       time.Now(),
-	   UpdatedAt:       time.Now(),
-	   ViewCount:       0,
-	   LikeCount:       0,
-	   DislikeCount:    0,
-	   CommentCount:    0,
-	   Popularity:      calculatePopularity(0, 0, 0, 0),
-	   FeaturedImageID: featuredImageID,
-	   IsDeleted:       false,
-   }
+	blog := &entity.Blog{
+		ID:              uc.uuidgen.NewUUID(),
+		Title:           title,
+		Content:         content,
+		AuthorID:        authorID,
+		Slug:            slug + "-" + uc.uuidgen.NewUUID(), // A UUID is always appended to ensure the final slug is unique
+		Status:          entity.BlogStatus(status),
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+		ViewCount:       0,
+		LikeCount:       0,
+		DislikeCount:    0,
+		CommentCount:    0,
+		Popularity:      calculatePopularity(0, 0, 0, 0),
+		FeaturedImageID: featuredImageID,
+		IsDeleted:       false,
+	}
 
 	if status == BlogStatusPublished {
 		now := time.Now()
@@ -149,7 +150,6 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 
 	return filteredBlogs, len(filteredBlogs), page, totalPages, nil
 }
-
 
 // GetBlogDetail retrieves a blog by its slug
 func (uc *BlogUseCaseImpl) GetBlogDetail(ctx context.Context, slug string) (entity.Blog, error) {
@@ -309,7 +309,7 @@ func (uc *BlogUseCaseImpl) TrackBlogView(ctx context.Context, blogID, userID, ip
 
 	// 3. Advanced Velocity & Rotation Checks
 	// Define time windows for checks
-	shortWindow := time.Now().Add(-5 * time.Minute)  // for rapid-fire views - 5 minutes
+	shortWindow := time.Now().Add(-5 * time.Minute)   // for rapid-fire views - 5 minutes
 	mediumWindow := time.Now().Add(-60 * time.Minute) // for IP rotation     - 60 minutes
 
 	// Fetch recent activity
@@ -411,16 +411,16 @@ func (uc *BlogUseCaseImpl) SearchAndFilterBlogs(
 	pageSize int,
 ) ([]entity.Blog, int, int, int, error) {
 	filterOptions := &contract.BlogFilterOptions{
-		Page:      page,
-		PageSize:  pageSize,
-		DateFrom:  dateFrom,
-		DateTo:    dateTo,
-		MinViews:  minViews,
-		MaxViews:  maxViews,
-		MinLikes:  minLikes,
-		MaxLikes:  maxLikes,
-		AuthorID:  authorID,
-		TagIDs:    tags,
+		Page:     page,
+		PageSize: pageSize,
+		DateFrom: dateFrom,
+		DateTo:   dateTo,
+		MinViews: minViews,
+		MaxViews: maxViews,
+		MinLikes: minLikes,
+		MaxLikes: maxLikes,
+		AuthorID: authorID,
+		TagIDs:   tags,
 	}
 	var blogs []*entity.Blog
 	var totalCount int64

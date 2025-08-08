@@ -68,13 +68,13 @@ func main() {
 	appConfig := config.NewConfig()
 	userUsecase := usecase.NewUserUsecase(userRepo, tokenRepo, nil, hasher, jwtService, nil, appLogger, appConfig, appValidator, uuidGenerator)
 	blogUsecase := usecase.NewBlogUseCase(blogRepo, uuidGenerator, appLogger)
-	
+
 	// Create like usecase
 	likeUsecase := usecase.NewLikeUsecase(likeRepo, blogRepo)
 
-// Setup API routes
-appRouter := handlerHttp.NewRouter(userUsecase, blogUsecase, likeUsecase, jwtService)
-appRouter.SetupRoutes(router)
+	// Setup API routes
+	appRouter := handlerHttp.NewRouter(userUsecase, blogUsecase, likeUsecase, jwtService)
+	appRouter.SetupRoutes(router)
 
 	// Start the server
 	port := os.Getenv("PORT")

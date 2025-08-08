@@ -69,7 +69,6 @@ func createIndexes(ctx context.Context, db *mongo.Database) error {
 	return nil
 }
 
-
 // Disconnect disconnects the MongoDB client
 func (m *MongoDBClient) Disconnect() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)

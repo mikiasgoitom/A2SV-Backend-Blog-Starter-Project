@@ -56,30 +56,30 @@ func (u *LikeUsecase) ToggleLike(ctx context.Context, userID, targetID string, t
 		resultErr = u.likeRepo.CreateReaction(ctx, newLike)
 	}
 
-   // Update blog like_count and popularity if this is a blog like/dislike
-   if targetType == entity.TargetTypeBlog && u.blogRepo != nil {
-	   // Recalculate like/dislike counts from likes collection
-	   likes, err1 := u.likeRepo.CountLikesByTargetID(ctx, targetID)
-	   dislikes, err2 := u.likeRepo.CountDislikesByTargetID(ctx, targetID)
-	   if err1 == nil && err2 == nil {
-		   // Get current view and comment counts from blog
-		   blog, err := u.blogRepo.GetBlogByID(ctx, targetID)
-		   views := 0
-		   comments := 0
-		   if err == nil && blog != nil {
-			   views = blog.ViewCount
-			   comments = blog.CommentCount
-		   }
-		   popularity := calculatePopularity(views, int(likes), int(dislikes), comments)
-		   updates := map[string]interface{}{
-			   "like_count":    likes,
-			   "dislike_count": dislikes,
-			   "popularity":    popularity,
-		   }
-		   _ = u.blogRepo.UpdateBlog(ctx, targetID, updates)
-	   }
-   }
-   return resultErr
+	// Update blog like_count and popularity if this is a blog like/dislike
+	if targetType == entity.TargetTypeBlog && u.blogRepo != nil {
+		// Recalculate like/dislike counts from likes collection
+		likes, err1 := u.likeRepo.CountLikesByTargetID(ctx, targetID)
+		dislikes, err2 := u.likeRepo.CountDislikesByTargetID(ctx, targetID)
+		if err1 == nil && err2 == nil {
+			// Get current view and comment counts from blog
+			blog, err := u.blogRepo.GetBlogByID(ctx, targetID)
+			views := 0
+			comments := 0
+			if err == nil && blog != nil {
+				views = blog.ViewCount
+				comments = blog.CommentCount
+			}
+			popularity := calculatePopularity(views, int(likes), int(dislikes), comments)
+			updates := map[string]interface{}{
+				"like_count":    likes,
+				"dislike_count": dislikes,
+				"popularity":    popularity,
+			}
+			_ = u.blogRepo.UpdateBlog(ctx, targetID, updates)
+		}
+	}
+	return resultErr
 }
 
 // ToggleDislike handles the logic for disliking and undisliking a target.
@@ -114,30 +114,30 @@ func (u *LikeUsecase) ToggleDislike(ctx context.Context, userID, targetID string
 		resultErr = u.likeRepo.CreateReaction(ctx, newDislike)
 	}
 
-   // Update blog dislike_count and popularity if this is a blog like/dislike
-   if targetType == entity.TargetTypeBlog && u.blogRepo != nil {
-	   // Recalculate like/dislike counts from likes collection
-	   likes, err1 := u.likeRepo.CountLikesByTargetID(ctx, targetID)
-	   dislikes, err2 := u.likeRepo.CountDislikesByTargetID(ctx, targetID)
-	   if err1 == nil && err2 == nil {
-		   // Get current view and comment counts from blog
-		   blog, err := u.blogRepo.GetBlogByID(ctx, targetID)
-		   views := 0
-		   comments := 0
-		   if err == nil && blog != nil {
-			   views = blog.ViewCount
-			   comments = blog.CommentCount
-		   }
-		   popularity := calculatePopularity(views, int(likes), int(dislikes), comments)
-		   updates := map[string]interface{}{
-			   "like_count":    likes,
-			   "dislike_count": dislikes,
-			   "popularity":    popularity,
-		   }
-		   _ = u.blogRepo.UpdateBlog(ctx, targetID, updates)
-	   }
-   }
-   return resultErr
+	// Update blog dislike_count and popularity if this is a blog like/dislike
+	if targetType == entity.TargetTypeBlog && u.blogRepo != nil {
+		// Recalculate like/dislike counts from likes collection
+		likes, err1 := u.likeRepo.CountLikesByTargetID(ctx, targetID)
+		dislikes, err2 := u.likeRepo.CountDislikesByTargetID(ctx, targetID)
+		if err1 == nil && err2 == nil {
+			// Get current view and comment counts from blog
+			blog, err := u.blogRepo.GetBlogByID(ctx, targetID)
+			views := 0
+			comments := 0
+			if err == nil && blog != nil {
+				views = blog.ViewCount
+				comments = blog.CommentCount
+			}
+			popularity := calculatePopularity(views, int(likes), int(dislikes), comments)
+			updates := map[string]interface{}{
+				"like_count":    likes,
+				"dislike_count": dislikes,
+				"popularity":    popularity,
+			}
+			_ = u.blogRepo.UpdateBlog(ctx, targetID, updates)
+		}
+	}
+	return resultErr
 }
 
 // GetUserReaction retrieves the active reaction (if any) a user has on a specific target.

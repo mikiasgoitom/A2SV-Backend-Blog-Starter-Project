@@ -38,7 +38,7 @@ func (r *MediaRepository) CreateMedia(ctx context.Context, media *entity.Media) 
 func (r *MediaRepository) GetMediaByID(ctx context.Context, mediaID string) (*entity.Media, error) {
 	var media entity.Media
 	filter := bson.M{
-		"_id":         mediaID,
+		"_id":        mediaID,
 		"is_deleted": false,
 	}
 
@@ -101,7 +101,7 @@ func (r *MediaRepository) GetMedia(ctx context.Context, params GetMediaParams) (
 // UpdateMedia updates an existing media record by its ID.
 func (r *MediaRepository) UpdateMedia(ctx context.Context, mediaID string, updates bson.M) error {
 	filter := bson.M{
-		"_id":         mediaID,
+		"_id":        mediaID,
 		"is_deleted": false,
 	}
 

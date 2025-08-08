@@ -25,9 +25,9 @@ type BlogRepository struct {
 // NewBlogRepository creates and returns a new BlogRepository instance.
 func NewBlogRepository(db *mongo.Database) *BlogRepository {
 	return &BlogRepository{
-		collection:         db.Collection("blogs"),
-		blogTagsCollection: db.Collection("blog_tags"),
-		usersCollection:    db.Collection("users"),
+		collection:          db.Collection("blogs"),
+		blogTagsCollection:  db.Collection("blog_tags"),
+		usersCollection:     db.Collection("users"),
 		blogViewsCollection: db.Collection("blog_views"),
 	}
 }
@@ -305,38 +305,38 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *co
 	}
 
 	// If TagIDs are provided, add a $lookup to blog_tags and filter for blogs that have ALL requested tags
-	   if len(opts.TagIDs) > 0 {
-			   pipeline = append(pipeline,
-					   bson.M{
-							   "$lookup": bson.M{
-									   "from":         "blog_tags",
-									   "localField":   "_id",
-									   "foreignField": "blog_id",
-									   "as":           "blogTags",
-							   },
-					   },
-					   bson.M{
-							   "$addFields": bson.M{
-									   "blogTagIds": bson.M{
-											   "$map": bson.M{
-													   "input": "$blogTags",
-													   "as": "bt",
-											   "in": bson.M{"$toString": "$$bt.tag_id"},
-											   },
-									   },
-							   },
-					   },
-					   bson.M{
-							   "$addFields": bson.M{
-									   "hasAllTags": bson.M{
-											   "$setIsSubset": []interface{}{opts.TagIDs, "$blogTagIds"},
-									   },
-							   },
-					   },
-					   bson.M{"$match": bson.M{"hasAllTags": true}},
-					   bson.M{"$project": bson.M{"blogTags": 0, "hasAllTags": 0}},
-			   )
-	   }
+	if len(opts.TagIDs) > 0 {
+		pipeline = append(pipeline,
+			bson.M{
+				"$lookup": bson.M{
+					"from":         "blog_tags",
+					"localField":   "_id",
+					"foreignField": "blog_id",
+					"as":           "blogTags",
+				},
+			},
+			bson.M{
+				"$addFields": bson.M{
+					"blogTagIds": bson.M{
+						"$map": bson.M{
+							"input": "$blogTags",
+							"as":    "bt",
+							"in":    bson.M{"$toString": "$$bt.tag_id"},
+						},
+					},
+				},
+			},
+			bson.M{
+				"$addFields": bson.M{
+					"hasAllTags": bson.M{
+						"$setIsSubset": []interface{}{opts.TagIDs, "$blogTagIds"},
+					},
+				},
+			},
+			bson.M{"$match": bson.M{"hasAllTags": true}},
+			bson.M{"$project": bson.M{"blogTags": 0, "hasAllTags": 0}},
+		)
+	}
 
 	// Determine the sort field, adding a prefix for joined collections if necessary.
 	sortField := opts.SortBy

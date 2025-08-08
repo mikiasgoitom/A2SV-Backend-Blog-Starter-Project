@@ -69,22 +69,22 @@ func (r *MongoUserRepository) GetByUserName(ctx context.Context, username string
 
 // UpdateUser updates an existing user and returns the updated user
 func (r *MongoUserRepository) UpdateUser(ctx context.Context, user *entity.User) (*entity.User, error) {
-   user.UpdatedAt = time.Now()
-   filter := bson.M{"_id": user.ID}
-   update := bson.M{"$set": user}
-   result, err := r.collection.UpdateOne(ctx, filter, update)
-   if err != nil {
-	   log.Printf("UpdateOne error: %v", err)
-	   return nil, err
-   }
-   if result.MatchedCount == 0 {
-	   return nil, errors.New("user not found")
-   }
-   var updatedUser entity.User
-   if err := r.collection.FindOne(ctx, filter).Decode(&updatedUser); err != nil {
-	   return nil, err
-   }
-   return &updatedUser, nil
+	user.UpdatedAt = time.Now()
+	filter := bson.M{"_id": user.ID}
+	update := bson.M{"$set": user}
+	result, err := r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		log.Printf("UpdateOne error: %v", err)
+		return nil, err
+	}
+	if result.MatchedCount == 0 {
+		return nil, errors.New("user not found")
+	}
+	var updatedUser entity.User
+	if err := r.collection.FindOne(ctx, filter).Decode(&updatedUser); err != nil {
+		return nil, err
+	}
+	return &updatedUser, nil
 }
 
 func (r *MongoUserRepository) UpdateUserPassword(ctx context.Context, id string, hashedPassword string) error {

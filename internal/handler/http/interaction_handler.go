@@ -4,12 +4,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
 
 type InteractionHandler struct {
-    likeUsecase *usecase.LikeUsecase
+	likeUsecase *usecase.LikeUsecase
 }
 
 func NewInteractionHandler(likeUsecase *usecase.LikeUsecase) *InteractionHandler {

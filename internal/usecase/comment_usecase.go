@@ -62,7 +62,9 @@ func (uc *commentUseCase) CreateComment(ctx context.Context, req dto.CreateComme
 
 	// Update blog popularity after comment creation
 	if blogID != "" && uc.blogRepo != nil {
-		if updater, ok := uc.blogRepo.(interface{ UpdateBlogPopularity(context.Context, string) error }); ok {
+		if updater, ok := uc.blogRepo.(interface {
+			UpdateBlogPopularity(context.Context, string) error
+		}); ok {
 			_ = updater.UpdateBlogPopularity(ctx, blogID)
 		}
 	}
@@ -130,7 +132,9 @@ func (uc *commentUseCase) DeleteComment(ctx context.Context, commentID, userID s
 
 	// Update blog popularity after comment deletion
 	if comment.BlogID != "" && uc.blogRepo != nil {
-		if updater, ok := uc.blogRepo.(interface{ UpdateBlogPopularity(context.Context, string) error }); ok {
+		if updater, ok := uc.blogRepo.(interface {
+			UpdateBlogPopularity(context.Context, string) error
+		}); ok {
 			_ = updater.UpdateBlogPopularity(ctx, comment.BlogID)
 		}
 	}
