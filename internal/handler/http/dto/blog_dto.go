@@ -33,17 +33,18 @@ type UpdateBlogRequest struct {
 
 // BlogResponse defines the standard JSON response for a single blog
 type BlogResponse struct {
-	ID  string `json:"id"`
-	Title string `json:"title"`
-	Content string `json:"content"`
-	AuthorID string `json:"author_id"`
-	Slug string `json:"slug"`
-	Status string `json:"status"`
-	ViewCount int `json:"view_count"`
-	FeaturedImageID *string `json:"featured_image_id,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	PublishedAt *time.Time `json:"published_at,omitempty"` 
+   ID  string `json:"id"`
+   Title string `json:"title"`
+   Content string `json:"content"`
+   AuthorID string `json:"author_id"`
+   Slug string `json:"slug"`
+   Status string `json:"status"`
+   ViewCount int `json:"view_count"`
+   Popularity float64 `json:"popularity"`
+   FeaturedImageID *string `json:"featured_image_id,omitempty"`
+   CreatedAt time.Time `json:"created_at"`
+   UpdatedAt time.Time `json:"updated_at"`
+   PublishedAt *time.Time `json:"published_at,omitempty"` 
 }
 
 // PaginatedBlogResponse defines the structure for a paginated list of blogs.
@@ -60,16 +61,17 @@ type PaginatedBlogResponse struct {
 
 func ToBlogResponse(blog *entity.Blog) BlogResponse {
 	return BlogResponse{
-	ID  : blog.ID,
-	Title : blog.Title,
-	Content : blog.Content,
-	AuthorID : blog.AuthorID,
-	Slug : blog.Slug,
-	Status : string(blog.Status),
-	ViewCount : blog.ViewCount,
-	FeaturedImageID : blog.FeaturedImageID,
-	CreatedAt : blog.CreatedAt,
-	UpdatedAt : blog.UpdatedAt,
-	PublishedAt : blog.PublishedAt,
+		ID: blog.ID,
+		Title: blog.Title,
+		Content: blog.Content,
+		AuthorID: blog.AuthorID,
+		Slug: blog.Slug,
+		Status: string(blog.Status),
+		ViewCount: blog.ViewCount,
+		Popularity: blog.Popularity,
+		FeaturedImageID: blog.FeaturedImageID,
+		CreatedAt: blog.CreatedAt,
+		UpdatedAt: blog.UpdatedAt,
+		PublishedAt: blog.PublishedAt,
 	}
 }

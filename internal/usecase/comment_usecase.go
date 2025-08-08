@@ -11,7 +11,7 @@ import (
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/dto"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
+	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
 )
 
 type commentUseCase struct {
@@ -58,6 +58,13 @@ func (uc *commentUseCase) CreateComment(ctx context.Context, req dto.CreateComme
 	// Create comment
 	if err := uc.commentRepo.Create(ctx, comment); err != nil {
 		return nil, fmt.Errorf("failed to create comment: %w", err)
+	}
+
+	// Update blog popularity after comment creation
+	if blogID != "" && uc.blogRepo != nil {
+		if updater, ok := uc.blogRepo.(interface{ UpdateBlogPopularity(context.Context, string) error }); ok {
+			_ = updater.UpdateBlogPopularity(ctx, blogID)
+		}
 	}
 
 	// Return response
@@ -116,7 +123,18 @@ func (uc *commentUseCase) DeleteComment(ctx context.Context, commentID, userID s
 		return errors.New("unauthorized: can only delete your own comments")
 	}
 
-	return uc.commentRepo.Delete(ctx, commentID)
+	err = uc.commentRepo.Delete(ctx, commentID)
+	if err != nil {
+		return err
+	}
+
+	// Update blog popularity after comment deletion
+	if comment.BlogID != "" && uc.blogRepo != nil {
+		if updater, ok := uc.blogRepo.(interface{ UpdateBlogPopularity(context.Context, string) error }); ok {
+			_ = updater.UpdateBlogPopularity(ctx, comment.BlogID)
+		}
+	}
+	return nil
 }
 
 // Listing Operations

@@ -70,7 +70,7 @@ func main() {
 	blogUsecase := usecase.NewBlogUseCase(blogRepo, uuidGenerator, appLogger)
 	
 	// Create like usecase
-likeUsecase := usecase.NewLikeUsecase(likeRepo)
+	likeUsecase := usecase.NewLikeUsecase(likeRepo, blogRepo)
 
 // Setup API routes
 appRouter := handlerHttp.NewRouter(userUsecase, blogUsecase, likeUsecase, jwtService)

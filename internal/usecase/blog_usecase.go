@@ -72,19 +72,23 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 		slug = strings.ReplaceAll(strings.ToLower(title), " ", "-")
 	}
 
-	blog := &entity.Blog{
-		ID:              uc.uuidgen.NewUUID(),
-		Title:           title,
-		Content:         content,
-		AuthorID:        authorID,
-		Slug:            slug + "-" + uc.uuidgen.NewUUID(), // A UUID is always appended to ensure the final slug is unique
-		Status:          entity.BlogStatus(status),
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
-		ViewCount:       0,
-		FeaturedImageID: featuredImageID,
-		IsDeleted:       false,
-	}
+   blog := &entity.Blog{
+	   ID:              uc.uuidgen.NewUUID(),
+	   Title:           title,
+	   Content:         content,
+	   AuthorID:        authorID,
+	   Slug:            slug + "-" + uc.uuidgen.NewUUID(), // A UUID is always appended to ensure the final slug is unique
+	   Status:          entity.BlogStatus(status),
+	   CreatedAt:       time.Now(),
+	   UpdatedAt:       time.Now(),
+	   ViewCount:       0,
+	   LikeCount:       0,
+	   DislikeCount:    0,
+	   CommentCount:    0,
+	   Popularity:      calculatePopularity(0, 0, 0, 0),
+	   FeaturedImageID: featuredImageID,
+	   IsDeleted:       false,
+   }
 
 	if status == BlogStatusPublished {
 		now := time.Now()
@@ -349,6 +353,10 @@ func (uc *BlogUseCaseImpl) TrackBlogView(ctx context.Context, blogID, userID, ip
 		return fmt.Errorf("failed to record user view: %w", err)
 	}
 
+	// Update popularity after view
+	if err := uc.UpdateBlogPopularity(ctx, blogID); err != nil {
+		uc.logger.Errorf("failed to update blog popularity after view: %v", err)
+	}
 	return nil
 }
 
@@ -364,7 +372,7 @@ func (uc *BlogUseCaseImpl) GetPopularBlogs(ctx context.Context, page, pageSize i
 	filterOptions := &contract.BlogFilterOptions{
 		Page:      page,
 		PageSize:  pageSize,
-		SortBy:    "viewCount",
+		SortBy:    "popularity",
 		SortOrder: "desc",
 	}
 
@@ -437,3 +445,25 @@ func (uc *BlogUseCaseImpl) SearchAndFilterBlogs(
 	return blogEntities, int(totalCount), page, totalPages, nil
 }
 
+// calculatePopularity computes the popularity score for a blog
+func calculatePopularity(views, likes, dislikes, comments int) float64 {
+	// You can tune these weights as needed
+	const (
+		viewWeight    = 1.0
+		likeWeight    = 3.0
+		dislikeWeight = -2.0
+		commentWeight = 2.0
+	)
+	return float64(views)*viewWeight + float64(likes)*likeWeight + float64(dislikes)*dislikeWeight + float64(comments)*commentWeight
+}
+
+// UpdateBlogPopularity fetches counts and updates the popularity field in the DB
+func (uc *BlogUseCaseImpl) UpdateBlogPopularity(ctx context.Context, blogID string) error {
+	views, likes, dislikes, comments, err := uc.blogRepo.GetBlogCounts(ctx, blogID)
+	if err != nil {
+		return err
+	}
+	popularity := calculatePopularity(views, likes, dislikes, comments)
+	updates := map[string]interface{}{"popularity": popularity}
+	return uc.blogRepo.UpdateBlog(ctx, blogID, updates)
+}

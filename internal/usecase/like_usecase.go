@@ -13,12 +13,14 @@ import (
 // LikeUsecase handles the business logic for managing likes and dislikes.
 type LikeUsecase struct {
 	likeRepo contract.ILikeRepository
+	blogRepo contract.IBlogRepository // Add blogRepo for updating popularity
 }
 
 // NewLikeUsecase creates and returns a new LikeUsecase instance.
-func NewLikeUsecase(likeRepo contract.ILikeRepository) *LikeUsecase {
+func NewLikeUsecase(likeRepo contract.ILikeRepository, blogRepo contract.IBlogRepository) *LikeUsecase {
 	return &LikeUsecase{
 		likeRepo: likeRepo,
+		blogRepo: blogRepo,
 	}
 }
 
@@ -33,25 +35,34 @@ func (u *LikeUsecase) ToggleLike(ctx context.Context, userID, targetID string, t
 		}
 	}
 
+	var resultErr error
 	if existingReaction != nil {
 		if existingReaction.Type == entity.LIKE_TYPE_LIKE {
 			// User is unliking a target they've already liked.
-			return u.likeRepo.DeleteReaction(ctx, existingReaction.ID)
+			resultErr = u.likeRepo.DeleteReaction(ctx, existingReaction.ID)
+		} else {
+			// User is changing a 'dislike' to a 'like'.
+			existingReaction.Type = entity.LIKE_TYPE_LIKE
+			resultErr = u.likeRepo.CreateReaction(ctx, existingReaction)
 		}
-
-		// User is changing a 'dislike' to a 'like'.
-		existingReaction.Type = entity.LIKE_TYPE_LIKE
-		return u.likeRepo.CreateReaction(ctx, existingReaction)
+	} else {
+		// No reaction exists, create a new one.
+		newLike := &entity.Like{
+			UserID:     userID,
+			TargetID:   targetID,
+			TargetType: targetType,
+			Type:       entity.LIKE_TYPE_LIKE,
+		}
+		resultErr = u.likeRepo.CreateReaction(ctx, newLike)
 	}
 
-	// No reaction exists, create a new one.
-	newLike := &entity.Like{
-		UserID:     userID,
-		TargetID:   targetID,
-		TargetType: targetType,
-		Type:       entity.LIKE_TYPE_LIKE,
+	// Update blog popularity if this is a blog like/dislike
+	if targetType == entity.TargetTypeBlog && u.blogRepo != nil {
+		if updater, ok := u.blogRepo.(interface{ UpdateBlogPopularity(context.Context, string) error }); ok {
+			_ = updater.UpdateBlogPopularity(ctx, targetID)
+		}
 	}
-	return u.likeRepo.CreateReaction(ctx, newLike)
+	return resultErr
 }
 
 // ToggleDislike handles the logic for disliking and undisliking a target.
@@ -65,25 +76,34 @@ func (u *LikeUsecase) ToggleDislike(ctx context.Context, userID, targetID string
 		}
 	}
 
+	var resultErr error
 	if existingReaction != nil {
 		if existingReaction.Type == entity.LIKE_TYPE_DISLIKE {
 			// User is undisliking a target they've already disliked.
-			return u.likeRepo.DeleteReaction(ctx, existingReaction.ID)
+			resultErr = u.likeRepo.DeleteReaction(ctx, existingReaction.ID)
+		} else {
+			// User is changing a 'like' to a 'dislike'.
+			existingReaction.Type = entity.LIKE_TYPE_DISLIKE
+			resultErr = u.likeRepo.CreateReaction(ctx, existingReaction)
 		}
-
-		// User is changing a 'like' to a 'dislike'.
-		existingReaction.Type = entity.LIKE_TYPE_DISLIKE
-		return u.likeRepo.CreateReaction(ctx, existingReaction)
+	} else {
+		// No reaction exists, create a new one.
+		newDislike := &entity.Like{
+			UserID:     userID,
+			TargetID:   targetID,
+			TargetType: targetType,
+			Type:       entity.LIKE_TYPE_DISLIKE,
+		}
+		resultErr = u.likeRepo.CreateReaction(ctx, newDislike)
 	}
 
-	// No reaction exists, create a new one.
-	newDislike := &entity.Like{
-		UserID:     userID,
-		TargetID:   targetID,
-		TargetType: targetType,
-		Type:       entity.LIKE_TYPE_DISLIKE,
+	// Update blog popularity if this is a blog like/dislike
+	if targetType == entity.TargetTypeBlog && u.blogRepo != nil {
+		if updater, ok := u.blogRepo.(interface{ UpdateBlogPopularity(context.Context, string) error }); ok {
+			_ = updater.UpdateBlogPopularity(ctx, targetID)
+		}
 	}
-	return u.likeRepo.CreateReaction(ctx, newDislike)
+	return resultErr
 }
 
 // GetUserReaction retrieves the active reaction (if any) a user has on a specific target.

@@ -19,6 +19,7 @@ type Blog struct {
 	LikeCount       int        `json:"like_count" bson:"like_count"`
 	DislikeCount    int        `json:"dislike_count" bson:"dislike_count"`
 	CommentCount    int        `json:"comment_count" bson:"comment_count"`
+	Popularity      float64    `json:"popularity" bson:"popularity"`
 	FeaturedImageID *string    `json:"featured_image_id" bson:"featured_image_id"`
 	IsDeleted       bool       `json:"is_deleted" bson:"is_deleted"`
 }
