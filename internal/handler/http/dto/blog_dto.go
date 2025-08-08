@@ -40,6 +40,8 @@ type BlogResponse struct {
    Slug string `json:"slug"`
    Status string `json:"status"`
    ViewCount int `json:"view_count"`
+   LikeCount int `json:"like_count"`
+   CommentCount int `json:"comment_count"`
    Popularity float64 `json:"popularity"`
    FeaturedImageID *string `json:"featured_image_id,omitempty"`
    CreatedAt time.Time `json:"created_at"`
@@ -60,18 +62,20 @@ type PaginatedBlogResponse struct {
 // a mapper function to convert *entity.Blog to a BlogResponse
 
 func ToBlogResponse(blog *entity.Blog) BlogResponse {
-	return BlogResponse{
-		ID: blog.ID,
-		Title: blog.Title,
-		Content: blog.Content,
-		AuthorID: blog.AuthorID,
-		Slug: blog.Slug,
-		Status: string(blog.Status),
-		ViewCount: blog.ViewCount,
-		Popularity: blog.Popularity,
-		FeaturedImageID: blog.FeaturedImageID,
-		CreatedAt: blog.CreatedAt,
-		UpdatedAt: blog.UpdatedAt,
-		PublishedAt: blog.PublishedAt,
-	}
+   return BlogResponse{
+	   ID: blog.ID,
+	   Title: blog.Title,
+	   Content: blog.Content,
+	   AuthorID: blog.AuthorID,
+	   Slug: blog.Slug,
+	   Status: string(blog.Status),
+	   ViewCount: blog.ViewCount,
+	   LikeCount: blog.LikeCount,
+	   CommentCount: blog.CommentCount,
+	   Popularity: blog.Popularity,
+	   FeaturedImageID: blog.FeaturedImageID,
+	   CreatedAt: blog.CreatedAt,
+	   UpdatedAt: blog.UpdatedAt,
+	   PublishedAt: blog.PublishedAt,
+   }
 }
