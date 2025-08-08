@@ -15,15 +15,17 @@ type CreateBlogRequest struct {
 	Slug string `json:"slug" binding:"required"`
 	Status string `json:"status" binding:"required,oneof=draft published archived"`
 	FeaturedImageID *string `json:"featured_image_id"`
+	Tags []string `json:"tags"`
 }
 
 // UpdateBlogRequest defines the structure for updating an existing blog
 type UpdateBlogRequest struct {
-	Title *string `json:"title"`
-	Content *string `json:"content"`
-	Slug *string `json:"slug"`
-	Status *string `json:"status" binding:"required,oneof=draft published archived"`
-	FeaturedImageID *string `json:"featured_image_id"`
+   Title *string `json:"title"`
+   Content *string `json:"content"`
+   Slug *string `json:"slug"`
+   Status *string `json:"status" binding:"omitempty,oneof=draft published archived"`
+   FeaturedImageID *string `json:"featured_image_id"`
+   Tags []string `json:"tags"`
 }
 
 

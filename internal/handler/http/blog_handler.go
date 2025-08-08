@@ -57,7 +57,7 @@ func (h *BlogHandler) CreateBlogHandler(cxt *gin.Context) {
 		ErrorHandler(cxt, http.StatusBadRequest, "Invalid user ID format in token")
 	}
 
-	_,err := h.blogUsecase.CreateBlog(cxt.Request.Context(), req.Title, req.Content, authorID, req.Slug, usecase.BlogStatus(req.Status), req.FeaturedImageID)
+_, err := h.blogUsecase.CreateBlog(cxt.Request.Context(), req.Title, req.Content, authorID, req.Slug, usecase.BlogStatus(req.Status), req.FeaturedImageID, req.Tags)
 	
 	if err != nil {
 		ErrorHandler(cxt, http.StatusInternalServerError, "Failed to create blog")
@@ -193,14 +193,25 @@ func (h *BlogHandler) DeleteBlogHandler(cxt *gin.Context) {
 		return
 	}
 
-	var isAdmin bool 
+	var isAdmin bool
 	userRole, exists := cxt.Get("userRole")
 	if !exists {
 		ErrorHandler(cxt, http.StatusUnauthorized, "User Unauthorized")
 		return
 	}
-	if userRole.(string) == "admin" {
-		isAdmin = true
+	// userRole is likely entity.UserRole, compare as string
+	if role, ok := userRole.(string); ok {
+		if role == "admin" {
+			isAdmin = true
+		}
+	} else if roleEnum, ok := userRole.(usecase.BlogStatus); ok {
+		if string(roleEnum) == "admin" {
+			isAdmin = true
+		}
+	} else if roleEnum, ok := userRole.(interface{ String() string }); ok {
+		if roleEnum.String() == "admin" {
+			isAdmin = true
+		}
 	}
 
 	ok, err := h.blogUsecase.DeleteBlog(cxt.Request.Context(), blogID, userID.(string), isAdmin)
