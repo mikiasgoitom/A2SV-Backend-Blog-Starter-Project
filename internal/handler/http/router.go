@@ -5,23 +5,22 @@ import (
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/middleware"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
-
 type Router struct {
-	userHandler        *UserHandler
-	blogHandler        *BlogHandler
-	interactionHandler *InteractionHandler
-	userUsecase        *usecase.UserUsecase
-	jwtService         usecase.JWTService
+    userHandler        *UserHandler
+    blogHandler        *BlogHandler
+    interactionHandler *InteractionHandler
+    userUsecase        *usecase.UserUsecase
+    jwtService         usecase.JWTService
 }
 
-func NewRouter(userUsecase *usecase.UserUsecase, blogUsecase usecase.IBlogUseCase, interactionUsecase usecase.IInteractionUseCase, jwtService usecase.JWTService) *Router {
-	return &Router{
-		userHandler:        NewUserHandler(userUsecase),
-		blogHandler:        NewBlogHandler(blogUsecase),
-		interactionHandler: NewInteractionHandler(interactionUsecase),
-		userUsecase:        userUsecase,
-		jwtService:         jwtService,
-	}
+func NewRouter(userUsecase *usecase.UserUsecase, blogUsecase usecase.IBlogUseCase, likeUsecase *usecase.LikeUsecase, jwtService usecase.JWTService) *Router {
+    return &Router{
+        userHandler:        NewUserHandler(userUsecase),
+        blogHandler:        NewBlogHandler(blogUsecase),
+        interactionHandler: NewInteractionHandler(likeUsecase),
+        userUsecase:        userUsecase,
+        jwtService:         jwtService,
+    }
 }
 
 func (r *Router) SetupRoutes(router *gin.Engine) {
@@ -69,9 +68,11 @@ func (r *Router) SetupRoutes(router *gin.Engine) {
 		protected.DELETE("/blogs/:blogID", r.blogHandler.DeleteBlogHandler)
 
 		// Interaction routes
-		protected.POST("/blogs/:blogID/like", r.interactionHandler.LikeBlogHandler)
-		protected.DELETE("/blogs/:blogID/like", r.interactionHandler.UnlikeBlogHandler)
-		protected.POST("/blogs/:blogID/view", r.blogHandler.TrackBlogViewHandler)
+	   protected.POST("/blogs/:blogID/like", r.interactionHandler.LikeBlogHandler)
+	   protected.DELETE("/blogs/:blogID/like", r.interactionHandler.UnlikeBlogHandler)
+	   protected.POST("/blogs/:blogID/dislike", r.interactionHandler.DislikeBlogHandler)
+	   protected.DELETE("/blogs/:blogID/dislike", r.interactionHandler.UndislikeBlogHandler)
+	   protected.POST("/blogs/:blogID/view", r.blogHandler.TrackBlogViewHandler)
 
 	}
 
