@@ -549,7 +549,6 @@ func (uc *UserUsecase) PromoteUser(ctx context.Context, userID string) (*entity.
 
 	user.Role = entity.UserRoleAdmin
 
-	user.Role = entity.UserRoleAdmin
 	_, err = uc.userRepo.UpdateUser(ctx, user)
 	if err != nil {
 		uc.logger.Errorf("failed to promote user %s: %v", userID, err)
