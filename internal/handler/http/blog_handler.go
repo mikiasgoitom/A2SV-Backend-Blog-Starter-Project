@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/dto"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
@@ -203,7 +204,7 @@ func (h *BlogHandler) DeleteBlogHandler(cxt *gin.Context) {
 		if role == "admin" {
 			isAdmin = true
 		}
-	} else if roleEnum, ok := userRole.(usecase.BlogStatus); ok {
+	} else if roleEnum, ok := userRole.(entity.UserRole); ok {
 		if string(roleEnum) == "admin" {
 			isAdmin = true
 		}
