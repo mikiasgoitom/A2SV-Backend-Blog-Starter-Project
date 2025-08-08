@@ -615,7 +615,6 @@ func (uc *UserUsecase) UpdateProfile(ctx context.Context, userID string, updates
 	}
 
 	uc.logger.Infof("About to update user %s with updates: %+v", userID, updates)
-	uc.logger.Infof("About to update user %s with updates: %+v", userID, updates)
 
 	// Apply updates to user struct
 	for k, v := range updates {
