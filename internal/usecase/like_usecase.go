@@ -43,7 +43,7 @@ func (u *LikeUsecase) ToggleLike(ctx context.Context, userID, targetID string, t
 		} else {
 			// User is changing a 'dislike' to a 'like'.
 			existingReaction.Type = entity.LIKE_TYPE_LIKE
-			resultErr = u.likeRepo.CreateReaction(ctx, existingReaction)
+			resultErr = u.likeRepo.UpdateReaction(ctx, existingReaction)
 		}
 	} else {
 		// No reaction exists, create a new one.
