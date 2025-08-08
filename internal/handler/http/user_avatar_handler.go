@@ -1,6 +1,7 @@
 package http
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -21,7 +22,8 @@ func NewUserAvatarHandler(useCase usecasecontract.IUserAvatarUseCase) *UserAvata
 
 // CreateUserAvatar handles POST request to create a new avatar
 func (h *UserAvatarHandler) CreateUserAvatar(c *gin.Context) {
-	userID := c.Param("userID")
+	userID := c.Param("id")
+	log.Printf("DEBUG: userID from URL param: %s", userID)
 
 	// Parse multipart form
 	file, err := c.FormFile("avatar")
@@ -42,7 +44,8 @@ func (h *UserAvatarHandler) CreateUserAvatar(c *gin.Context) {
 
 // ReadUserAvatar handles GET request to retrieve avatar data
 func (h *UserAvatarHandler) ReadUserAvatar(c *gin.Context) {
-	userID := c.Param("userID")
+	userID := c.Param("id")
+	log.Printf("DEBUG: userID from URL param: %s", userID)
 
 	media, err := h.userAvatarUseCase.ReadUserAvatarMetadata(c.Request.Context(), userID)
 	if err != nil {
@@ -55,7 +58,8 @@ func (h *UserAvatarHandler) ReadUserAvatar(c *gin.Context) {
 
 // UpdateUserAvatar handles PUT request to update a user's avatar
 func (h *UserAvatarHandler) UpdateUserAvatar(c *gin.Context) {
-	userID := c.Param("userID")
+	userID := c.Param("id")
+	log.Printf("DEBUG: userID from URL param: %s", userID)
 
 	file, err := c.FormFile("avatar")
 	if err != nil {
@@ -74,7 +78,8 @@ func (h *UserAvatarHandler) UpdateUserAvatar(c *gin.Context) {
 
 // DeleteUserAvatar handles DELETE request to remove a user's avatar
 func (h *UserAvatarHandler) DeleteUserAvatar(c *gin.Context) {
-	userID := c.Param("userID")
+	userID := c.Param("id")
+	log.Printf("DEBUG: userID from URL param: %s", userID)
 
 	if err := h.userAvatarUseCase.DeleteUserAvatar(c.Request.Context(), userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -86,7 +91,7 @@ func (h *UserAvatarHandler) DeleteUserAvatar(c *gin.Context) {
 
 // RegisterRoutes registers user avatar routes with the Gin router
 func (h *UserAvatarHandler) RegisterRoutes(router *gin.RouterGroup) {
-	avatarRoutes := router.Group("/users/avatar/:userID")
+	avatarRoutes := router.Group("/:id/avatar")
 	{
 		avatarRoutes.POST("", h.CreateUserAvatar)
 		avatarRoutes.GET("", h.ReadUserAvatar)
