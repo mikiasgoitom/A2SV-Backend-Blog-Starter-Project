@@ -2,22 +2,26 @@ package http
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/middleware"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
+	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
 )
 
 type Router struct {
 	userHandler        *UserHandler
 	blogHandler        *BlogHandler
+	emailHandler       *EmailHandler
 	interactionHandler *InteractionHandler
-	userUsecase        *usecase.UserUsecase
+	userUsecase        usecase.IUserUseCase
 	jwtService         usecase.JWTService
 }
 
-func NewRouter(userUsecase *usecase.UserUsecase, blogUsecase usecase.IBlogUseCase, likeUsecase *usecase.LikeUsecase, jwtService usecase.JWTService) *Router {
+func NewRouter(userUsecase usecase.IUserUseCase, blogUsecase usecase.IBlogUseCase, likeUsecase *usecase.LikeUsecase, emailVerUC usecasecontract.IEmailVerificationUC, userRepo contract.IUserRepository, jwtService usecase.JWTService) *Router {
 	return &Router{
 		userHandler:        NewUserHandler(userUsecase),
 		blogHandler:        NewBlogHandler(blogUsecase),
+		emailHandler:       NewEmailHandler(emailVerUC, userRepo),
 		interactionHandler: NewInteractionHandler(likeUsecase),
 		userUsecase:        userUsecase,
 		jwtService:         jwtService,

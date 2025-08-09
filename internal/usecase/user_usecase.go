@@ -23,6 +23,7 @@ const (
 type UserUsecase struct {
 	userRepo        UserRepository
 	tokenRepo       contract.ITokenRepository
+	emailUsecase    usecasecontract.IEmailVerificationUC
 	hasher          contract.IHasher
 	jwtService      JWTService
 	mailService     contract.IEmailService
@@ -37,6 +38,7 @@ type UserUsecase struct {
 func NewUserUsecase(
 	userRepo UserRepository,
 	tokenRepo contract.ITokenRepository,
+	emailUC usecasecontract.IEmailVerificationUC,
 	hasher contract.IHasher,
 	jwtService JWTService,
 	mailService contract.IEmailService,
@@ -49,6 +51,7 @@ func NewUserUsecase(
 	return &UserUsecase{
 		userRepo:        userRepo,
 		tokenRepo:       tokenRepo,
+		emailUsecase:    emailUC,
 		hasher:          hasher,
 		jwtService:      jwtService,
 		mailService:     mailService,
@@ -78,7 +81,6 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 	if err != nil && err.Error() != errUserNotFound {
 		uc.logger.Errorf("failed to check for existing user by email: %v", err)
 		return nil, errors.New(errInternalServer)
-		return nil, fmt.Errorf("%s", errInternalServer)
 	}
 	if existingUserByEmail != nil {
 		return nil, fmt.Errorf("user with email %s already exists", email)
@@ -88,7 +90,6 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 	if err != nil && err.Error() != errUserNotFound {
 		uc.logger.Errorf("failed to check for existing user by username: %v", err)
 		return nil, errors.New(errInternalServer)
-		return nil, fmt.Errorf("%s", errInternalServer)
 	}
 	if existingUserByUsername != nil {
 		return nil, fmt.Errorf("user with username %s already exists", username)
@@ -135,31 +136,8 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 	// Send activation email if required, using config from injected ConfigProvider
 	if uc.config.GetSendActivationEmail() {
 		// Generate email verification token
-		emailVerificationTokenString, err := uc.jwtService.GenerateEmailVerificationToken(user.ID)
-		if err != nil {
-			uc.logger.Errorf("failed to generate email verification token for user %s: %v", user.ID, err)
-		} else {
-			// Hash the token before storing it
-			hashedEmailVerificationToken := uc.hasher.HashString(emailVerificationTokenString)
-
-			emailTokenEntity := &entity.EmailVerificationToken{
-				ID:        uc.uuidGenerator.NewUUID(),
-				UserID:    user.ID,
-				TokenHash: hashedEmailVerificationToken,
-				ExpiresAt: time.Now().Add(uc.config.GetEmailVerificationTokenExpiry()),
-				Used:      false,
-				CreatedAt: time.Now(),
-			}
-
-			if err := uc.emailVerificationTokenRepo.CreateEmailVerificationToken(ctx, emailTokenEntity); err != nil {
-				uc.logger.Errorf("failed to store email verification token for user %s: %v", user.ID, err)
-				// Log but don't fail registration if token storage fails
-			} else {
-				activationLink := fmt.Sprintf("%s/verify-email?token=%s", uc.config.GetAppBaseURL(), emailVerificationTokenString)
-				if err := uc.mailService.SendActivationEmail(user.Email, user.Username, activationLink); err != nil {
-					uc.logger.Warnf("failed to send activation email to %s: %v", user.Email, err)
-				}
-			}
+		if err = uc.emailUsecase.RequestVerificationEmail(ctx, user); err != nil {
+			return nil, fmt.Errorf("failed to send verification email")
 		}
 	}
 
@@ -192,7 +170,7 @@ func (uc *UserUsecase) Login(ctx context.Context, email, password string) (*enti
 	}
 
 	// Verify password
-	if !uc.hasher.ComparePasswordHash(password, user.PasswordHash) {
+	if err := uc.hasher.ComparePasswordHash(password, user.PasswordHash); err != nil {
 		return nil, "", "", errors.New("invalid credentials")
 	}
 
@@ -350,7 +328,7 @@ func (uc *UserUsecase) ForgotPassword(ctx context.Context, email string) error {
 	// generate verifier. it will be used to identify the reset token
 	verifier, err := uc.randomGenerator.GenerateRandomToken(16)
 	if err != nil {
-		fmt.Errorf("failed to generate verifier: %w", err)
+		return fmt.Errorf("failed to generate verifier: %w", err)
 	}
 
 	// Store the token
@@ -382,7 +360,7 @@ func (uc *UserUsecase) ForgotPassword(ctx context.Context, email string) error {
 }
 
 // ResetPassword handles the password reset flow using a password reset token.
-func (uc *UserUsecase) ResetPassword(ctx context.Context, verifier, resetToken, , newPassword string) error {
+func (uc *UserUsecase) ResetPassword(ctx context.Context, verifier, resetToken, newPassword string) error {
 	// check if the token exists using the verifier
 	token, err := uc.tokenRepo.GetTokenByVerifier(ctx, verifier)
 	if err != nil {
@@ -413,7 +391,7 @@ func (uc *UserUsecase) ResetPassword(ctx context.Context, verifier, resetToken, 
 	}
 
 	// Update the user's password.
-	if err = uc.userRepo.UpdateUserPassword(ctx, token.UserID, hashedNewPassword); err != nil {
+	if err = uc.userRepo.UpdateUserPassword(ctx, token.UserID, hashedPassword); err != nil {
 		return fmt.Errorf("failed to update password for user %s: %v", token.UserID, err)
 	}
 

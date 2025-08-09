@@ -108,9 +108,10 @@ func (eu *EmailVerificationUseCase) VerifyEmailToken(ctx context.Context, verifi
 	user.IsVerified = true
 
 	// update user
-	if _, err = eu.userRepository.UpdateUser(ctx, *user); err != nil {
+	if _, err = eu.userRepository.UpdateUser(ctx, user); err != nil {
 		return nil, fmt.Errorf("failed to update user verification status: %w", err)
 	}
+
 	// revoke token
 	if err = eu.tokenRepository.RevokeToken(ctx, token.ID); err != nil {
 		return nil, fmt.Errorf("failed to revoke token after user is verified: %w", err)

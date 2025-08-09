@@ -85,6 +85,19 @@ func (r *TokenRepository) GetTokenByID(ctx context.Context, id string) (*entity.
 	return token, nil
 }
 
+// get user by user id
+func (r *TokenRepository) GetTokenByUserID(ctx context.Context, userID string) (*entity.Token, error) {
+	filter := bson.M{"user_id": userID}
+	var dto tokenDTO
+	err := r.Collection.FindOne(ctx, filter).Decode(&dto)
+	if err != nil {
+		return nil, err
+	}
+	token := dto.ToEntity()
+
+	return token, nil
+}
+
 // UpdateToken updates the token hash and expiry
 func (r *TokenRepository) UpdateToken(ctx context.Context, tokenID string, tokenHash string, expiry time.Time) error {
 	filter := bson.M{"_id": tokenID}
