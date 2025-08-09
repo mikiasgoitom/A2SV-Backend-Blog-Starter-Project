@@ -8,6 +8,7 @@ import (
 
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
+	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
 )
 
 // Constants for common error messages
@@ -59,7 +60,7 @@ func NewUserUsecase(
 }
 
 // check if UserUseCase implements the IUserUseCase
-var _ IUserUseCase = (*UserUsecase)(nil)
+var _ usecasecontract.IUserUseCase = (*UserUsecase)(nil)
 
 // Register handles user registration.
 func (uc *UserUsecase) Register(ctx context.Context, username, email, password, firstName, lastName string) (*entity.User, error) {

@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/dto"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
+	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
 )
 
 // BlogHandlerInterface defines the methods for Blog handler to allow interface-based dependency injection (for testing/mocking)
@@ -27,10 +27,10 @@ type BlogHandlerInterface interface {
 var _ BlogHandlerInterface = (*BlogHandler)(nil)
 
 type BlogHandler struct {
-	blogUsecase usecase.IBlogUseCase
+	blogUsecase usecasecontract.IBlogUseCase
 }
 
-func NewBlogHandler(blogUsecase usecase.IBlogUseCase) *BlogHandler {
+func NewBlogHandler(blogUsecase usecasecontract.IBlogUseCase) *BlogHandler {
 	return &BlogHandler{
 		blogUsecase: blogUsecase,
 	}
@@ -58,7 +58,7 @@ func (h *BlogHandler) CreateBlogHandler(cxt *gin.Context) {
 		ErrorHandler(cxt, http.StatusBadRequest, "Invalid user ID format in token")
 	}
 
-	_, err := h.blogUsecase.CreateBlog(cxt.Request.Context(), req.Title, req.Content, authorID, req.Slug, usecase.BlogStatus(req.Status), req.FeaturedImageID, req.Tags)
+	_, err := h.blogUsecase.CreateBlog(cxt.Request.Context(), req.Title, req.Content, authorID, req.Slug, usecasecontract.BlogStatus(req.Status), req.FeaturedImageID, req.Tags)
 
 	if err != nil {
 		ErrorHandler(cxt, http.StatusInternalServerError, "Failed to create blog")
@@ -89,9 +89,9 @@ func (h *BlogHandler) GetBlogsHandler(cxt *gin.Context) {
 	// 2. get sorting parameters
 	sortBy := cxt.DefaultQuery("sortBy", "created_at")
 	sortOrderStr := cxt.DefaultQuery("sortOrder", "desc")
-	sortOrder := usecase.SortOrder(sortOrderStr)
+	sortOrder := usecasecontract.SortOrder(sortOrderStr)
 
-	if sortOrder != usecase.SortOrderASC && sortOrder != usecase.SortOrderDESC {
+	if sortOrder != usecasecontract.SortOrderASC && sortOrder != usecasecontract.SortOrderDESC {
 		ErrorHandler(cxt, http.StatusBadRequest, "Invalid sort order. Use 'asc' or 'desc' ")
 		return
 	}
@@ -152,7 +152,7 @@ func (h *BlogHandler) GetBlogDetailHandler(cxt *gin.Context) {
 	SuccessHandler(cxt, http.StatusOK, dto.ToBlogResponse(&blog))
 }
 
-//  UpdateBlogHandler
+// UpdateBlogHandler
 func (h *BlogHandler) UpdateBlogHandler(cxt *gin.Context) {
 	userIDAny, exists := cxt.Get("userID")
 	if !exists {
@@ -173,7 +173,7 @@ func (h *BlogHandler) UpdateBlogHandler(cxt *gin.Context) {
 		return
 	}
 
-	blog, err := h.blogUsecase.UpdateBlog(cxt.Request.Context(), blogID, userID, req.Title, req.Content, (*usecase.BlogStatus)(req.Status), req.FeaturedImageID)
+	blog, err := h.blogUsecase.UpdateBlog(cxt.Request.Context(), blogID, userID, req.Title, req.Content, (*usecasecontract.BlogStatus)(req.Status), req.FeaturedImageID)
 
 	if err != nil {
 		ErrorHandler(cxt, http.StatusInternalServerError, "Failed to update blog")

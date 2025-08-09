@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/middleware"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
+	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
 )
 
 type Router struct {
@@ -15,12 +16,12 @@ type Router struct {
 	jwtService         usecase.JWTService
 }
 
-func NewRouter(userUsecase *usecase.UserUsecase, blogUsecase usecase.IBlogUseCase, likeUsecase *usecase.LikeUsecase, jwtService usecase.JWTService) *Router {
+func NewRouter(userUsecase usecasecontract.IUserUseCase, blogUsecase usecasecontract.IBlogUseCase, likeUsecase *usecase.LikeUsecase, jwtService usecase.JWTService) *Router {
 	return &Router{
 		userHandler:        NewUserHandler(userUsecase),
 		blogHandler:        NewBlogHandler(blogUsecase),
 		interactionHandler: NewInteractionHandler(likeUsecase),
-		userUsecase:        userUsecase,
+		userUsecase:        usecase.NewUserUsecase(userUsecase, blogUsecase, likeUsecase, jwtService),
 		jwtService:         jwtService,
 	}
 }

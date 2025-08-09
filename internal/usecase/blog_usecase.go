@@ -11,6 +11,7 @@ import (
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/metrics"
+	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/utils"
 )
 
@@ -64,8 +65,11 @@ func NewBlogUseCase(blogRepo contract.IBlogRepository, uuidgenrator contract.IUU
 	}
 }
 
+// check if UserUseCase implements the IUserUseCase
+var _ usecasecontract.IBlogUseCase = (*BlogUseCaseImpl)(nil)
+
 // separate blog instance for blogCache injection
-func (uc *BlogUseCaseImpl) SetBlogCache(cache contract.IBlogCache) {
+func (uc *BlogUseCaseImpl) SetBlogCache(cache usecasecontract.IBlogCache) {
 	uc.blogCache = cache
 }
 
@@ -84,7 +88,7 @@ func buildBlogsListCacheKey(page, pageSize int, sortBy string, sortOrder SortOrd
 
 
 // CreateBlog creates a new blog post
-func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status BlogStatus, featuredImageID *string, tags []string) (*entity.Blog, error) {
+func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status usecasecontract.BlogStatus, featuredImageID *string, tags []string) (*entity.Blog, error) {
 	if title == "" {
 		return nil, errors.New("title is required")
 	}
@@ -118,7 +122,7 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 		IsDeleted:       false,
 	}
 
-	if status == BlogStatusPublished {
+	if status == usecasecontract.BlogStatusPublished {
 		now := time.Now()
 		blog.PublishedAt = &now
 	}
@@ -144,7 +148,7 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 }
 
 // GetBlogs retrieves paginated list of blogs
-func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder SortOrder, dateFrom *time.Time, dateTo *time.Time) ([]entity.Blog, int, int, int, error) {
+func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder usecasecontract.SortOrder, dateFrom *time.Time, dateTo *time.Time) ([]entity.Blog, int, int, int, error) {
 
 	// Try cache first
     if uc.blogCache != nil {
@@ -286,7 +290,7 @@ func (uc *BlogUseCaseImpl) GetBlogDetail(ctx context.Context, slug string) (enti
 }
 
 // UpdateBlog updates an existing blog post
-func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, status *BlogStatus, featuredImageID *string) (*entity.Blog, error) {
+func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, status *usecasecontract.BlogStatus, featuredImageID *string) (*entity.Blog, error) {
 	if blogID == "" {
 		return nil, errors.New("blog ID is required")
 	}
@@ -324,7 +328,7 @@ func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID stri
 
 	if status != nil {
 		updates["status"] = entity.BlogStatus(*status)
-		if *status == BlogStatusPublished && blog.PublishedAt == nil {
+		if *status == usecasecontract.BlogStatusPublished && blog.PublishedAt == nil {
 			now := time.Now()
 			updates["published_at"] = &now
 		}
