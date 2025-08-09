@@ -7,8 +7,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-	type Router struct{
-userHandler        *UserHandler
+type Router struct {
+	userHandler        *UserHandler
 	blogHandler        *BlogHandler
 	interactionHandler *InteractionHandler
 	userUsecase        *usecase.UserUsecase
@@ -26,7 +26,7 @@ func NewRouter(userUsecase *usecase.UserUsecase, blogUsecase usecase.IBlogUseCas
 }
 
 func (r *Router) SetupRoutes(router *gin.Engine) {
-		
+
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	router.GET("/api/v1/metrics", gin.WrapH(promhttp.Handler()))
 	// API v1 routes

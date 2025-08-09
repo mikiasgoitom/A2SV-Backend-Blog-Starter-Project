@@ -32,15 +32,15 @@ type IBlogUseCase interface {
 
 // BlogUseCaseImpl implements the BlogUseCase interface
 type BlogUseCaseImpl struct {
-	blogRepo contract.IBlogRepository
-	uuidgen  contract.IUUIDGenerator
-	logger   AppLogger
+	blogRepo  contract.IBlogRepository
+	uuidgen   contract.IUUIDGenerator
+	logger    AppLogger
 	blogCache contract.IBlogCache
 	// simple metrics
-	detailHits  uint64
-	detailMiss  uint64
-	listHits    uint64
-	listMiss    uint64
+	detailHits uint64
+	detailMiss uint64
+	listHits   uint64
+	listMiss   uint64
 }
 
 // NewBlogUseCase creates a new instance of BlogUseCase
@@ -62,17 +62,16 @@ func (uc *BlogUseCaseImpl) SetBlogCache(cache contract.IBlogCache) {
 
 // buildBlogsListCacheKey builds a stable key for list endpoint caching
 func buildBlogsListCacheKey(page, pageSize int, sortBy string, sortOrder string, dateFrom, dateTo *time.Time) string {
-    df := ""
-    dt := ""
-    if dateFrom != nil {
-        df = dateFrom.UTC().Format(time.RFC3339)
-    }
-    if dateTo != nil {
-        dt = dateTo.UTC().Format(time.RFC3339)
-    }
-    return fmt.Sprintf("blogs:list:p=%d:s=%d:sb=%s:so=%s:df=%s:dt=%s", page, pageSize, sortBy, sortOrder, df, dt)
+	df := ""
+	dt := ""
+	if dateFrom != nil {
+		df = dateFrom.UTC().Format(time.RFC3339)
+	}
+	if dateTo != nil {
+		dt = dateTo.UTC().Format(time.RFC3339)
+	}
+	return fmt.Sprintf("blogs:list:p=%d:s=%d:sb=%s:so=%s:df=%s:dt=%s", page, pageSize, sortBy, sortOrder, df, dt)
 }
-
 
 // CreateBlog creates a new blog post
 func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status entity.BlogStatus, featuredImageID *string, tags []string) (*entity.Blog, error) {
@@ -138,7 +137,7 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder string, dateFrom *time.Time, dateTo *time.Time) ([]entity.Blog, int, int, int, error) {
 
 	// Try cache first
-    if uc.blogCache != nil {
+	if uc.blogCache != nil {
 		key := buildBlogsListCacheKey(page, pageSize, sortBy, sortOrder, dateFrom, dateTo)
 		t0 := time.Now()
 		cached, found, err := uc.blogCache.GetBlogsPage(ctx, key)
@@ -150,12 +149,12 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 			if uc.logger != nil {
 				uc.logger.Infof("cache hit: blogs list key=%s took=%s", key, elapsed)
 			}
-            total := cached.Total
-            totalPages := 0
-            if pageSize > 0 {
-                totalPages = (total + pageSize - 1) / pageSize
-            }
-            return cached.Blogs, total, page, totalPages, nil
+			total := cached.Total
+			totalPages := 0
+			if pageSize > 0 {
+				totalPages = (total + pageSize - 1) / pageSize
+			}
+			return cached.Blogs, total, page, totalPages, nil
 		} else if err == nil && !found {
 			atomic.AddUint64(&uc.listMiss, 1)
 			metrics.IncListMiss()
@@ -165,8 +164,8 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 			}
 		} else if err != nil && uc.logger != nil {
 			uc.logger.Warningf("cache error: blogs list key=%s err=%v took=%s", key, err, elapsed)
-        }
-    }
+		}
+	}
 
 	if page < 1 {
 		page = 1
@@ -209,12 +208,11 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 	// If there is a cache miss before retuning save the results to the cache
 	if uc.blogCache != nil {
 		key := buildBlogsListCacheKey(page, pageSize, sortBy, sortOrder, dateFrom, dateTo)
-	_ = uc.blogCache.SetBlogsPage(ctx, key, &contract.CachedBlogsPage{Blogs: filteredBlogs, Total: int(totalCount)})
+		_ = uc.blogCache.SetBlogsPage(ctx, key, &contract.CachedBlogsPage{Blogs: filteredBlogs, Total: int(totalCount)})
 		if uc.logger != nil {
 			uc.logger.Infof("cache set: blogs list key=%s size=%d ttl=%s", key, len(filteredBlogs), 5*time.Minute)
 		}
 	}
-
 
 	return filteredBlogs, int(totalCount), page, totalPages, nil
 }
@@ -222,11 +220,11 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 // GetBlogDetail retrieves a blog by its slug
 func (uc *BlogUseCaseImpl) GetBlogDetail(ctx context.Context, slug string) (entity.Blog, error) {
 	if slug == "" {
-        return entity.Blog{}, errors.New("slug is required")
-    }
+		return entity.Blog{}, errors.New("slug is required")
+	}
 
-    // Cache first
-    if uc.blogCache != nil {
+	// Cache first
+	if uc.blogCache != nil {
 		t0 := time.Now()
 		cached, found, err := uc.blogCache.GetBlogBySlug(ctx, slug)
 		elapsed := time.Since(t0)
@@ -237,9 +235,9 @@ func (uc *BlogUseCaseImpl) GetBlogDetail(ctx context.Context, slug string) (enti
 			if uc.logger != nil {
 				uc.logger.Infof("cache hit: blog detail slug=%s took=%s", slug, elapsed)
 			}
-            if cached.Status == entity.BlogStatusPublished || cached.Status == entity.BlogStatusArchived {
-                return *cached, nil
-            }
+			if cached.Status == entity.BlogStatusPublished || cached.Status == entity.BlogStatusArchived {
+				return *cached, nil
+			}
 		} else if err == nil && !found {
 			atomic.AddUint64(&uc.detailMiss, 1)
 			metrics.IncDetailMiss()
@@ -249,8 +247,8 @@ func (uc *BlogUseCaseImpl) GetBlogDetail(ctx context.Context, slug string) (enti
 			}
 		} else if err != nil && uc.logger != nil {
 			uc.logger.Warningf("cache error: blog detail slug=%s err=%v took=%s", slug, err, elapsed)
-        }
-    }
+		}
+	}
 
 	dbStart := time.Now()
 	blog, err := uc.blogRepo.GetBlogBySlug(ctx, slug)
@@ -314,8 +312,8 @@ func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID stri
 	}
 
 	if status != nil {
-	updates["status"] = *status
-	if *status == entity.BlogStatusPublished && blog.PublishedAt == nil {
+		updates["status"] = *status
+		if *status == entity.BlogStatusPublished && blog.PublishedAt == nil {
 			now := time.Now()
 			updates["published_at"] = &now
 		}
@@ -437,9 +435,9 @@ func (uc *BlogUseCaseImpl) TrackBlogView(ctx context.Context, blogID, userID, ip
 
 	// 3. Advanced Velocity & Rotation Checks (using Redis cache)
 	const (
-		maxIpVelocity = 10 // max 10 views from one IP in 5 mins
-		ipVelocityTTL = 5 * 60 // 5 minutes in seconds
-		maxUserIPs = 5 // max 5 different IPs for one user in 1 hour
+		maxIpVelocity     = 10      // max 10 views from one IP in 5 mins
+		ipVelocityTTL     = 5 * 60  // 5 minutes in seconds
+		maxUserIPs        = 5       // max 5 different IPs for one user in 1 hour
 		userIPRotationTTL = 60 * 60 // 60 minutes in seconds
 	)
 	if uc.blogCache != nil {
@@ -592,7 +590,6 @@ func (uc *BlogUseCaseImpl) SearchAndFilterBlogs(
 	}
 	return blogEntities, int(totalCount), page, totalPages, nil
 }
-
 
 // UpdateBlogPopularity fetches counts and updates the popularity field in the DB
 func (uc *BlogUseCaseImpl) UpdateBlogPopularity(ctx context.Context, blogID string) error {

@@ -91,7 +91,6 @@ func main() {
 
 	// In your handler code, use metrics.IncDetailHit(), metrics.AddHitDuration(), etc.
 
-
 	// Start the server
 	port := os.Getenv("PORT")
 	if port == "" {
