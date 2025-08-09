@@ -21,30 +21,30 @@ const (
 
 // UserUsecase implements the UserUseCase interface.
 type UserUsecase struct {
-	userRepo        UserRepository
+	userRepo        contract.IUserRepository
 	tokenRepo       contract.ITokenRepository
 	emailUsecase    usecasecontract.IEmailVerificationUC
 	hasher          contract.IHasher
 	jwtService      JWTService
 	mailService     contract.IEmailService
-	logger          AppLogger
+	logger          usecasecontract.IAppLogger
 	config          usecasecontract.IConfigProvider
-	validator       Validator
+	validator       usecasecontract.IValidator
 	uuidGenerator   contract.IUUIDGenerator
 	randomGenerator contract.IRandomGenerator
 }
 
 // NewUserUsecase creates a new UserUsecase instance.
 func NewUserUsecase(
-	userRepo UserRepository,
+	userRepo contract.IUserRepository,
 	tokenRepo contract.ITokenRepository,
 	emailUC usecasecontract.IEmailVerificationUC,
 	hasher contract.IHasher,
 	jwtService JWTService,
 	mailService contract.IEmailService,
-	logger AppLogger,
+	logger usecasecontract.IAppLogger,
 	cfg usecasecontract.IConfigProvider,
-	validator Validator,
+	validator usecasecontract.IValidator,
 	uuidGenerator contract.IUUIDGenerator,
 	randomgen contract.IRandomGenerator,
 ) *UserUsecase {
@@ -64,7 +64,7 @@ func NewUserUsecase(
 }
 
 // check if UserUseCase implements the IUserUseCase
-var _ IUserUseCase = (*UserUsecase)(nil)
+var _ usecasecontract.IUserUseCase = (*UserUsecase)(nil)
 
 // Register handles user registration.
 func (uc *UserUsecase) Register(ctx context.Context, username, email, password, firstName, lastName string) (*entity.User, error) {

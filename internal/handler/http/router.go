@@ -13,17 +13,17 @@ type Router struct {
 	blogHandler        *BlogHandler
 	emailHandler       *EmailHandler
 	interactionHandler *InteractionHandler
-	userUsecase        usecase.IUserUseCase
+	userUsecase        *usecase.UserUsecase
 	jwtService         usecase.JWTService
 }
 
-func NewRouter(userUsecase usecase.IUserUseCase, blogUsecase usecase.IBlogUseCase, likeUsecase *usecase.LikeUsecase, emailVerUC usecasecontract.IEmailVerificationUC, userRepo contract.IUserRepository, jwtService usecase.JWTService) *Router {
+func NewRouter(userUsecase usecasecontract.IUserUseCase, blogUsecase usecasecontract.IBlogUseCase, likeUsecase *usecase.LikeUsecase, emailVerUC usecasecontract.IEmailVerificationUC, userRepo contract.IUserRepository, tokenRepo contract.ITokenRepository, hasher contract.IHasher, jwtService usecase.JWTService, mailService contract.IEmailService, logger usecasecontract.IAppLogger, config usecasecontract.IConfigProvider, validator usecasecontract.IValidator, uuidGen contract.IUUIDGenerator, randomGen contract.IRandomGenerator) *Router {
 	return &Router{
 		userHandler:        NewUserHandler(userUsecase),
 		blogHandler:        NewBlogHandler(blogUsecase),
 		emailHandler:       NewEmailHandler(emailVerUC, userRepo),
 		interactionHandler: NewInteractionHandler(likeUsecase),
-		userUsecase:        userUsecase,
+		userUsecase:        usecase.NewUserUsecase(userRepo, tokenRepo, emailVerUC, hasher, jwtService, mailService, logger, config, validator, uuidGen, randomGen),
 		jwtService:         jwtService,
 	}
 }

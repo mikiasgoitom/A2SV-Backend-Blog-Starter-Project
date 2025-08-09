@@ -71,14 +71,14 @@ func main() {
 	jwtManager := jwt.NewJWTManager(jwtSecret)
 	jwtService := jwt.NewJWTService(jwtManager)
 	appLogger := logger.NewStdLogger()
-	emailService := external_services.NewEmailService(smtpHost, smtpPort, smtpUsername, smtpPassword, smtpFrom)
+	mailService := external_services.NewEmailService(smtpHost, smtpPort, smtpUsername, smtpPassword, smtpFrom)
 	randomGenerator := randomgenerator.NewRandomGenerator()
 	appValidator := validator.NewValidator()
 	uuidGenerator := uuidgen.NewGenerator()
 	appConfig := config.NewConfig()
 	// Dependency Injection: Usecases
-	emailUsecase := usecase.NewEmailVerificationUseCase(tokenRepo, userRepo, emailService, randomGenerator, uuidGenerator)
-	userUsecase := usecase.NewUserUsecase(userRepo, tokenRepo, emailUsecase, hasher, jwtService, emailService, appLogger, appConfig, appValidator, uuidGenerator, randomGenerator)
+	emailUsecase := usecase.NewEmailVerificationUseCase(tokenRepo, userRepo, mailService, randomGenerator, uuidGenerator)
+	userUsecase := usecase.NewUserUsecase(userRepo, tokenRepo, emailUsecase, hasher, jwtService, mailService, appLogger, appConfig, appValidator, uuidGenerator, randomGenerator)
 
 	blogUsecase := usecase.NewBlogUseCase(blogRepo, uuidGenerator, appLogger)
 
@@ -86,7 +86,7 @@ func main() {
 	likeUsecase := usecase.NewLikeUsecase(likeRepo, blogRepo)
 
 	// Setup API routes
-	appRouter := handlerHttp.NewRouter(userUsecase, blogUsecase, likeUsecase, emailUsecase, userRepo, jwtService)
+	appRouter := handlerHttp.NewRouter(userUsecase, blogUsecase, likeUsecase, emailUsecase, userRepo, tokenRepo, hasher, jwtService, mailService, appLogger, appConfig, appValidator, uuidGenerator, randomGenerator)
 	appRouter.SetupRoutes(router)
 
 	// Start the server

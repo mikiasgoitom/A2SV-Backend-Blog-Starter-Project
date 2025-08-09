@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
+	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
 )
 
 // MockUserUsecase is a mock implementation of the UserUsecase interface
@@ -32,7 +32,7 @@ type MockUserUsecase struct {
 }
 
 // Ensure MockUserUsecase implements the correct interface for handler.NewUserHandler
-var _ usecase.IUserUseCase = (*MockUserUsecase)(nil)
+var _ usecasecontract.IUserUseCase = (*MockUserUsecase)(nil)
 
 func NewMockUserUsecase() *MockUserUsecase {
 	return &MockUserUsecase{

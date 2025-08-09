@@ -10,16 +10,16 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
+	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
 
 type AuthHandler struct {
-	UserUseCase usecase.IUserUseCase
+	UserUseCase usecasecontract.IUserUseCase
 }
 
-func NewAuthHandler(uc usecase.IUserUseCase) *AuthHandler {
+func NewAuthHandler(uc usecasecontract.IUserUseCase) *AuthHandler {
 	return &AuthHandler{
 		UserUseCase: uc,
 	}
