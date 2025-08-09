@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/dto"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
+	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
 )
 
 // UserHandlerInterface defines the methods for user handler to allow interface-based dependency injection (for testing/mocking)
@@ -27,10 +27,10 @@ type UserHandlerInterface interface {
 var _ UserHandlerInterface = (*UserHandler)(nil)
 
 type UserHandler struct {
-	userUsecase usecase.IUserUseCase
+	userUsecase usecasecontract.IUserUseCase
 }
 
-func NewUserHandler(userUsecase usecase.IUserUseCase) *UserHandler {
+func NewUserHandler(userUsecase usecasecontract.IUserUseCase) *UserHandler {
 	return &UserHandler{
 		userUsecase: userUsecase,
 	}

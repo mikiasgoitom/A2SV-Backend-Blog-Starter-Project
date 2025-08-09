@@ -7,8 +7,10 @@ import (
 
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
-	mongodb "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/repository/mongodb"
 )
+
+// ErrReactionNotFound is returned when a reaction is not found in the database.
+var ErrReactionNotFound = errors.New("reaction not found")
 
 // LikeUsecase handles the business logic for managing likes and dislikes.
 type LikeUsecase struct {
@@ -28,7 +30,7 @@ func NewLikeUsecase(likeRepo contract.ILikeRepository, blogRepo contract.IBlogRe
 func (u *LikeUsecase) ToggleLike(ctx context.Context, userID, targetID string, targetType entity.TargetType) error {
 	existingReaction, err := u.likeRepo.GetReactionByUserIDAndTargetID(ctx, userID, targetID)
 	if err != nil {
-		if errors.Is(err, mongodb.ErrReactionNotFound) {
+		if errors.Is(err, ErrReactionNotFound) {
 			existingReaction = nil
 		} else {
 			return fmt.Errorf("failed to retrieve existing reaction: %w", err)
@@ -86,7 +88,7 @@ func (u *LikeUsecase) ToggleLike(ctx context.Context, userID, targetID string, t
 func (u *LikeUsecase) ToggleDislike(ctx context.Context, userID, targetID string, targetType entity.TargetType) error {
 	existingReaction, err := u.likeRepo.GetReactionByUserIDAndTargetID(ctx, userID, targetID)
 	if err != nil {
-		if errors.Is(err, mongodb.ErrReactionNotFound) {
+		if errors.Is(err, ErrReactionNotFound) {
 			existingReaction = nil
 		} else {
 			return fmt.Errorf("failed to retrieve existing reaction: %w", err)
@@ -144,7 +146,7 @@ func (u *LikeUsecase) ToggleDislike(ctx context.Context, userID, targetID string
 func (u *LikeUsecase) GetUserReaction(ctx context.Context, userID, targetID string) (*entity.Like, error) {
 	like, err := u.likeRepo.GetReactionByUserIDAndTargetID(ctx, userID, targetID)
 	if err != nil {
-		if errors.Is(err, mongodb.ErrReactionNotFound) {
+		if errors.Is(err, ErrReactionNotFound) {
 			// The use case should handle this specific error and return nil, nil
 			return nil, nil
 		}
