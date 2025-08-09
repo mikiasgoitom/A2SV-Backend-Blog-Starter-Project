@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
@@ -15,6 +16,8 @@ import (
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/uuidgen"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/validator"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
+	redisclient "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/cache"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/store"
 )
 
 func main() {
@@ -69,12 +72,25 @@ func main() {
 	userUsecase := usecase.NewUserUsecase(userRepo, tokenRepo, nil, hasher, jwtService, nil, appLogger, appConfig, appValidator, uuidGenerator)
 	blogUsecase := usecase.NewBlogUseCase(blogRepo, uuidGenerator, appLogger)
 
+	// Pass Prometheus metrics to handlers or usecases as needed (import from metrics package)
+
+	// Optional Dependency Injection: Redis cache
+	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
+		rdb := redisclient.NewRedisFromURL(context.Background(), redisURL)
+		defer redisclient.Close(rdb)
+		blogCache := store.NewBlogCacheStore(rdb)
+		blogUsecase.SetBlogCache(blogCache)
+	}
+
 	// Create like usecase
 	likeUsecase := usecase.NewLikeUsecase(likeRepo, blogRepo)
 
 	// Setup API routes
 	appRouter := handlerHttp.NewRouter(userUsecase, blogUsecase, likeUsecase, jwtService)
 	appRouter.SetupRoutes(router)
+
+	// In your handler code, use metrics.IncDetailHit(), metrics.AddHitDuration(), etc.
+
 
 	// Start the server
 	port := os.Getenv("PORT")

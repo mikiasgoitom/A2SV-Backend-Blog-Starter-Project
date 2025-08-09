@@ -1,6 +1,7 @@
 package http
 
 import (
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/gin-gonic/gin"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/middleware"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
@@ -25,6 +26,9 @@ func NewRouter(userUsecase *usecase.UserUsecase, blogUsecase usecase.IBlogUseCas
 }
 
 func (r *Router) SetupRoutes(router *gin.Engine) {
+		
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	router.GET("/api/v1/metrics", gin.WrapH(promhttp.Handler()))
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 

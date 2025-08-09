@@ -8,6 +8,7 @@ import (
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	mongodb "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/repository/mongodb"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/utils"
 )
 
 // LikeUsecase handles the business logic for managing likes and dislikes.
@@ -70,7 +71,7 @@ func (u *LikeUsecase) ToggleLike(ctx context.Context, userID, targetID string, t
 				views = blog.ViewCount
 				comments = blog.CommentCount
 			}
-			popularity := calculatePopularity(views, int(likes), int(dislikes), comments)
+			popularity := utils.CalculatePopularity(views, int(likes), int(dislikes), comments)
 			updates := map[string]interface{}{
 				"like_count":    likes,
 				"dislike_count": dislikes,
@@ -128,7 +129,7 @@ func (u *LikeUsecase) ToggleDislike(ctx context.Context, userID, targetID string
 				views = blog.ViewCount
 				comments = blog.CommentCount
 			}
-			popularity := calculatePopularity(views, int(likes), int(dislikes), comments)
+			popularity := utils.CalculatePopularity(views, int(likes), int(dislikes), comments)
 			updates := map[string]interface{}{
 				"like_count":    likes,
 				"dislike_count": dislikes,

@@ -235,8 +235,21 @@ func (h *BlogHandler) TrackBlogViewHandler(c *gin.Context) {
 
 	err := h.blogUsecase.TrackBlogView(c.Request.Context(), blogID, userID, ipAddress, userAgent)
 	if err != nil {
-		ErrorHandler(c, http.StatusInternalServerError, "Failed to process blog view")
-		return
+		errMsg := err.Error()
+		switch {
+		case errMsg == "already viewed recently":
+			SuccessHandler(c, http.StatusOK, "Already viewed recently")
+			return
+		case errMsg == "exceeded view velocity limit: too many views from this IP recently":
+			ErrorHandler(c, 429, "Exceeded view velocity limit")
+			return
+		case errMsg == "exceeded IP rotation limit: too many IPs used by this user recently":
+			ErrorHandler(c, 429, "Exceeded IP rotation limit")
+			return
+		default:
+			ErrorHandler(c, http.StatusInternalServerError, "Failed to process blog view")
+			return
+		}
 	}
 
 	SuccessHandler(c, http.StatusOK, "view tracked successfully")
