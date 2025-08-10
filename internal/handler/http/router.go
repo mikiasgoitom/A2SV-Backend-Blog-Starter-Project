@@ -15,35 +15,42 @@ type Router struct {
 	interactionHandler *InteractionHandler
 	userUsecase        *usecase.UserUsecase
 	jwtService         usecase.JWTService
+	authHandler        *AuthHandler
 }
 
 func NewRouter(userUsecase usecasecontract.IUserUseCase, blogUsecase usecasecontract.IBlogUseCase, likeUsecase *usecase.LikeUsecase, emailVerUC usecasecontract.IEmailVerificationUC, userRepo contract.IUserRepository, tokenRepo contract.ITokenRepository, hasher contract.IHasher, jwtService usecase.JWTService, mailService contract.IEmailService, logger usecasecontract.IAppLogger, config usecasecontract.IConfigProvider, validator usecasecontract.IValidator, uuidGen contract.IUUIDGenerator, randomGen contract.IRandomGenerator) *Router {
-	return &Router{
-		userHandler:        NewUserHandler(userUsecase),
-		blogHandler:        NewBlogHandler(blogUsecase),
-		emailHandler:       NewEmailHandler(emailVerUC, userRepo),
-		interactionHandler: NewInteractionHandler(likeUsecase),
-		userUsecase:        usecase.NewUserUsecase(userRepo, tokenRepo, emailVerUC, hasher, jwtService, mailService, logger, config, validator, uuidGen, randomGen),
-		jwtService:         jwtService,
-	}
+       baseURL := config.GetAppBaseURL()
+       return &Router{
+	       userHandler:        NewUserHandler(userUsecase),
+	       blogHandler:        NewBlogHandler(blogUsecase),
+	       emailHandler:       NewEmailHandler(emailVerUC, userRepo),
+	       interactionHandler: NewInteractionHandler(likeUsecase),
+	       userUsecase:        usecase.NewUserUsecase(userRepo, tokenRepo, emailVerUC, hasher, jwtService, mailService, logger, config, validator, uuidGen, randomGen),
+	       jwtService:         jwtService,
+	       authHandler:        NewAuthHandler(userUsecase, baseURL),
+       }
 }
 
 func (r *Router) SetupRoutes(router *gin.Engine) {
-	// API v1 routes
-	v1 := router.Group("/api/v1")
+       // API v1 routes
+       v1 := router.Group("/api/v1")
 
-	// Public routes (no authentication required)
-	auth := v1.Group("/auth")
-	{
-		auth.POST("/register", r.userHandler.CreateUser)
-		auth.POST("/login", r.userHandler.Login)
-		auth.GET("/verify-email", r.emailHandler.HandleVerifyEmailToken)
-		auth.POST("/forgot-password", r.userHandler.ForgotPassword)
-		auth.POST("/reset-password", r.userHandler.ResetPassword)
-		auth.POST("/refresh-token", r.userHandler.RefreshToken)
+       // Public routes (no authentication required)
+       auth := v1.Group("/auth")
+       {
+	       auth.POST("/register", r.userHandler.CreateUser)
+	       auth.POST("/login", r.userHandler.Login)
+	       auth.GET("/verify-email", r.emailHandler.HandleVerifyEmailToken)
+	       auth.POST("/forgot-password", r.userHandler.ForgotPassword)
+	       auth.POST("/reset-password", r.userHandler.ResetPassword)
+	       auth.POST("/refresh-token", r.userHandler.RefreshToken)
 
-		auth.POST("/request-verification-email", r.emailHandler.HandleRequestEmailVerification)
-	}
+	       auth.POST("/request-verification-email", r.emailHandler.HandleRequestEmailVerification)
+
+	       // Google OAuth endpoints
+	       auth.GET("/google/login", r.authHandler.HandleGoogleLogin)
+	       auth.GET("/google/callback", r.authHandler.HandleGoogleCallback)
+       }
 
 	// Public user routes
 	users := v1.Group("/users")
