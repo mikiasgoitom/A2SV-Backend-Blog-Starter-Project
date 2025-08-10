@@ -89,7 +89,7 @@ func (m *MockUserUsecase) ForgotPassword(ctx context.Context, email string) erro
 	return nil
 }
 
-func (m *MockUserUsecase) ResetPassword(ctx context.Context, token, password string) error {
+func (m *MockUserUsecase) ResetPassword(ctx context.Context, verifier, token, password string) error {
 	if m.ShouldFailResetPassword {
 		return errors.New("reset password failed")
 	}

@@ -3,14 +3,14 @@ package logger
 import (
 	"log"
 
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
+	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
 )
 
 // StdLogger is a simple logger that uses the standard log package.
 type StdLogger struct{}
 
 // NewStdLogger creates a new StdLogger.
-func NewStdLogger() usecase.AppLogger {
+func NewStdLogger() usecasecontract.IAppLogger {
 	return &StdLogger{}
 }
 

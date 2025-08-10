@@ -12,9 +12,8 @@ import (
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/metrics"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/utils"
+	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
 )
-
-// (SortOrder is just a string, see BlogFilterOptions in contract)
 
 // IBlogUseCase defines blog-related business logic
 type IBlogUseCase interface {
@@ -34,7 +33,7 @@ type IBlogUseCase interface {
 type BlogUseCaseImpl struct {
 	blogRepo  contract.IBlogRepository
 	uuidgen   contract.IUUIDGenerator
-	logger    AppLogger
+	logger    usecasecontract.IAppLogger
 	blogCache contract.IBlogCache
 	// simple metrics
 	detailHits uint64
@@ -44,7 +43,7 @@ type BlogUseCaseImpl struct {
 }
 
 // NewBlogUseCase creates a new instance of BlogUseCase
-func NewBlogUseCase(blogRepo contract.IBlogRepository, uuidgenrator contract.IUUIDGenerator, logger AppLogger) *BlogUseCaseImpl {
+func NewBlogUseCase(blogRepo contract.IBlogRepository, uuidgenrator contract.IUUIDGenerator, logger usecasecontract.IAppLogger) *BlogUseCaseImpl {
 	return &BlogUseCaseImpl{
 		blogRepo: blogRepo,
 		logger:   logger,
@@ -95,8 +94,9 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 		Title:           title,
 		Content:         content,
 		AuthorID:        authorID,
-		Slug:            slug + "-" + uc.uuidgen.NewUUID(),
-		Status:          status,
+		Slug:            slug + "-" + uc.uuidgen.NewUUID(), // A UUID is always appended to ensure the final slug is unique
+		Status:          entity.BlogStatus(status),
+		Tags:            tags,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 		ViewCount:       0,
@@ -119,7 +119,7 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 	}
 	// Add tags to blog if provided
 	if len(tags) > 0 {
-		err := uc.blogRepo.AddTagsToBlog(ctx, blog.Slug, tags)
+		err := uc.blogRepo.AddTagsToBlog(ctx, blog.ID, tags)
 		if err != nil {
 			uc.logger.Errorf("Failed to add tags to blog: %v", err)
 			// Not returning error here to allow blog creation to succeed even if tag association fails

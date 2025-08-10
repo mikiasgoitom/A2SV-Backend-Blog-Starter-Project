@@ -38,6 +38,7 @@ type ForgotPasswordRequest struct {
 // ResetPasswordRequest is the DTO for resetting password.
 type ResetPasswordRequest struct {
 	Token    string `json:"token" binding:"required"`
+	Verifier string `json:"verifier" binding:"required"`
 	Password string `json:"password" binding:"required,min=8,max=32"`
 }
 

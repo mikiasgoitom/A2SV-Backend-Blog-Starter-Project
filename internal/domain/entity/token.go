@@ -13,6 +13,7 @@ type Token struct {
 	UserID    string    `bson:"user_id" json:"user_id"`
 	TokenType TokenType `bson:"token_type" json:"token_type"`
 	TokenHash string    `bson:"token_hash" json:"-"`
+	Verifier  string    `bson:"verifier" json:"-"`
 	ExpiresAt time.Time `bson:"expires_at" json:"expires_at"`
 	CreatedAt time.Time `bson:"created_at" json:"created_at"`
 	Revoke    bool      `bson:"revoke" json:"revoked"`
@@ -31,7 +32,7 @@ const (
 func isValidTokenType(tokType string) bool {
 
 	switch TokenType(tokType) {
-	case TokenTypeAccess, TokenTypeRefresh, TokenTypePasswordReset:
+	case TokenTypeAccess, TokenTypeRefresh, TokenTypePasswordReset, TokenTypeEmailVerification:
 		return true
 	default:
 		return false
