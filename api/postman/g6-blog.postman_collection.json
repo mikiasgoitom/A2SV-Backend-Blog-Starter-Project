@@ -297,9 +297,9 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/api/v1/blogs/{{slugID}}",
+              "raw": "{{baseUrl}}/api/v1/blogs/:slugID",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "blogs", "{{slugID}}"],
+              "path": ["api", "v1", "blogs", ":slugID"],
               "variable": [{ "key": "slug", "value": "example-blog-slug" }]
             },
             "description": "Retrieves details of a blog by its slug."
@@ -348,9 +348,9 @@
               "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/blogs/{{blogID}}",
+              "raw": "{{baseUrl}}/api/v1/blogs/:blogID",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "blogs", "{{blogID}}"],
+              "path": ["api", "v1", "blogs", ":blogID"],
               "variable": [
                 {
                   "key": "blogID",
@@ -374,9 +374,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/blogs/{{blogID}}",
+              "raw": "{{baseUrl}}/api/v1/blogs/:blogID",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "blogs", "{{blogID}}"],
+              "path": ["api", "v1", "blogs", ":blogID"],
               "variable": [
                 {
                   "key": "blogID",
@@ -406,9 +406,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/blogs/{{blogID}}/like",
+              "raw": "{{baseUrl}}/api/v1/blogs/:blogID/like",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "blogs", "{{blogID}}", "like"],
+              "path": ["api", "v1", "blogs", ":blogID", "like"],
               "variable": [{ "key": "blogID", "value": "<blog_id>" }]
             },
             "description": "Likes a blog post. Requires authentication."
@@ -427,9 +427,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/blogs/{{blogID}}/like",
+              "raw": "{{baseUrl}}/api/v1/blogs/:blogID/like",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "blogs", "{{blogID}}", "like"],
+              "path": ["api", "v1", "blogs", ":blogID", "like"],
               "variable": [{ "key": "blogID", "value": "<blog_id>" }]
             },
             "description": "Unlikes a blog post. Requires authentication."
@@ -448,9 +448,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/blogs/{{blogID}}/dislike",
+              "raw": "{{baseUrl}}/api/v1/blogs/:blogID/dislike",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "blogs", "{{blogID}}", "dislike"],
+              "path": ["api", "v1", "blogs", ":blogID", "dislike"],
               "variable": [{ "key": "blogID", "value": "<blog_id>" }]
             },
             "description": "Dislikes a blog post. Requires authentication."
@@ -469,9 +469,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/blogs/{{blogID}}/dislike",
+              "raw": "{{baseUrl}}/api/v1/blogs/:blogID/dislike",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "blogs", "{{blogID}}", "dislike"],
+              "path": ["api", "v1", "blogs", ":blogID", "dislike"],
               "variable": [{ "key": "blogID", "value": "<blog_id>" }]
             },
             "description": "Removes a dislike from a blog post. Requires authentication."
@@ -490,9 +490,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/blogs/{{blogID}}/view",
+              "raw": "{{baseUrl}}/api/v1/blogs/:blogID/view",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "blogs", "{{blogID}}", "view"],
+              "path": ["api", "v1", "blogs", ":blogID", "view"],
               "variable": [{ "key": "blogID", "value": "<blog_id>" }]
             },
             "description": "Tracks a view for a blog post. Requires authentication."
@@ -525,8 +525,6 @@
   ],
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8080" },
-    { "key": "accessToken", "value": "" },
-    { "key": "blogID", "value": "" },
-    { "key": "slugID", "value": "" }
+    { "key": "accessToken", "value": "" }
   ]
 }
