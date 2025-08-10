@@ -55,6 +55,7 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 		AuthorID:        authorID,
 		Slug:            slug + "-" + uc.uuidgen.NewUUID(), // A UUID is always appended to ensure the final slug is unique
 		Status:          entity.BlogStatus(status),
+		Tags:            tags,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 		ViewCount:       0,
@@ -77,7 +78,7 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 	}
 	// Add tags to blog if provided
 	if len(tags) > 0 {
-		err := uc.blogRepo.AddTagsToBlog(ctx, blog.Slug, tags)
+		err := uc.blogRepo.AddTagsToBlog(ctx, blog.ID, tags)
 		if err != nil {
 			uc.logger.Errorf("Failed to add tags to blog: %v", err)
 			// Not returning error here to allow blog creation to succeed even if tag association fails
