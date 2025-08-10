@@ -13,8 +13,7 @@ type IUserUseCase interface {
 	Authenticate(ctx context.Context, accessToken string) (*entity.User, error)
 	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
 	ForgotPassword(ctx context.Context, email string) error
-	ResetPassword(ctx context.Context, resetToken, newPassword string) error
-	VerifyEmail(ctx context.Context, token string) error
+	ResetPassword(ctx context.Context, verifier, resetToken, newPassword string) error
 	Logout(ctx context.Context, refreshToken string) error
 	PromoteUser(ctx context.Context, userID string) (*entity.User, error)
 	DemoteUser(ctx context.Context, userID string) (*entity.User, error)

@@ -2,12 +2,17 @@ package contract
 
 import (
 	"context"
+	"time"
+
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 )
 
 type ITokenRepository interface {
 	CreateToken(ctx context.Context, token *entity.Token) error
-	GetByID(ctx context.Context, id string) (*entity.Token, error)
-	GetByUserID(ctx context.Context, userID string) (*entity.Token, error)
-	Revoke(ctx context.Context, id string) error
+	GetTokenByID(ctx context.Context, id string) (*entity.Token, error)
+	GetTokenByUserID(ctx context.Context, userID string) (*entity.Token, error)
+	UpdateToken(ctx context.Context, tokenID string, tokenHash string, expiry time.Time) error
+	GetTokenByVerifier(ctx context.Context, verifier string) (*entity.Token, error)
+	RevokeToken(ctx context.Context, id string) error
+	RevokeAllTokensForUser(ctx context.Context, userID string, tokenType entity.TokenType) error
 }

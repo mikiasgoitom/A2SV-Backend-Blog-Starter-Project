@@ -17,6 +17,7 @@ type tokenDTO struct {
 	UserID    string    `bson:"user_id"`
 	TokenType string    `bson:"token_type"`
 	TokenHash string    `bson:"token_hash"`
+	Verifier  string    `bson:"verifier"`
 	CreatedAt time.Time `bson:"created_at"`
 	ExpiresAt time.Time `bson:"expires_at"`
 	Revoke    bool      `bson:"revoke"`
@@ -27,6 +28,7 @@ func (t *tokenDTO) ToEntity() *entity.Token {
 		ID:        t.ID,
 		UserID:    t.UserID,
 		TokenType: entity.TokenType(t.TokenType),
+		Verifier:  t.Verifier,
 		TokenHash: t.TokenHash,
 		CreatedAt: t.CreatedAt,
 		ExpiresAt: t.ExpiresAt,
@@ -39,6 +41,7 @@ func FromTokenEntityToDTO(t *entity.Token) *tokenDTO {
 		ID:        t.ID,
 		UserID:    t.UserID,
 		TokenType: string(t.TokenType),
+		Verifier:  t.Verifier,
 		TokenHash: t.TokenHash,
 		CreatedAt: t.CreatedAt,
 		ExpiresAt: t.ExpiresAt,
@@ -60,7 +63,6 @@ func NewTokenRepository(colln *mongo.Collection) *TokenRepository {
 		Collection: colln,
 	}
 }
-
 func (r *TokenRepository) CreateToken(ctx context.Context, token *entity.Token) error {
 	dto := FromTokenEntityToDTO(token)
 	_, err := r.Collection.InsertOne(ctx, dto)
@@ -71,7 +73,7 @@ func (r *TokenRepository) CreateToken(ctx context.Context, token *entity.Token) 
 	return nil
 }
 
-func (r *TokenRepository) GetByID(ctx context.Context, id string) (*entity.Token, error) {
+func (r *TokenRepository) GetTokenByID(ctx context.Context, id string) (*entity.Token, error) {
 	filter := bson.M{"_id": id}
 	var dto tokenDTO
 	err := r.Collection.FindOne(ctx, filter).Decode(&dto)
@@ -83,8 +85,8 @@ func (r *TokenRepository) GetByID(ctx context.Context, id string) (*entity.Token
 	return token, nil
 }
 
-// GetByUserID fetches token by user's ID string
-func (r *TokenRepository) GetByUserID(ctx context.Context, userID string) (*entity.Token, error) {
+// get user by user id
+func (r *TokenRepository) GetTokenByUserID(ctx context.Context, userID string) (*entity.Token, error) {
 	filter := bson.M{"user_id": userID}
 	var dto tokenDTO
 	err := r.Collection.FindOne(ctx, filter).Decode(&dto)
@@ -96,25 +98,6 @@ func (r *TokenRepository) GetByUserID(ctx context.Context, userID string) (*enti
 	return token, nil
 }
 
-// GetTokenByUserID retrieves a token by user ID (string).
-func (r *TokenRepository) GetTokenByUserID(ctx context.Context, userID string) (*entity.Token, error) {
-	var dto tokenDTO
-	err := r.Collection.FindOne(ctx, bson.M{"user_id": userID}).Decode(&dto)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, fmt.Errorf("token not found")
-		}
-		return nil, err
-	}
-	return dto.ToEntity(), nil
-}
-
-func (r *TokenRepository) DeleteToken(ctx context.Context, id string) error {
-	filter := bson.M{"_id": id}
-	_, err := r.Collection.DeleteOne(ctx, filter)
-	return err
-}
-
 // UpdateToken updates the token hash and expiry
 func (r *TokenRepository) UpdateToken(ctx context.Context, tokenID string, tokenHash string, expiry time.Time) error {
 	filter := bson.M{"_id": tokenID}
@@ -123,8 +106,21 @@ func (r *TokenRepository) UpdateToken(ctx context.Context, tokenID string, token
 	return err
 }
 
+func (r *TokenRepository) GetTokenByVerifier(ctx context.Context, verifier string) (*entity.Token, error) {
+	filter := bson.M{"verifier": verifier}
+	var dto *tokenDTO
+
+	err := r.Collection.FindOne(ctx, filter).Decode(&dto)
+	if err != nil {
+		return nil, err
+	}
+
+	token := dto.ToEntity()
+	return token, nil
+}
+
 // Revoke marks a token as revoked by its ID
-func (r *TokenRepository) Revoke(ctx context.Context, id string) error {
+func (r *TokenRepository) RevokeToken(ctx context.Context, id string) error {
 	filter := bson.M{"_id": id}
 	update := bson.M{"$set": bson.M{"revoke": true}}
 	result, err := r.Collection.UpdateOne(ctx, filter, update)
@@ -134,6 +130,28 @@ func (r *TokenRepository) Revoke(ctx context.Context, id string) error {
 
 	if result.MatchedCount == 0 {
 		return fmt.Errorf("failed to revoke token with: %v", id)
+	}
+
+	return nil
+}
+
+// GetTokenByUserID retrieves a token by user ID (string).
+func (r *TokenRepository) RevokeAllTokensForUser(ctx context.Context, userID string, tokenType entity.TokenType) error {
+       filter := bson.D{
+	       {Key: "user_id", Value: userID},
+	       {Key: "token_type", Value: string(tokenType)},
+	       {Key: "revoke", Value: false},
+       }
+	update := bson.D{
+		{Key: "$set", Value: bson.M{"revoke": true}},
+	}
+
+	_, err := r.Collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return fmt.Errorf("token not found")
+		}
+		return err
 	}
 
 	return nil

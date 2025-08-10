@@ -16,11 +16,11 @@ import (
 type BlogUseCaseImpl struct {
 	blogRepo contract.IBlogRepository
 	uuidgen  contract.IUUIDGenerator
-	logger   AppLogger
+	logger   usecasecontract.IAppLogger
 }
 
 // NewBlogUseCase creates a new instance of BlogUseCase
-func NewBlogUseCase(blogRepo contract.IBlogRepository, uuidgenrator contract.IUUIDGenerator, logger AppLogger) *BlogUseCaseImpl {
+func NewBlogUseCase(blogRepo contract.IBlogRepository, uuidgenrator contract.IUUIDGenerator, logger usecasecontract.IAppLogger) *BlogUseCaseImpl {
 	return &BlogUseCaseImpl{
 		blogRepo: blogRepo,
 		logger:   logger,

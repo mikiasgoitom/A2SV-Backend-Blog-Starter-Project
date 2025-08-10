@@ -6,9 +6,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
+	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
 )
 
-func AuthMiddleWare(jwtService usecase.JWTService, userUseCase *usecase.UserUsecase) gin.HandlerFunc {
+func AuthMiddleWare(jwtService usecase.JWTService, userUseCase usecasecontract.IUserUseCase) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		authHeader := ctx.GetHeader("Authorization")
 		if authHeader == "" {
