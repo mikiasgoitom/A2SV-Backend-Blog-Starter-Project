@@ -1,7 +1,7 @@
 {
   "info": {
-    "_postman_id": "a2sv-g6-blog-updated",
-    "name": "G6 Blog API (Updated)",
+    "_postman_id": "a2sv-g6-blog",
+    "name": "G6 Blog API",
     "description": "Postman collection for the G6 Blog Starter Project API. Includes all endpoints as of August 2025.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -54,7 +54,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"token\": \"<your_email_verification_token_here>\"\n}",
+              "raw": "{\n  \"token\": \"{{email_verification_token}}\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -92,7 +92,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"token\": \"<your_reset_token_here>\",\n  \"password\": \"NewPass123!\"\n}",
+              "raw": "{\n  \"token\": \"{{reset_token}}\",\n  \"password\": \"NewPass123!\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -111,7 +111,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"refresh_token\": \"<your_refresh_token_here>\"\n}",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -136,7 +136,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"refresh_token\": \"<your_refresh_token_here>\"\n}",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -300,7 +300,7 @@
               "raw": "{{baseUrl}}/api/v1/blogs/:slugID",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "blogs", ":slugID"],
-              "variable": [{ "key": "slugID", "value": "example-blog-slug" }]
+              "variable": [{ "key": "slugID", "value": "{{slug_id}}" }]
             },
             "description": "Retrieves details of a blog by its slug."
           },
@@ -409,30 +409,9 @@
               "raw": "{{baseUrl}}/api/v1/blogs/:blogID/like",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "blogs", ":blogID", "like"],
-              "variable": [{ "key": "blogID", "value": "<blog_id>" }]
+              "variable": [{ "key": "blogID", "value": "{{blog_id}}" }]
             },
             "description": "Likes a blog post. Requires authentication."
-          },
-          "response": []
-        },
-        {
-          "name": "Unlike Blog",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/blogs/:blogID/like",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "blogs", ":blogID", "like"],
-              "variable": [{ "key": "blogID", "value": "<blog_id>" }]
-            },
-            "description": "Unlikes a blog post. Requires authentication."
           },
           "response": []
         },
@@ -451,30 +430,9 @@
               "raw": "{{baseUrl}}/api/v1/blogs/:blogID/dislike",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "blogs", ":blogID", "dislike"],
-              "variable": [{ "key": "blogID", "value": "<blog_id>" }]
+              "variable": [{ "key": "blogID", "value": "{{blog_id}}" }]
             },
             "description": "Dislikes a blog post. Requires authentication."
-          },
-          "response": []
-        },
-        {
-          "name": "Undislike Blog",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/blogs/:blogID/dislike",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "blogs", ":blogID", "dislike"],
-              "variable": [{ "key": "blogID", "value": "<blog_id>" }]
-            },
-            "description": "Removes a dislike from a blog post. Requires authentication."
           },
           "response": []
         },
@@ -493,14 +451,14 @@
               "raw": "{{baseUrl}}/api/v1/blogs/:blogID/view",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "blogs", ":blogID", "view"],
-              "variable": [{ "key": "blogID", "value": "<blog_id>" }]
+              "variable": [{ "key": "blogID", "value": "{{blog_id}}" }]
             },
             "description": "Tracks a view for a blog post. Requires authentication."
           },
           "response": []
         }
       ],
-      "description": "Endpoints for blog interactions (like, unlike, dislike, undislike, view)."
+  "description": "Endpoints for blog interactions (like, dislike, view)."
     },
     {
       "name": "Monitoring",
@@ -525,6 +483,11 @@
   ],
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8080" },
-    { "key": "accessToken", "value": "" }
+    { "key": "accessToken", "value": "" },
+    { "key": "blog_id", "value": "" },
+    { "key": "slug_id", "value": "" },
+    { "key": "reset_token", "value": "" },
+    { "key": "refresh_token", "value": "" },
+    { "key": "email_verification_token", "value": "" }
   ]
 }
