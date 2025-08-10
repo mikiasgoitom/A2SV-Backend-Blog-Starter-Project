@@ -53,17 +53,64 @@ func createIndexes(ctx context.Context, db *mongo.Database) error {
 		return fmt.Errorf("failed to create TTL index for blog_views: %w", err)
 	}
 
-	// We can add other index creations here, for example, for users, blogs, etc.
-	// Example: Unique index for user email
-	// usersCollection := db.Collection("users")
-	// emailIndex := mongo.IndexModel{
-	// 	Keys:    bson.M{"email": 1},
-	// 	Options: options.Index().SetUnique(true),
-	// }
-	// _, err = usersCollection.Indexes().CreateOne(ctx, emailIndex)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to create unique index for users email: %w", err)
-	// }
+	// Unique index for user email
+	usersCollection := db.Collection("users")
+	emailIndex := mongo.IndexModel{
+		Keys:    bson.M{"email": 1},
+		Options: options.Index().SetUnique(true),
+	}
+	_, err = usersCollection.Indexes().CreateOne(ctx, emailIndex)
+	if err != nil {
+		return fmt.Errorf("failed to create unique index for users email: %w", err)
+	}
+
+	// Compound index for blogs: author_id + created_at (for author timeline queries)
+	blogsCollection := db.Collection("blogs")
+	authorCreatedIndex := mongo.IndexModel{
+		Keys: bson.D{{Key: "author_id", Value: 1}},
+	}
+	_, err = blogsCollection.Indexes().CreateOne(ctx, authorCreatedIndex)
+	if err != nil {
+		return fmt.Errorf("failed to create compound index for blogs: %w", err)
+	}
+
+	// Text index for blogs: title and content (for search)
+	blogTextIndex := mongo.IndexModel{
+		Keys: bson.D{{Key: "title", Value: "text"}, {Key: "content", Value: "text"}},
+	}
+	_, err = blogsCollection.Indexes().CreateOne(ctx, blogTextIndex)
+	if err != nil {
+		return fmt.Errorf("failed to create text index for blogs: %w", err)
+	}
+
+	// Index for blogs._id (for fast lookup by blog id)
+	blogIDIndex := mongo.IndexModel{
+		Keys:    bson.M{"_id": 1},
+	}
+	_, err = blogsCollection.Indexes().CreateOne(ctx, blogIDIndex)
+	if err != nil {
+		return fmt.Errorf("failed to create index for blogs._id: %w", err)
+	}
+
+	// Index for blogs.slug (for fast lookup by slug)
+	slugIndex := mongo.IndexModel{
+		Keys:    bson.M{"slug": 1},
+		Options: options.Index().SetUnique(true),
+	}
+	_, err = blogsCollection.Indexes().CreateOne(ctx, slugIndex)
+	if err != nil {
+		return fmt.Errorf("failed to create index for blogs.slug: %w", err)
+	}
+
+	// Index for blog_tags.blog_id and blog_tags.tag_id (for tag lookups)
+	blogTagsCollection := db.Collection("blog_tags")
+	blogTagIndex := mongo.IndexModel{
+		Keys: bson.D{{Key: "blog_id", Value: 1}, {Key: "tag_id", Value: 1}},
+	}
+	_, err = blogTagsCollection.Indexes().CreateOne(ctx, blogTagIndex)
+	if err != nil {
+		return fmt.Errorf("failed to create index for blog_tags: %w", err)
+	}
 
 	log.Println("Successfully created database indexes.")
 	return nil
