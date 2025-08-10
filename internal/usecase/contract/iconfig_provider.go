@@ -8,4 +8,5 @@ type IConfigProvider interface {
 	GetRefreshTokenExpiry() time.Duration
 	GetPasswordResetTokenExpiry() time.Duration
 	GetEmailVerificationTokenExpiry() time.Duration
+	GetAIServiceAPIKey() string
 }

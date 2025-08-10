@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/dto"
-	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
 
 // BlogHandlerInterface defines the methods for Blog handler to allow interface-based dependency injection (for testing/mocking)
@@ -27,10 +27,10 @@ type BlogHandlerInterface interface {
 var _ BlogHandlerInterface = (*BlogHandler)(nil)
 
 type BlogHandler struct {
-	blogUsecase usecasecontract.IBlogUseCase
+	blogUsecase usecase.IBlogUseCase
 }
 
-func NewBlogHandler(blogUsecase usecasecontract.IBlogUseCase) *BlogHandler {
+func NewBlogHandler(blogUsecase usecase.IBlogUseCase) *BlogHandler {
 	return &BlogHandler{
 		blogUsecase: blogUsecase,
 	}
@@ -58,7 +58,7 @@ func (h *BlogHandler) CreateBlogHandler(cxt *gin.Context) {
 		ErrorHandler(cxt, http.StatusBadRequest, "Invalid user ID format in token")
 	}
 
-	_, err := h.blogUsecase.CreateBlog(cxt.Request.Context(), req.Title, req.Content, authorID, req.Slug, usecasecontract.BlogStatus(req.Status), req.FeaturedImageID, req.Tags)
+	_, err := h.blogUsecase.CreateBlog(cxt.Request.Context(), req.Title, req.Content, authorID, req.Slug, entity.BlogStatus(req.Status), req.FeaturedImageID, req.Tags)
 
 	if err != nil {
 		ErrorHandler(cxt, http.StatusInternalServerError, "Failed to create blog")
@@ -88,10 +88,8 @@ func (h *BlogHandler) GetBlogsHandler(cxt *gin.Context) {
 
 	// 2. get sorting parameters
 	sortBy := cxt.DefaultQuery("sortBy", "created_at")
-	sortOrderStr := cxt.DefaultQuery("sortOrder", "desc")
-	sortOrder := usecasecontract.SortOrder(sortOrderStr)
-
-	if sortOrder != usecasecontract.SortOrderASC && sortOrder != usecasecontract.SortOrderDESC {
+	sortOrder := cxt.DefaultQuery("sortOrder", "desc")
+	if sortOrder != "asc" && sortOrder != "desc" {
 		ErrorHandler(cxt, http.StatusBadRequest, "Invalid sort order. Use 'asc' or 'desc' ")
 		return
 	}
@@ -173,7 +171,12 @@ func (h *BlogHandler) UpdateBlogHandler(cxt *gin.Context) {
 		return
 	}
 
-	blog, err := h.blogUsecase.UpdateBlog(cxt.Request.Context(), blogID, userID, req.Title, req.Content, (*usecasecontract.BlogStatus)(req.Status), req.FeaturedImageID)
+	var statusPtr *entity.BlogStatus
+	if req.Status != nil {
+		s := entity.BlogStatus(*req.Status)
+		statusPtr = &s
+	}
+	blog, err := h.blogUsecase.UpdateBlog(cxt.Request.Context(), blogID, userID, req.Title, req.Content, statusPtr, req.FeaturedImageID)
 
 	if err != nil {
 		ErrorHandler(cxt, http.StatusInternalServerError, "Failed to update blog")
@@ -235,8 +238,21 @@ func (h *BlogHandler) TrackBlogViewHandler(c *gin.Context) {
 
 	err := h.blogUsecase.TrackBlogView(c.Request.Context(), blogID, userID, ipAddress, userAgent)
 	if err != nil {
-		ErrorHandler(c, http.StatusInternalServerError, "Failed to process blog view")
-		return
+		errMsg := err.Error()
+		switch {
+		case errMsg == "already viewed recently":
+			SuccessHandler(c, http.StatusOK, "Already viewed recently")
+			return
+		case errMsg == "exceeded view velocity limit: too many views from this IP recently":
+			ErrorHandler(c, 429, "Exceeded view velocity limit")
+			return
+		case errMsg == "exceeded IP rotation limit: too many IPs used by this user recently":
+			ErrorHandler(c, 429, "Exceeded IP rotation limit")
+			return
+		default:
+			ErrorHandler(c, http.StatusInternalServerError, "Failed to process blog view")
+			return
+		}
 	}
 
 	SuccessHandler(c, http.StatusOK, "view tracked successfully")

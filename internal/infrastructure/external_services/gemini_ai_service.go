@@ -96,12 +96,12 @@ func (as *GeminiAIService) GenerateContent(ctx context.Context, prompt string) (
 		return "", fmt.Errorf("gemini return status code non-200: %v", resp.StatusCode)
 	}
 
-       var response ResponsePayload
-       if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-	       return "", fmt.Errorf("failed to decode gemini response: %w", err)
-       }
-       if len(response.Candidates) > 0 && len(response.Candidates[0].Content.Parts) > 0 {
-	       return response.Candidates[0].Content.Parts[0].Text, nil
-       }
-       return "", fmt.Errorf("gemini response has no content")
+	var response ResponsePayload
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return "", fmt.Errorf("failed to decode gemini response: %w", err)
+	}
+	if len(response.Candidates) > 0 && len(response.Candidates[0].Content.Parts) > 0 {
+		return response.Candidates[0].Content.Parts[0].Text, nil
+	}
+	return "", fmt.Errorf("gemini response has no content")
 }

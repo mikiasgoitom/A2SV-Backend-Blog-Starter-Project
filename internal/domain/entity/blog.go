@@ -12,6 +12,7 @@ type Blog struct {
 	AuthorID        string     `json:"author_id" bson:"author_id"`
 	Slug            string     `json:"slug" bson:"slug"`
 	Status          BlogStatus `json:"status" bson:"status"`
+	Tags            []string   `json:"tags" bson:"tags"`
 	CreatedAt       time.Time  `json:"created_at" bson:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at" bson:"updated_at"`
 	PublishedAt     *time.Time `json:"published_at" bson:"published_at"`

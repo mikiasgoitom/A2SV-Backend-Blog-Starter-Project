@@ -77,3 +77,7 @@ func getEnvAsBool(name string, fallback bool) bool {
 	}
 	return fallback
 }
+
+func (c *Config) GetAIServiceAPIKey() string {
+	return getEnv("AI_SERVICE_API_KEY", "")
+}
