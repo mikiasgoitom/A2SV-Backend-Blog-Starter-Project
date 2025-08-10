@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
@@ -18,6 +19,7 @@ type BlogRepository struct {
 	collection          *mongo.Collection // For blog posts
 	usersCollection     *mongo.Collection // For accessing user data for search
 	blogViewsCollection *mongo.Collection // For tracking blog views
+	blogTagsCollection *mongo.Collection
 }
 
 // NewBlogRepository creates and returns a new BlogRepository instance.

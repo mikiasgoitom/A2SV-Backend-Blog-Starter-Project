@@ -297,10 +297,10 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/api/v1/blogs/:slug",
+              "raw": "{{baseUrl}}/api/v1/blogs/:slugID",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "blogs", ":slug"],
-              "variable": [{ "key": "slug", "value": "example-blog-slug" }]
+              "path": ["api", "v1", "blogs", ":slugID"],
+              "variable": [{ "key": "slugID", "value": "example-blog-slug" }]
             },
             "description": "Retrieves details of a blog by its slug."
           },
@@ -501,6 +501,26 @@
         }
       ],
       "description": "Endpoints for blog interactions (like, unlike, dislike, undislike, view)."
+    },
+    {
+      "name": "Monitoring",
+      "item": [
+        {
+          "name": "Prometheus Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["metrics"]
+            },
+            "description": "Exposes Prometheus metrics in text format for scraping. Useful for quick inspection in Postman."
+          },
+          "response": []
+        }
+      ],
+      "description": "Operational monitoring endpoints (Prometheus metrics)."
     }
   ],
   "variable": [

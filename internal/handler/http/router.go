@@ -6,6 +6,7 @@ import (
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/middleware"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type Router struct {
@@ -18,7 +19,7 @@ type Router struct {
 	authHandler        *AuthHandler
 }
 
-func NewRouter(userUsecase usecasecontract.IUserUseCase, blogUsecase usecasecontract.IBlogUseCase, likeUsecase *usecase.LikeUsecase, emailVerUC usecasecontract.IEmailVerificationUC, userRepo contract.IUserRepository, tokenRepo contract.ITokenRepository, hasher contract.IHasher, jwtService usecase.JWTService, mailService contract.IEmailService, logger usecasecontract.IAppLogger, config usecasecontract.IConfigProvider, validator usecasecontract.IValidator, uuidGen contract.IUUIDGenerator, randomGen contract.IRandomGenerator) *Router {
+func NewRouter(userUsecase usecasecontract.IUserUseCase, blogUsecase usecase.IBlogUseCase, likeUsecase *usecase.LikeUsecase, emailVerUC usecasecontract.IEmailVerificationUC, userRepo contract.IUserRepository, tokenRepo contract.ITokenRepository, hasher contract.IHasher, jwtService usecase.JWTService, mailService contract.IEmailService, logger usecasecontract.IAppLogger, config usecasecontract.IConfigProvider, validator usecasecontract.IValidator, uuidGen contract.IUUIDGenerator, randomGen contract.IRandomGenerator) *Router {
        baseURL := config.GetAppBaseURL()
        return &Router{
 	       userHandler:        NewUserHandler(userUsecase),
@@ -32,8 +33,11 @@ func NewRouter(userUsecase usecasecontract.IUserUseCase, blogUsecase usecasecont
 }
 
 func (r *Router) SetupRoutes(router *gin.Engine) {
-       // API v1 routes
-       v1 := router.Group("/api/v1")
+
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	router.GET("/api/v1/metrics", gin.WrapH(promhttp.Handler()))
+	// API v1 routes
+	v1 := router.Group("/api/v1")
 
        // Public routes (no authentication required)
        auth := v1.Group("/auth")

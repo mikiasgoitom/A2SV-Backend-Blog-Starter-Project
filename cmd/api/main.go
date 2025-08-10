@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	handlerHttp "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http"
+	redisclient "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/cache"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/config"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/external_services"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/jwt"
@@ -14,6 +16,7 @@ import (
 	passwordservice "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/password_service"
 	randomgenerator "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/random_generator"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/repository/mongodb"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/store"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/uuidgen"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/validator"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
@@ -82,6 +85,16 @@ func main() {
 	userUsecase := usecase.NewUserUsecase(userRepo, tokenRepo, emailUsecase, hasher, jwtService, mailService, appLogger, appConfig, appValidator, uuidGenerator, randomGenerator)
 
 	blogUsecase := usecase.NewBlogUseCase(blogRepo, uuidGenerator, appLogger)
+
+	// Pass Prometheus metrics to handlers or usecases as needed (import from metrics package)
+
+	// Optional Dependency Injection: Redis cache
+	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
+		rdb := redisclient.NewRedisFromURL(context.Background(), redisURL)
+		defer redisclient.Close(rdb)
+		blogCache := store.NewBlogCacheStore(rdb)
+		blogUsecase.SetBlogCache(blogCache)
+	}
 
 	// Create like usecase
 	likeUsecase := usecase.NewLikeUsecase(likeRepo, blogRepo)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/utils"
 )
 
 // ErrReactionNotFound is returned when a reaction is not found in the database.
@@ -72,7 +73,7 @@ func (u *LikeUsecase) ToggleLike(ctx context.Context, userID, targetID string, t
 				views = blog.ViewCount
 				comments = blog.CommentCount
 			}
-			popularity := calculatePopularity(views, int(likes), int(dislikes), comments)
+			popularity := utils.CalculatePopularity(views, int(likes), int(dislikes), comments)
 			updates := map[string]interface{}{
 				"like_count":    likes,
 				"dislike_count": dislikes,
@@ -88,7 +89,7 @@ func (u *LikeUsecase) ToggleLike(ctx context.Context, userID, targetID string, t
 func (u *LikeUsecase) ToggleDislike(ctx context.Context, userID, targetID string, targetType entity.TargetType) error {
 	existingReaction, err := u.likeRepo.GetReactionByUserIDAndTargetID(ctx, userID, targetID)
 	if err != nil {
-		if errors.Is(err, ErrReactionNotFound) {
+		if errors.Is(err, ErrReactionNotFound) || (err != nil && err.Error() == "reaction not found") {
 			existingReaction = nil
 		} else {
 			return fmt.Errorf("failed to retrieve existing reaction: %w", err)
@@ -98,15 +99,18 @@ func (u *LikeUsecase) ToggleDislike(ctx context.Context, userID, targetID string
 	var resultErr error
 	if existingReaction != nil {
 		if existingReaction.Type == entity.LIKE_TYPE_DISLIKE {
-			// User is undisliking a target they've already disliked.
 			resultErr = u.likeRepo.DeleteReaction(ctx, existingReaction.ID)
+			if resultErr != nil {
+				return fmt.Errorf("failed to delete dislike reaction: %w", resultErr)
+			}
 		} else {
-			// User is changing a 'like' to a 'dislike'.
 			existingReaction.Type = entity.LIKE_TYPE_DISLIKE
 			resultErr = u.likeRepo.CreateReaction(ctx, existingReaction)
+			if resultErr != nil {
+				return fmt.Errorf("failed to change like to dislike: %w", resultErr)
+			}
 		}
 	} else {
-		// No reaction exists, create a new one.
 		newDislike := &entity.Like{
 			UserID:     userID,
 			TargetID:   targetID,
@@ -114,6 +118,9 @@ func (u *LikeUsecase) ToggleDislike(ctx context.Context, userID, targetID string
 			Type:       entity.LIKE_TYPE_DISLIKE,
 		}
 		resultErr = u.likeRepo.CreateReaction(ctx, newDislike)
+		if resultErr != nil {
+			return fmt.Errorf("failed to create dislike reaction: %w", resultErr)
+		}
 	}
 
 	// Update blog dislike_count and popularity if this is a blog like/dislike
@@ -121,25 +128,31 @@ func (u *LikeUsecase) ToggleDislike(ctx context.Context, userID, targetID string
 		// Recalculate like/dislike counts from likes collection
 		likes, err1 := u.likeRepo.CountLikesByTargetID(ctx, targetID)
 		dislikes, err2 := u.likeRepo.CountDislikesByTargetID(ctx, targetID)
-		if err1 == nil && err2 == nil {
-			// Get current view and comment counts from blog
-			blog, err := u.blogRepo.GetBlogByID(ctx, targetID)
-			views := 0
-			comments := 0
-			if err == nil && blog != nil {
-				views = blog.ViewCount
-				comments = blog.CommentCount
-			}
-			popularity := calculatePopularity(views, int(likes), int(dislikes), comments)
-			updates := map[string]interface{}{
-				"like_count":    likes,
-				"dislike_count": dislikes,
-				"popularity":    popularity,
-			}
-			_ = u.blogRepo.UpdateBlog(ctx, targetID, updates)
+		if err1 != nil {
+			return fmt.Errorf("failed to count likes: %w", err1)
+		}
+		if err2 != nil {
+			return fmt.Errorf("failed to count dislikes: %w", err2)
+		}
+		blog, err := u.blogRepo.GetBlogByID(ctx, targetID)
+		views := 0
+		comments := 0
+		if err == nil && blog != nil {
+			views = blog.ViewCount
+			comments = blog.CommentCount
+		}
+		popularity := utils.CalculatePopularity(views, int(likes), int(dislikes), comments)
+		updates := map[string]interface{}{
+			"like_count":    likes,
+			"dislike_count": dislikes,
+			"popularity":    popularity,
+		}
+		err = u.blogRepo.UpdateBlog(ctx, targetID, updates)
+		if err != nil {
+			return fmt.Errorf("failed to update blog counts: %w", err)
 		}
 	}
-	return resultErr
+	return nil
 }
 
 // GetUserReaction retrieves the active reaction (if any) a user has on a specific target.
