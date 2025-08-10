@@ -20,7 +20,6 @@ type IBlogUseCase interface {
 	GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder SortOrder, dateFrom *time.Time, dateTo *time.Time) ([]entity.Blog, int, int, int, error)
 	GetBlogDetail(ctx context.Context, slug string) (entity.Blog, error)
 	UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, status *entity.BlogStatus, featuredImageID *string) (*entity.Blog, error)
-	UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, status *entity.BlogStatus, featuredImageID *string) (*entity.Blog, error)
 	DeleteBlog(ctx context.Context, blogID, userID string, isAdmin bool) (bool, error)
 	TrackBlogView(ctx context.Context, blogID, userID, ipAddress, userAgent string) error
 	GetPopularBlogs(ctx context.Context, page, pageSize int) ([]entity.Blog, int, int, int, error)
