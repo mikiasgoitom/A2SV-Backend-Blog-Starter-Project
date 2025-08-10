@@ -144,8 +144,8 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 		elapsed := time.Since(t0)
 		if err == nil && found && cached != nil {
 			atomic.AddUint64(&uc.listHits, 1)
-			metrics.IncListHit()
-			metrics.AddHitDuration(elapsed.Seconds())
+			go metrics.IncListHit()
+			go metrics.AddHitDuration(elapsed.Seconds())
 			if uc.logger != nil {
 				uc.logger.Infof("cache hit: blogs list key=%s took=%s", key, elapsed)
 			}
@@ -157,8 +157,8 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 			return cached.Blogs, total, page, totalPages, nil
 		} else if err == nil && !found {
 			atomic.AddUint64(&uc.listMiss, 1)
-			metrics.IncListMiss()
-			metrics.AddMissDuration(elapsed.Seconds())
+			go metrics.IncListMiss()
+			go metrics.AddMissDuration(elapsed.Seconds())
 			if uc.logger != nil {
 				uc.logger.Infof("cache miss: blogs list key=%s took=%s", key, elapsed)
 			}
@@ -230,8 +230,8 @@ func (uc *BlogUseCaseImpl) GetBlogDetail(ctx context.Context, slug string) (enti
 		elapsed := time.Since(t0)
 		if err == nil && found && cached != nil {
 			atomic.AddUint64(&uc.detailHits, 1)
-			metrics.IncDetailHit()
-			metrics.AddHitDuration(elapsed.Seconds())
+			go metrics.IncDetailHit()
+			go metrics.AddHitDuration(elapsed.Seconds())
 			if uc.logger != nil {
 				uc.logger.Infof("cache hit: blog detail slug=%s took=%s", slug, elapsed)
 			}
@@ -240,8 +240,8 @@ func (uc *BlogUseCaseImpl) GetBlogDetail(ctx context.Context, slug string) (enti
 			}
 		} else if err == nil && !found {
 			atomic.AddUint64(&uc.detailMiss, 1)
-			metrics.IncDetailMiss()
-			metrics.AddMissDuration(elapsed.Seconds())
+			go metrics.IncDetailMiss()
+			go metrics.AddMissDuration(elapsed.Seconds())
 			if uc.logger != nil {
 				uc.logger.Infof("cache miss: blog detail slug=%s took=%s", slug, elapsed)
 			}
