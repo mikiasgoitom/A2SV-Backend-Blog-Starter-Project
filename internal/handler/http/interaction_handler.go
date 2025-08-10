@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
+	usecase "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
 
 type InteractionHandler struct {
@@ -44,6 +44,7 @@ func (h *InteractionHandler) UnlikeBlogHandler(c *gin.Context) {
 }
 
 func (h *InteractionHandler) DislikeBlogHandler(c *gin.Context) {
+
 	blogID := c.Param("blogID")
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -55,6 +56,19 @@ func (h *InteractionHandler) DislikeBlogHandler(c *gin.Context) {
 		ErrorHandler(c, http.StatusBadRequest, "Invalid user ID format in token")
 		return
 	}
+
+	// Validate blogID format (UUID)
+	if len(blogID) != 36 {
+		ErrorHandler(c, http.StatusBadRequest, "Invalid blog ID format")
+		return
+	}
+
+	// Check if blog exists using LikeUsecase.ExistsBlog
+	if !h.likeUsecase.ExistsBlog(c.Request.Context(), blogID) {
+		ErrorHandler(c, http.StatusNotFound, "Blog not found")
+		return
+	}
+
 	err := h.likeUsecase.ToggleDislike(c.Request.Context(), userIDStr, blogID, entity.TargetTypeBlog)
 	if err != nil {
 		ErrorHandler(c, http.StatusInternalServerError, err.Error())
