@@ -9,6 +9,7 @@ import (
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Constants for common error messages
@@ -20,42 +21,45 @@ const (
 
 // UserUsecase implements the UserUseCase interface.
 type UserUsecase struct {
-	userRepo                   UserRepository
-	tokenRepo                  TokenRepository
-	emailVerificationTokenRepo EmailVerificationTokenRepository
-	hasher                     Hasher
-	jwtService                 JWTService
-	mailService                MailService
-	logger                     AppLogger
-	cfg                        ConfigProvider
-	validator                  Validator
-	uuidGenerator              contract.IUUIDGenerator
+	userRepo        contract.IUserRepository
+	tokenRepo       contract.ITokenRepository
+	emailUsecase    usecasecontract.IEmailVerificationUC
+	hasher          contract.IHasher
+	jwtService      JWTService
+	mailService     contract.IEmailService
+	logger          usecasecontract.IAppLogger
+	config          usecasecontract.IConfigProvider
+	validator       usecasecontract.IValidator
+	uuidGenerator   contract.IUUIDGenerator
+	randomGenerator contract.IRandomGenerator
 }
 
 // NewUserUsecase creates a new UserUsecase instance.
 func NewUserUsecase(
-	userRepo UserRepository,
-	tokenRepo TokenRepository,
-	emailVerificationTokenRepo EmailVerificationTokenRepository,
-	hasher Hasher,
+	userRepo contract.IUserRepository,
+	tokenRepo contract.ITokenRepository,
+	emailUC usecasecontract.IEmailVerificationUC,
+	hasher contract.IHasher,
 	jwtService JWTService,
-	mailService MailService,
-	logger AppLogger,
-	cfg ConfigProvider,
-	validator Validator,
+	mailService contract.IEmailService,
+	logger usecasecontract.IAppLogger,
+	cfg usecasecontract.IConfigProvider,
+	validator usecasecontract.IValidator,
 	uuidGenerator contract.IUUIDGenerator,
+	randomgen contract.IRandomGenerator,
 ) *UserUsecase {
 	return &UserUsecase{
-		userRepo:                   userRepo,
-		tokenRepo:                  tokenRepo,
-		emailVerificationTokenRepo: emailVerificationTokenRepo,
-		hasher:                     hasher,
-		jwtService:                 jwtService,
-		mailService:                mailService,
-		logger:                     logger,
-		cfg:                        cfg,
-		validator:                  validator,
-		uuidGenerator:              uuidGenerator,
+		userRepo:        userRepo,
+		tokenRepo:       tokenRepo,
+		emailUsecase:    emailUC,
+		hasher:          hasher,
+		jwtService:      jwtService,
+		mailService:     mailService,
+		logger:          logger,
+		config:          cfg,
+		validator:       validator,
+		uuidGenerator:   uuidGenerator,
+		randomGenerator: randomgen,
 	}
 }
 
@@ -115,7 +119,7 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 		Email:        email,
 		PasswordHash: hashedPassword,
 		Role:         entity.UserRoleUser,
-		IsActive:     !uc.cfg.GetSendActivationEmail(), // Activate user immediately if email verification is off
+		IsActive:     !uc.config.GetSendActivationEmail(), // Activate user immediately if email verification is off
 		AvatarURL:    nil,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
@@ -130,33 +134,10 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password, 
 	}
 
 	// Send activation email if required, using config from injected ConfigProvider
-	if uc.cfg.GetSendActivationEmail() {
+	if uc.config.GetSendActivationEmail() {
 		// Generate email verification token
-		emailVerificationTokenString, err := uc.jwtService.GenerateEmailVerificationToken(user.ID)
-		if err != nil {
-			uc.logger.Errorf("failed to generate email verification token for user %s: %v", user.ID, err)
-		} else {
-			// Hash the token before storing it
-			hashedEmailVerificationToken := uc.hasher.HashString(emailVerificationTokenString)
-
-			emailTokenEntity := &entity.EmailVerificationToken{
-				ID:        uc.uuidGenerator.NewUUID(),
-				UserID:    user.ID,
-				TokenHash: hashedEmailVerificationToken,
-				ExpiresAt: time.Now().Add(uc.cfg.GetEmailVerificationTokenExpiry()),
-				Used:      false,
-				CreatedAt: time.Now(),
-			}
-
-			if err := uc.emailVerificationTokenRepo.CreateEmailVerificationToken(ctx, emailTokenEntity); err != nil {
-				uc.logger.Errorf("failed to store email verification token for user %s: %v", user.ID, err)
-				// Log but don't fail registration if token storage fails
-			} else {
-				activationLink := fmt.Sprintf("%s/verify-email?token=%s", uc.cfg.GetAppBaseURL(), emailVerificationTokenString)
-				if err := uc.mailService.SendActivationEmail(user.Email, user.Username, activationLink); err != nil {
-					uc.logger.Warnf("failed to send activation email to %s: %v", user.Email, err)
-				}
-			}
+		if err = uc.emailUsecase.RequestVerificationEmail(ctx, user); err != nil {
+			return nil, fmt.Errorf("failed to send verification email")
 		}
 	}
 
@@ -189,7 +170,7 @@ func (uc *UserUsecase) Login(ctx context.Context, email, password string) (*enti
 	}
 
 	// Verify password
-	if !uc.hasher.CheckPasswordHash(password, user.PasswordHash) {
+	if err := uc.hasher.ComparePasswordHash(password, user.PasswordHash); err != nil {
 		return nil, "", "", errors.New("invalid credentials")
 	}
 
@@ -206,7 +187,7 @@ func (uc *UserUsecase) Login(ctx context.Context, email, password string) (*enti
 		return nil, "", "", errors.New("failed to generate token")
 	}
 
-	refreshTokenExpiry := uc.cfg.GetRefreshTokenExpiry()
+	refreshTokenExpiry := uc.config.GetRefreshTokenExpiry()
 	if refreshTokenExpiry <= 0 {
 		uc.logger.Errorf("invalid refresh token expiry configuration: %v", refreshTokenExpiry)
 		return nil, "", "", errors.New("invalid refresh token expiry configuration")
@@ -287,14 +268,14 @@ func (uc *UserUsecase) RefreshToken(ctx context.Context, refreshToken string) (s
 	if !uc.hasher.CheckHash(refreshToken, storedToken.TokenHash) {
 		uc.logger.Warnf("refresh token mismatch for user %s", claims.UserID)
 		uc.logger.Errorf("Debug: Token hash comparison failed")
-		_ = uc.tokenRepo.DeleteToken(ctx, storedToken.ID) // Invalidate the stored token
+		_ = uc.tokenRepo.RevokeToken(ctx, storedToken.ID) // Invalidate the stored token by revoking it
 		return "", "", errors.New("invalid refresh token")
 	}
 	uc.logger.Infof("Debug: Token hash comparison successful")
 
 	if storedToken.ExpiresAt.Before(time.Now()) {
 		// Refresh token expired
-		_ = uc.tokenRepo.DeleteToken(ctx, storedToken.ID) // Delete the expired token
+		_ = uc.tokenRepo.RevokeToken(ctx, storedToken.ID) // revoke the expired token
 		return "", "", errors.New("refresh token expired, please log in again")
 	}
 
@@ -316,7 +297,7 @@ func (uc *UserUsecase) RefreshToken(ctx context.Context, refreshToken string) (s
 	newHashedRefreshToken := uc.hasher.HashString(newRefreshToken)
 
 	// Update the stored refresh token with the new hash and expiry.
-	err = uc.tokenRepo.UpdateToken(ctx, storedToken.ID, newHashedRefreshToken, time.Now().Add(uc.cfg.GetRefreshTokenExpiry()))
+	err = uc.tokenRepo.UpdateToken(ctx, storedToken.ID, newHashedRefreshToken, time.Now().Add(uc.config.GetRefreshTokenExpiry()))
 	if err != nil {
 		uc.logger.Errorf("failed to update refresh token in db: %v", err)
 		return "", "", errors.New("failed to update token")
@@ -330,31 +311,33 @@ func (uc *UserUsecase) RefreshToken(ctx context.Context, refreshToken string) (s
 func (uc *UserUsecase) ForgotPassword(ctx context.Context, email string) error {
 	user, err := uc.userRepo.GetUserByEmail(ctx, email)
 	if err != nil {
-		if err.Error() == errUserNotFound {
-			uc.logger.Warnf("password reset requested for non-existent email: %s", email)
-			return nil
-		}
-		uc.logger.Errorf("failed to retrieve user for forgot password: %v", err)
-		return errors.New(errInternalServer)
+		return fmt.Errorf("email not found: %w", err)
 	}
 
 	// Generate a password reset token/link
-	resetToken, err := uc.jwtService.GeneratePasswordResetToken(user.ID)
+	resetToken, err := uc.randomGenerator.GenerateRandomToken(32)
 	if err != nil {
-		uc.logger.Errorf("failed to generate password reset token: %v", err)
-		return errors.New("failed to initiate password reset")
+		return fmt.Errorf("failed to create password reset token: %w", err)
 	}
 
 	// Hash the token before storing it to match the schema
-	hashedResetToken := uc.hasher.HashString(resetToken)
+	hashedResetToken, err := bcrypt.GenerateFromPassword([]byte(resetToken), 7)
+	if err != nil {
+		return fmt.Errorf("failed to hash reset token: %w", err)
+	}
+	// generate verifier. it will be used to identify the reset token
+	verifier, err := uc.randomGenerator.GenerateRandomToken(16)
+	if err != nil {
+		return fmt.Errorf("failed to generate verifier: %w", err)
+	}
 
 	// Store the token
 	tokenEntity := &entity.Token{
 		ID:        uc.uuidGenerator.NewUUID(),
 		UserID:    user.ID,
 		TokenType: entity.TokenTypePasswordReset,
-		TokenHash: hashedResetToken,
-		ExpiresAt: time.Now().Add(uc.cfg.GetPasswordResetTokenExpiry()),
+		TokenHash: string(hashedResetToken),
+		ExpiresAt: time.Now().Add(uc.config.GetPasswordResetTokenExpiry()),
 		CreatedAt: time.Now(),
 		Revoke:    false,
 	}
@@ -364,8 +347,11 @@ func (uc *UserUsecase) ForgotPassword(ctx context.Context, email string) error {
 	}
 
 	// The reset link should use the unhashed token
-	resetLink := fmt.Sprintf("%s/reset-password?token=%s", uc.cfg.GetAppBaseURL(), resetToken)
-	if err := uc.mailService.SendPasswordResetEmail(user.Email, user.Username, resetLink); err != nil {
+	emailSubject := "Password Reset Request"
+	resetLink := fmt.Sprintf("%s/reset-password?verifier=%s&token=%s", uc.config.GetAppBaseURL(), verifier, resetToken)
+	emailBody := fmt.Sprintf("Hi %s,\n\nYou have requested to reset your password. Please click the following link to reset your password: %s\n\nIf you did not request this, please ignore this email.\n\nThanks,\nThe Team", user.Username, resetLink)
+
+	if err := uc.mailService.SendEmail(ctx, user.Email, emailSubject, emailBody); err != nil {
 		uc.logger.Errorf("failed to send password reset email to %s: %v", user.Email, err)
 		return errors.New("failed to send password reset email")
 	}
@@ -374,133 +360,47 @@ func (uc *UserUsecase) ForgotPassword(ctx context.Context, email string) error {
 }
 
 // ResetPassword handles the password reset flow using a password reset token.
-func (uc *UserUsecase) ResetPassword(ctx context.Context, resetToken, newPassword string) error {
-	// Parse the reset token to get the user claims.
-	claims, err := uc.jwtService.ParsePasswordResetToken(resetToken)
+func (uc *UserUsecase) ResetPassword(ctx context.Context, verifier, resetToken, newPassword string) error {
+	// check if the token exists using the verifier
+	token, err := uc.tokenRepo.GetTokenByVerifier(ctx, verifier)
 	if err != nil {
-		return fmt.Errorf("invalid or expired password reset token: %w", err)
+		return fmt.Errorf("invalid verifier and token doesnt exist: %w", err)
 	}
 
-	// Retrieve the stored token using the UserID from the claims.
-	storedToken, err := uc.tokenRepo.GetTokenByUserID(ctx, claims.UserID)
-	if err != nil {
-		if err.Error() == errTokenNotFound {
-			return errors.New("password reset token not found or invalidated")
+	// check if the token is expired
+	if time.Now().After(token.ExpiresAt) {
+		return fmt.Errorf("invalid token. it is expired")
+	}
+	// check if it is revoked
+	if token.Revoke {
+		return fmt.Errorf("invalid token. It is revoked")
+	}
+
+	// check if the token hash and plain rest token matchs
+	if err = bcrypt.CompareHashAndPassword([]byte(token.TokenHash), []byte(resetToken)); err != nil {
+		if err == bcrypt.ErrMismatchedHashAndPassword {
+			return fmt.Errorf("token doesnt match: %w", err)
 		}
-		uc.logger.Errorf("failed to retrieve stored reset token: %v", err)
-		return errors.New(errInternalServer)
-	}
-
-	// Check if the token has been revoked.
-	if storedToken.Revoke {
-		return errors.New("password reset token has been used or revoked")
-	}
-
-	// Check if the token has expired.
-	if storedToken.ExpiresAt.Before(time.Now()) {
-		// Delete the expired token to prevent future use.
-		_ = uc.tokenRepo.DeleteToken(ctx, storedToken.ID)
-		return errors.New("password reset token has expired")
-	}
-
-	// Validate the provided reset token against the stored hash.
-	if !uc.hasher.CheckHash(resetToken, storedToken.TokenHash) {
-		uc.logger.Warnf("password reset token hash mismatch for user %s", claims.UserID)
-		// Delete the stored token to prevent further attempts with an invalid token.
-		_ = uc.tokenRepo.DeleteToken(ctx, storedToken.ID)
-		return errors.New("invalid password reset token")
+		return fmt.Errorf("failded to match the the hashed and plain token: %w", err)
 	}
 
 	// Hash the new password before updating the user.
-	hashedNewPassword, err := uc.hasher.HashPassword(newPassword)
+	hashedPassword, err := uc.hasher.HashPassword(newPassword)
 	if err != nil {
-		uc.logger.Errorf("failed to hash new password: %v", err)
-		return errors.New("failed to update password")
+		return fmt.Errorf("failed to hash new password: %v", err)
 	}
 
 	// Update the user's password.
-	if err := uc.userRepo.UpdateUserPassword(ctx, claims.UserID, hashedNewPassword); err != nil {
-		uc.logger.Errorf("failed to update password for user %s: %v", claims.UserID, err)
-		return errors.New("failed to update password")
+	if err = uc.userRepo.UpdateUserPassword(ctx, token.UserID, hashedPassword); err != nil {
+		return fmt.Errorf("failed to update password for user %s: %v", token.UserID, err)
 	}
 
-	// Invalidate the password reset token by deleting it.
-	if err := uc.tokenRepo.DeleteToken(ctx, storedToken.ID); err != nil {
-		uc.logger.Errorf("failed to delete used password reset token for user %s: %v", claims.UserID, err)
+	// revoke the password reset token
+	if err = uc.tokenRepo.RevokeToken(ctx, token.ID); err != nil {
+		return fmt.Errorf("failed to revoke reset password")
 	}
 
 	// Return success, confirming the change.
-	return nil
-}
-
-// VerifyEmail handles the email verification process.
-func (uc *UserUsecase) VerifyEmail(ctx context.Context, token string) error {
-	// Parse the email verification token to get the user claims.
-	claims, err := uc.jwtService.ParseEmailVerificationToken(token)
-	if err != nil {
-		return fmt.Errorf("invalid or expired email verification token: %w", err)
-	}
-
-	// Retrieve the stored email verification token using the UserID from the claims.
-	storedEmailToken, err := uc.emailVerificationTokenRepo.GetEmailVerificationTokenByUserID(ctx, claims.UserID)
-	if err != nil {
-		if err.Error() == errTokenNotFound {
-			return errors.New("email verification token not found or invalidated")
-		}
-		uc.logger.Errorf("failed to retrieve stored email verification token: %v", err)
-		return errors.New(errInternalServer)
-	}
-
-	// Check if the token has already been used.
-	if storedEmailToken.Used {
-		return errors.New("email verification token has already been used")
-	}
-
-	// Check if the token has expired.
-	if storedEmailToken.ExpiresAt.Before(time.Now()) {
-		// Mark the token as used/expired to prevent future use.
-		_ = uc.emailVerificationTokenRepo.UpdateEmailVerificationTokenUsedStatus(ctx, storedEmailToken.ID, true)
-		return errors.New("email verification token has expired")
-	}
-
-	// Validate the provided token against the stored hash.
-	if !uc.hasher.CheckHash(token, storedEmailToken.TokenHash) {
-		uc.logger.Warnf("email verification token hash mismatch for user %s", claims.UserID)
-		// Mark the token as used/invalid to prevent further attempts.
-		_ = uc.emailVerificationTokenRepo.UpdateEmailVerificationTokenUsedStatus(ctx, storedEmailToken.ID, true)
-		return errors.New("invalid email verification token")
-	}
-
-	// Retrieve the user.
-	user, err := uc.userRepo.GetUserByID(ctx, claims.UserID)
-	if err != nil {
-		if err.Error() == errUserNotFound {
-			return errors.New("user not found for verification")
-		}
-		uc.logger.Errorf("failed to retrieve user for email verification: %v", err)
-		return errors.New(errInternalServer)
-	}
-
-	// Check if the user is already active.
-	if user.IsActive {
-		// Mark the token as used even if user is already active.
-		_ = uc.emailVerificationTokenRepo.UpdateEmailVerificationTokenUsedStatus(ctx, storedEmailToken.ID, true)
-		return errors.New("email already verified")
-	}
-
-	// Activate the user's account.
-	user.IsActive = true
-	_, err = uc.userRepo.UpdateUser(ctx, user)
-	if err != nil {
-		uc.logger.Errorf("failed to activate user %s: %v", user.ID, err)
-		return errors.New("failed to activate account")
-	}
-
-	// Mark the email verification token as used after successful verification.
-	if err := uc.emailVerificationTokenRepo.UpdateEmailVerificationTokenUsedStatus(ctx, storedEmailToken.ID, true); err != nil {
-		uc.logger.Errorf("failed to mark email verification token %s as used: %v", storedEmailToken.ID, err)
-	}
-
 	return nil
 }
 
@@ -525,9 +425,9 @@ func (uc *UserUsecase) Logout(ctx context.Context, refreshToken string) error {
 	}
 
 	// Delete the token from the database.
-	if err := uc.tokenRepo.DeleteToken(ctx, storedToken.ID); err != nil {
-		uc.logger.Errorf("failed to delete refresh token for user %s: %v", claims.UserID, err)
-		return errors.New("failed to delete token")
+	if err := uc.tokenRepo.RevokeToken(ctx, storedToken.ID); err != nil {
+		uc.logger.Errorf("failed to revoke refresh token for user %s: %v", claims.UserID, err)
+		return errors.New("failed to revoke token")
 	}
 
 	return nil
@@ -718,7 +618,7 @@ func (uc *UserUsecase) LoginWithOAuth(ctx context.Context, firstName, lastName, 
 		return "", "", errors.New("failed to generate token")
 	}
 
-	refreshTokenExpiry := uc.cfg.GetRefreshTokenExpiry()
+	refreshTokenExpiry := uc.config.GetRefreshTokenExpiry()
 	if refreshTokenExpiry <= 0 {
 		uc.logger.Errorf("invalid refresh token expiry configuration: %v", refreshTokenExpiry)
 		return "", "", errors.New("invalid refresh token expiry configuration")

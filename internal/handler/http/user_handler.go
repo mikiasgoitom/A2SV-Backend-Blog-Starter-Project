@@ -12,7 +12,6 @@ import (
 // UserHandlerInterface defines the methods for user handler to allow interface-based dependency injection (for testing/mocking)
 type UserHandlerInterface interface {
 	CreateUser(*gin.Context)
-	VerifyEmail(*gin.Context)
 	Login(*gin.Context)
 	GetUser(*gin.Context)
 	GetCurrentUser(*gin.Context)
@@ -50,23 +49,6 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	}
 
 	MessageHandler(c, http.StatusCreated, "User created successfully. Please check your email to verify your account.")
-}
-
-// VerifyEmail handles email verification
-func (h *UserHandler) VerifyEmail(c *gin.Context) {
-	var req dto.VerifyEmailRequest
-	if err := BindAndValidate(c, &req); err != nil {
-		ErrorHandler(c, http.StatusBadRequest, "Bad Request, Please try again.")
-		return
-	}
-
-	err := h.userUsecase.VerifyEmail(c.Request.Context(), req.Token)
-	if err != nil {
-		ErrorHandler(c, http.StatusBadRequest, "Invalid or expired verification token")
-		return
-	}
-
-	MessageHandler(c, http.StatusOK, "Email verified successfully. You can now log in.")
 }
 
 // Login handles user authentication
@@ -169,8 +151,16 @@ func (h *UserHandler) ResetPassword(c *gin.Context) {
 		ErrorHandler(c, http.StatusBadRequest, "Invalid or Bad request")
 		return
 	}
+	if req.Token == "" || req.Password == "" || req.Verifier == "" {
+		ErrorHandler(c, http.StatusBadRequest, "Invalid or missing token/password/verifier")
+		return
+	}
+	if len(req.Password) < 8 {
+		ErrorHandler(c, http.StatusBadRequest, "Password must be at least 8 characters long")
+		return
+	}
 
-	err := h.userUsecase.ResetPassword(c.Request.Context(), req.Token, req.Password)
+	err := h.userUsecase.ResetPassword(c.Request.Context(), req.Verifier, req.Token, req.Password)
 	if err != nil {
 		ErrorHandler(c, http.StatusBadRequest, "Invalid or expired reset token")
 		return

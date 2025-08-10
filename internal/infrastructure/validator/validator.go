@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
+	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
 )
 
 // AppValidator implements the usecase.Validator interface.
@@ -17,7 +17,7 @@ type AppValidator struct {
 }
 
 // NewValidator creates a new validator that implements the usecase.Validator interface.
-func NewValidator() usecase.Validator {
+func NewValidator() usecasecontract.IValidator {
 	v := validator.New()
 	return &AppValidator{validate: v}
 }

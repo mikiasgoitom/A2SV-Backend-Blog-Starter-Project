@@ -1,11 +1,10 @@
 package config
 
 import (
+	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase"
 )
 
 // Config holds application configuration values.
@@ -18,7 +17,7 @@ type Config struct {
 }
 
 // NewConfig creates a new Config instance, loading values from environment variables.
-func NewConfig() usecase.ConfigProvider {
+func NewConfig() usecasecontract.IConfigProvider {
 	return &Config{
 		SendActivationEmail:          getEnvAsBool("SEND_ACTIVATION_EMAIL", false),
 		AppBaseURL:                   getEnv("APP_BASE_URL", "http://localhost:8080"),

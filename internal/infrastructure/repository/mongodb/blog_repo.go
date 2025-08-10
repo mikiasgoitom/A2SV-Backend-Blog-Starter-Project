@@ -23,11 +23,11 @@ type BlogRepository struct {
 }
 
 // NewBlogRepository creates and returns a new BlogRepository instance.
-func NewBlogRepository(db *mongo.Database) *BlogRepository {
+func NewBlogRepository(db *mongo.Database, user *mongo.Collection) *BlogRepository {
 	return &BlogRepository{
 		collection:          db.Collection("blogs"),
 		blogTagsCollection:  db.Collection("blog_tags"),
-		usersCollection:     db.Collection("users"),
+		usersCollection:     user,
 		blogViewsCollection: db.Collection("blog_views"),
 	}
 }
