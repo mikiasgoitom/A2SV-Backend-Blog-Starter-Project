@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"sync/atomic"
+	"sync/atomic"
 	"time"
 
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
@@ -31,6 +32,15 @@ type IBlogUseCase interface {
 
 // BlogUseCaseImpl implements the BlogUseCase interface
 type BlogUseCaseImpl struct {
+	blogRepo  contract.IBlogRepository
+	uuidgen   contract.IUUIDGenerator
+	logger    usecasecontract.IAppLogger
+	blogCache contract.IBlogCache
+	// simple metrics
+	detailHits uint64
+	detailMiss uint64
+	listHits   uint64
+	listMiss   uint64
 	blogRepo  contract.IBlogRepository
 	uuidgen   contract.IUUIDGenerator
 	logger    usecasecontract.IAppLogger
@@ -71,8 +81,29 @@ func buildBlogsListCacheKey(page, pageSize int, sortBy string, sortOrder string,
 	}
 	return fmt.Sprintf("blogs:list:p=%d:s=%d:sb=%s:so=%s:df=%s:dt=%s", page, pageSize, sortBy, sortOrder, df, dt)
 }
+// check if BlogUseCaseImpl implements the IBlogUseCase
+var _ IBlogUseCase = (*BlogUseCaseImpl)(nil)
+
+// separate blog instance for blogCache injection
+func (uc *BlogUseCaseImpl) SetBlogCache(cache contract.IBlogCache) {
+	uc.blogCache = cache
+}
+
+// buildBlogsListCacheKey builds a stable key for list endpoint caching
+func buildBlogsListCacheKey(page, pageSize int, sortBy string, sortOrder string, dateFrom, dateTo *time.Time) string {
+	df := ""
+	dt := ""
+	if dateFrom != nil {
+		df = dateFrom.UTC().Format(time.RFC3339)
+	}
+	if dateTo != nil {
+		dt = dateTo.UTC().Format(time.RFC3339)
+	}
+	return fmt.Sprintf("blogs:list:p=%d:s=%d:sb=%s:so=%s:df=%s:dt=%s", page, pageSize, sortBy, sortOrder, df, dt)
+}
 
 // CreateBlog creates a new blog post
+func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status entity.BlogStatus, featuredImageID *string, tags []string) (*entity.Blog, error) {
 func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status entity.BlogStatus, featuredImageID *string, tags []string) (*entity.Blog, error) {
 	if title == "" {
 		return nil, errors.New("title is required")
@@ -104,10 +135,12 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 		DislikeCount:    0,
 		CommentCount:    0,
 		Popularity:      utils.CalculatePopularity(0, 0, 0, 0),
+		Popularity:      utils.CalculatePopularity(0, 0, 0, 0),
 		FeaturedImageID: featuredImageID,
 		IsDeleted:       false,
 	}
 
+	if status == entity.BlogStatusPublished {
 	if status == entity.BlogStatusPublished {
 		now := time.Now()
 		blog.PublishedAt = &now
@@ -126,6 +159,10 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 		}
 	}
 
+	// Invalidate list caches after creating a blog
+	if uc.blogCache != nil {
+		_ = uc.blogCache.InvalidateBlogLists(ctx)
+	}
 	// Invalidate list caches after creating a blog
 	if uc.blogCache != nil {
 		_ = uc.blogCache.InvalidateBlogLists(ctx)
@@ -184,10 +221,14 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 
 	// Only return published or archived blogs (not drafts)
 	dbStart := time.Now()
+	dbStart := time.Now()
 	blogs, totalCount, err := uc.blogRepo.GetBlogs(ctx, filterOptions)
 	if err != nil {
 		uc.logger.Errorf("failed to get blogs: %v", err)
 		return nil, 0, 0, 0, fmt.Errorf("failed to get blogs: %w", err)
+	}
+	if uc.logger != nil {
+		uc.logger.Infof("db fetch: blogs list page=%d size=%d took=%s", page, pageSize, time.Since(dbStart))
 	}
 	if uc.logger != nil {
 		uc.logger.Infof("db fetch: blogs list page=%d size=%d took=%s", page, pageSize, time.Since(dbStart))
@@ -259,6 +300,9 @@ func (uc *BlogUseCaseImpl) GetBlogDetail(ctx context.Context, slug string) (enti
 	if uc.logger != nil {
 		uc.logger.Infof("db fetch: blog detail slug=%s took=%s", slug, time.Since(dbStart))
 	}
+	if uc.logger != nil {
+		uc.logger.Infof("db fetch: blog detail slug=%s took=%s", slug, time.Since(dbStart))
+	}
 	if blog == nil || blog.IsDeleted {
 		return entity.Blog{}, errors.New("blog not found")
 	}
@@ -271,10 +315,16 @@ func (uc *BlogUseCaseImpl) GetBlogDetail(ctx context.Context, slug string) (enti
 	if uc.blogCache != nil {
 		_ = uc.blogCache.SetBlogBySlug(ctx, slug, blog)
 	}
+
+	// Set cache on successful DB fetch
+	if uc.blogCache != nil {
+		_ = uc.blogCache.SetBlogBySlug(ctx, slug, blog)
+	}
 	return *blog, nil
 }
 
 // UpdateBlog updates an existing blog post
+func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, status *entity.BlogStatus, featuredImageID *string) (*entity.Blog, error) {
 func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, status *entity.BlogStatus, featuredImageID *string) (*entity.Blog, error) {
 	if blogID == "" {
 		return nil, errors.New("blog ID is required")
@@ -300,6 +350,7 @@ func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID stri
 
 	updates := make(map[string]interface{})
 	oldSlug := blog.Slug
+	oldSlug := blog.Slug
 
 	if title != nil {
 		updates["title"] = *title
@@ -312,6 +363,8 @@ func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID stri
 	}
 
 	if status != nil {
+		updates["status"] = *status
+		if *status == entity.BlogStatusPublished && blog.PublishedAt == nil {
 		updates["status"] = *status
 		if *status == entity.BlogStatusPublished && blog.PublishedAt == nil {
 			now := time.Now()
@@ -336,6 +389,18 @@ func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID stri
 	if err != nil {
 		uc.logger.Errorf("failed to get updated blog: %v", err)
 		return nil, fmt.Errorf("failed to get updated blog: %w", err)
+	}
+
+	// Invalidate caches after update
+	if uc.blogCache != nil {
+		_ = uc.blogCache.InvalidateBlogLists(ctx)
+		if updatedBlog != nil && updatedBlog.Slug != "" {
+			_ = uc.blogCache.InvalidateBlogBySlug(ctx, updatedBlog.Slug)
+		}
+		// If slug changed, invalidate the old slug key as well
+		if oldSlug != "" && updatedBlog != nil && updatedBlog.Slug != oldSlug {
+			_ = uc.blogCache.InvalidateBlogBySlug(ctx, oldSlug)
+		}
 	}
 
 	// Invalidate caches after update
@@ -389,6 +454,14 @@ func (uc *BlogUseCaseImpl) DeleteBlog(ctx context.Context, blogID, userID string
 		}
 	}
 
+	// Invalidate caches after delete
+	if uc.blogCache != nil {
+		_ = uc.blogCache.InvalidateBlogLists(ctx)
+		if blog.Slug != "" {
+			_ = uc.blogCache.InvalidateBlogBySlug(ctx, blog.Slug)
+		}
+	}
+
 	return true, nil
 }
 
@@ -431,8 +504,37 @@ func (uc *BlogUseCaseImpl) TrackBlogView(ctx context.Context, blogID, userID, ip
 		// Already viewed recently: return sentinel error for handler
 		uc.logger.Infof("User %s or IP %s already viewed blog %s recently", userID, ipAddress, blogID)
 		return errors.New("already viewed recently")
+		// Already viewed recently: return sentinel error for handler
+		uc.logger.Infof("User %s or IP %s already viewed blog %s recently", userID, ipAddress, blogID)
+		return errors.New("already viewed recently")
 	}
 
+	// 3. Advanced Velocity & Rotation Checks (using Redis cache)
+	const (
+		maxIpVelocity     = 10      // max 10 views from one IP in 5 mins
+		ipVelocityTTL     = 5 * 60  // 5 minutes in seconds
+		maxUserIPs        = 5       // max 5 different IPs for one user in 1 hour
+		userIPRotationTTL = 60 * 60 // 60 minutes in seconds
+	)
+	if uc.blogCache != nil {
+		// IP velocity check: Has this IP viewed too many different blogs in the last 5 minutes?
+		// Add this view to the IP's recent views set
+		_ = uc.blogCache.AddRecentViewByIP(ctx, ipAddress, blogID, int64(ipVelocityTTL))
+		ipViewCount, err := uc.blogCache.GetRecentViewCountByIP(ctx, ipAddress)
+		if err == nil {
+			if ipViewCount > int64(maxIpVelocity) {
+				uc.logger.Warningf("High IP velocity detected for %s. Views: %d", ipAddress, ipViewCount)
+				return fmt.Errorf("exceeded view velocity limit: too many views from this IP recently")
+			}
+		} else {
+			// Redis failed, fallback to DB
+			shortWindow := time.Now().Add(-5 * time.Minute)
+			ipViews, dbErr := uc.blogRepo.GetRecentViewsByIP(ctx, ipAddress, shortWindow)
+			if dbErr == nil && len(ipViews) > maxIpVelocity {
+				uc.logger.Warningf("[DB Fallback] High IP velocity detected for %s. Views: %d", ipAddress, len(ipViews))
+				return fmt.Errorf("exceeded view velocity limit: too many views from this IP recently")
+			}
+		}
 	// 3. Advanced Velocity & Rotation Checks (using Redis cache)
 	const (
 		maxIpVelocity     = 10      // max 10 views from one IP in 5 mins
@@ -486,8 +588,35 @@ func (uc *BlogUseCaseImpl) TrackBlogView(ctx context.Context, blogID, userID, ip
 				}
 			}
 		}
+		// User-IP rotation check: Has this user account used too many IPs in the last 1 hour?
+		// Add this IP to the user's recent IPs set
+		if userID != "" {
+			_ = uc.blogCache.AddRecentViewByUser(ctx, userID, ipAddress, int64(userIPRotationTTL))
+			userIPCount, err := uc.blogCache.GetRecentIPCountByUser(ctx, userID)
+			if err == nil {
+				if userIPCount > int64(maxUserIPs) {
+					uc.logger.Warningf("High IP rotation detected for user %s. IPs used: %d", userID, userIPCount)
+					return fmt.Errorf("exceeded IP rotation limit: too many IPs used by this user recently")
+				}
+			} else {
+				// Redis failed, fallback to DB
+				mediumWindow := time.Now().Add(-60 * time.Minute)
+				userViews, dbErr := uc.blogRepo.GetRecentViewsByUser(ctx, userID, mediumWindow)
+				if dbErr == nil {
+					ipSet := make(map[string]struct{})
+					for _, view := range userViews {
+						ipSet[view.IPAddress] = struct{}{}
+					}
+					if len(ipSet) > maxUserIPs {
+						uc.logger.Warningf("[DB Fallback] High IP rotation detected for user %s. IPs used: %d", userID, len(ipSet))
+						return fmt.Errorf("exceeded IP rotation limit: too many IPs used by this user recently")
+					}
+				}
+			}
+		}
 	}
 
+	// If all checks pass, increment the view count and record the view on the DB
 	// If all checks pass, increment the view count and record the view on the DB
 	if err := uc.blogRepo.IncrementViewCount(ctx, blogID); err != nil {
 		uc.logger.Errorf("failed to increment view count: %v", err)
@@ -597,6 +726,7 @@ func (uc *BlogUseCaseImpl) UpdateBlogPopularity(ctx context.Context, blogID stri
 	if err != nil {
 		return err
 	}
+	popularity := utils.CalculatePopularity(views, likes, dislikes, comments)
 	popularity := utils.CalculatePopularity(views, likes, dislikes, comments)
 	updates := map[string]interface{}{"popularity": popularity}
 	return uc.blogRepo.UpdateBlog(ctx, blogID, updates)

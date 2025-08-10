@@ -8,6 +8,7 @@ import (
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/utils"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/utils"
 )
 
 // ErrReactionNotFound is returned when a reaction is not found in the database.
@@ -75,6 +76,7 @@ func (u *LikeUsecase) ToggleLike(ctx context.Context, userID, targetID string, t
 				comments = blog.CommentCount
 			}
 			popularity := utils.CalculatePopularity(views, int(likes), int(dislikes), comments)
+			popularity := utils.CalculatePopularity(views, int(likes), int(dislikes), comments)
 			updates := map[string]interface{}{
 				"like_count":    likes,
 				"dislike_count": dislikes,
@@ -91,6 +93,7 @@ func (u *LikeUsecase) ToggleDislike(ctx context.Context, userID, targetID string
 	existingReaction, err := u.likeRepo.GetReactionByUserIDAndTargetID(ctx, userID, targetID)
 	if err != nil {
 		if errors.Is(err, ErrReactionNotFound) || (err != nil && err.Error() == "reaction not found") {
+		if errors.Is(err, ErrReactionNotFound) || (err != nil && err.Error() == "reaction not found") {
 			existingReaction = nil
 		} else {
 			return fmt.Errorf("failed to retrieve existing reaction: %w", err)
@@ -104,9 +107,15 @@ func (u *LikeUsecase) ToggleDislike(ctx context.Context, userID, targetID string
 			if resultErr != nil {
 				return fmt.Errorf("failed to delete dislike reaction: %w", resultErr)
 			}
+			if resultErr != nil {
+				return fmt.Errorf("failed to delete dislike reaction: %w", resultErr)
+			}
 		} else {
 			existingReaction.Type = entity.LIKE_TYPE_DISLIKE
 			resultErr = u.likeRepo.CreateReaction(ctx, existingReaction)
+			if resultErr != nil {
+				return fmt.Errorf("failed to change like to dislike: %w", resultErr)
+			}
 			if resultErr != nil {
 				return fmt.Errorf("failed to change like to dislike: %w", resultErr)
 			}
@@ -119,6 +128,9 @@ func (u *LikeUsecase) ToggleDislike(ctx context.Context, userID, targetID string
 			Type:       entity.LIKE_TYPE_DISLIKE,
 		}
 		resultErr = u.likeRepo.CreateReaction(ctx, newDislike)
+		if resultErr != nil {
+			return fmt.Errorf("failed to create dislike reaction: %w", resultErr)
+		}
 		if resultErr != nil {
 			return fmt.Errorf("failed to create dislike reaction: %w", resultErr)
 		}
@@ -154,6 +166,7 @@ func (u *LikeUsecase) ToggleDislike(ctx context.Context, userID, targetID string
 			}
 		}(ctx, targetID)
 	}
+	return nil
 	return nil
 }
 
