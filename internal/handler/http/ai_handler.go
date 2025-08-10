@@ -32,16 +32,16 @@ type SuggestAndModifyRequest struct {
 func (h *AIHandler) HandleBlogContentGeneration(ctx *gin.Context) {
 	requestCtx := ctx.Request.Context()
 	var req GenerateBlogRequest
-       if err := ctx.ShouldBindJSON(&req); err != nil {
-	       ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("failed to read the generate request: %v", err)})
-	       return
-       }
-       generatedBlog, err := h.AIUseCase.GenerateBlogContent(requestCtx, req.Keywords)
-       if err != nil {
-	       ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to generate blog content: %v", err)})
-	       return
-       }
-       ctx.JSON(http.StatusOK, gin.H{"message": "successfully generated blog\n" + generatedBlog})
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("failed to read the generate request: %v", err)})
+		return
+	}
+	generatedBlog, err := h.AIUseCase.GenerateBlogContent(requestCtx, req.Keywords)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to generate blog content: %v", err)})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "successfully generated blog\n" + generatedBlog})
 
 }
 
@@ -49,14 +49,14 @@ func (h *AIHandler) HandleBlogContentGeneration(ctx *gin.Context) {
 func (h *AIHandler) HandleSuggestAndModifyContent(ctx *gin.Context) {
 	requestCtx := ctx.Request.Context()
 	var req SuggestAndModifyRequest
-       if err := ctx.ShouldBindJSON(&req); err != nil {
-	       ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("failed to read the generate request: %v", err)})
-	       return
-       }
-       generatedBlog, err := h.AIUseCase.SuggestAndModifyContent(requestCtx, req.Keywords, req.Blog)
-       if err != nil {
-	       ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to generate blog content: %v", err)})
-	       return
-       }
-       ctx.JSON(http.StatusOK, gin.H{"message": "successfully generated blog\n" + generatedBlog})
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("failed to read the generate request: %v", err)})
+		return
+	}
+	generatedBlog, err := h.AIUseCase.SuggestAndModifyContent(requestCtx, req.Keywords, req.Blog)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to generate blog content: %v", err)})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "successfully generated blog\n" + generatedBlog})
 }

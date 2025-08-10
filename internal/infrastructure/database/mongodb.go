@@ -85,7 +85,7 @@ func createIndexes(ctx context.Context, db *mongo.Database) error {
 
 	// Index for blogs._id (for fast lookup by blog id)
 	blogIDIndex := mongo.IndexModel{
-		Keys:    bson.M{"_id": 1},
+		Keys: bson.M{"_id": 1},
 	}
 	_, err = blogsCollection.Indexes().CreateOne(ctx, blogIDIndex)
 	if err != nil {
