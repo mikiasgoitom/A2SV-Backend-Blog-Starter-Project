@@ -11,15 +11,15 @@ import (
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/metrics"
-	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/utils"
 	usecasecontract "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/usecase/contract"
+	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/utils"
 )
 
 // IBlogUseCase defines blog-related business logic
 type IBlogUseCase interface {
 	CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status entity.BlogStatus, featuredImageID *string, tags []string) (*entity.Blog, error)
 	GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder string, dateFrom *time.Time, dateTo *time.Time) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
-	GetBlogDetail(ctx context.Context, slug string) (blog entity.Blog, err error)
+	GetBlogDetail(cnt context.Context, slug string) (blog entity.Blog, err error)
 	UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, status *entity.BlogStatus, featuredImageID *string) (*entity.Blog, error)
 	DeleteBlog(ctx context.Context, blogID, userID string, isAdmin bool) (bool, error)
 	SearchAndFilterBlogs(ctx context.Context, query string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, maxViews *int, minLikes *int, maxLikes *int, authorID *string, page int, pageSize int) ([]entity.Blog, int, int, int, error)
@@ -144,8 +144,8 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 		elapsed := time.Since(t0)
 		if err == nil && found && cached != nil {
 			atomic.AddUint64(&uc.listHits, 1)
-			metrics.IncListHit()
-			metrics.AddHitDuration(elapsed.Seconds())
+			go metrics.IncListHit()
+			go metrics.AddHitDuration(elapsed.Seconds())
 			if uc.logger != nil {
 				uc.logger.Infof("cache hit: blogs list key=%s took=%s", key, elapsed)
 			}
@@ -157,8 +157,8 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 			return cached.Blogs, total, page, totalPages, nil
 		} else if err == nil && !found {
 			atomic.AddUint64(&uc.listMiss, 1)
-			metrics.IncListMiss()
-			metrics.AddMissDuration(elapsed.Seconds())
+			go metrics.IncListMiss()
+			go metrics.AddMissDuration(elapsed.Seconds())
 			if uc.logger != nil {
 				uc.logger.Infof("cache miss: blogs list key=%s took=%s", key, elapsed)
 			}
@@ -208,7 +208,7 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 	// If there is a cache miss before retuning save the results to the cache
 	if uc.blogCache != nil {
 		key := buildBlogsListCacheKey(page, pageSize, sortBy, sortOrder, dateFrom, dateTo)
-		_ = uc.blogCache.SetBlogsPage(ctx, key, &usecasecontract.CachedBlogsPage{Blogs: filteredBlogs, Total: int(totalCount)})
+		_ = uc.blogCache.SetBlogsPage(ctx, key, &contract.CachedBlogsPage{Blogs: filteredBlogs, Total: int(totalCount)})
 		if uc.logger != nil {
 			uc.logger.Infof("cache set: blogs list key=%s size=%d ttl=%s", key, len(filteredBlogs), 5*time.Minute)
 		}
@@ -230,8 +230,8 @@ func (uc *BlogUseCaseImpl) GetBlogDetail(ctx context.Context, slug string) (enti
 		elapsed := time.Since(t0)
 		if err == nil && found && cached != nil {
 			atomic.AddUint64(&uc.detailHits, 1)
-			metrics.IncDetailHit()
-			metrics.AddHitDuration(elapsed.Seconds())
+			go metrics.IncDetailHit()
+			go metrics.AddHitDuration(elapsed.Seconds())
 			if uc.logger != nil {
 				uc.logger.Infof("cache hit: blog detail slug=%s took=%s", slug, elapsed)
 			}
@@ -240,8 +240,8 @@ func (uc *BlogUseCaseImpl) GetBlogDetail(ctx context.Context, slug string) (enti
 			}
 		} else if err == nil && !found {
 			atomic.AddUint64(&uc.detailMiss, 1)
-			metrics.IncDetailMiss()
-			metrics.AddMissDuration(elapsed.Seconds())
+			go metrics.IncDetailMiss()
+			go metrics.AddMissDuration(elapsed.Seconds())
 			if uc.logger != nil {
 				uc.logger.Infof("cache miss: blog detail slug=%s took=%s", slug, elapsed)
 			}

@@ -137,11 +137,11 @@ func (r *TokenRepository) RevokeToken(ctx context.Context, id string) error {
 
 // GetTokenByUserID retrieves a token by user ID (string).
 func (r *TokenRepository) RevokeAllTokensForUser(ctx context.Context, userID string, tokenType entity.TokenType) error {
-       filter := bson.D{
-	       {Key: "user_id", Value: userID},
-	       {Key: "token_type", Value: string(tokenType)},
-	       {Key: "revoke", Value: false},
-       }
+	filter := bson.D{
+		{Key: "user_id", Value: userID},
+		{Key: "token_type", Value: string(tokenType)},
+		{Key: "revoke", Value: false},
+	}
 	update := bson.D{
 		{Key: "$set", Value: bson.M{"revoke": true}},
 	}

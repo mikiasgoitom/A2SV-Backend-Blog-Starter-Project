@@ -10,6 +10,7 @@ import (
 	handlerHttp "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http"
 	redisclient "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/cache"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/config"
+	database "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/database"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/external_services"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/jwt"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/logger"
@@ -39,7 +40,7 @@ func main() {
 	}
 
 	// Establish MongoDB connection
-	mongoClient, err := mongodb.NewMongoDBClient(mongoURI)
+	mongoClient, err := database.NewMongoDBClient(mongoURI)
 	if err != nil {
 		log.Fatalf("Failed to connect to MongoDB: %v", err)
 	}

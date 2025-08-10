@@ -16,8 +16,7 @@ const (
 )
 
 type IBlogUseCase interface {
-
-   CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status entity.BlogStatus, featuredImageID *string, tags []string) (*entity.Blog, error)
+	CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status entity.BlogStatus, featuredImageID *string, tags []string) (*entity.Blog, error)
 	GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder SortOrder, dateFrom *time.Time, dateTo *time.Time) ([]entity.Blog, int, int, int, error)
 	GetBlogDetail(ctx context.Context, slug string) (entity.Blog, error)
 	UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, status *entity.BlogStatus, featuredImageID *string) (*entity.Blog, error)

@@ -19,7 +19,7 @@ type BlogRepository struct {
 	collection          *mongo.Collection // For blog posts
 	usersCollection     *mongo.Collection // For accessing user data for search
 	blogViewsCollection *mongo.Collection // For tracking blog views
-	blogTagsCollection *mongo.Collection
+	blogTagsCollection  *mongo.Collection
 }
 
 // NewBlogRepository creates and returns a new BlogRepository instance.
