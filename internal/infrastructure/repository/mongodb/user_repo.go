@@ -103,13 +103,13 @@ func (r *MongoUserRepository) UpdateUserPassword(ctx context.Context, id string,
 }
 
 func (r *MongoUserRepository) DeleteUser(ctx context.Context, id string) error {
-	filter := bson.M{"id": id}
-	count, err := r.collection.DeleteOne(ctx, filter)
-	if err != nil {
-		return err
-	}
-	if count.DeletedCount == 0 {
-		return fmt.Errorf("failed to fetch user with id:%s", id)
-	}
-	return nil
+       filter := bson.M{"_id": id}
+       count, err := r.collection.DeleteOne(ctx, filter)
+       if err != nil {
+	       return err
+       }
+       if count.DeletedCount == 0 {
+	       return fmt.Errorf("failed to fetch user with id:%s", id)
+       }
+       return nil
 }
