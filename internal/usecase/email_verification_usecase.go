@@ -16,15 +16,17 @@ type EmailVerificationUseCase struct {
 	emailService    contract.IEmailService
 	RandomGenerator contract.IRandomGenerator
 	UUIDGenerator   contract.IUUIDGenerator
+	baseURL         string // Add baseURL for config
 }
 
-func NewEmailVerificationUseCase(tr contract.ITokenRepository, ur contract.IUserRepository, es contract.IEmailService, rg contract.IRandomGenerator, uuidgen contract.IUUIDGenerator) *EmailVerificationUseCase {
+func NewEmailVerificationUseCase(tr contract.ITokenRepository, ur contract.IUserRepository, es contract.IEmailService, rg contract.IRandomGenerator, uuidgen contract.IUUIDGenerator, baseURL string) *EmailVerificationUseCase {
 	return &EmailVerificationUseCase{
 		tokenRepository: tr,
 		userRepository:  ur,
 		emailService:    es,
 		RandomGenerator: rg,
 		UUIDGenerator:   uuidgen,
+		baseURL:         baseURL,
 	}
 }
 
@@ -37,17 +39,14 @@ func (eu *EmailVerificationUseCase) RequestVerificationEmail(ctx context.Context
 	if err != nil {
 		return fmt.Errorf("failed to creating token: %w", err)
 	}
-
-	tokenHash, err := bcrypt.GenerateFromPassword([]byte(plainToken), 5)
+	tokenHash, err := bcrypt.GenerateFromPassword([]byte(plainToken), bcrypt.DefaultCost)
 	if err != nil {
-		return fmt.Errorf("failed to hash token:%w", err)
+		return fmt.Errorf("failed to hash token: %w", err)
 	}
-
 	verifier, err := eu.RandomGenerator.GenerateRandomToken(16)
 	if err != nil {
 		return fmt.Errorf("failed to creating verifier: %w", err)
 	}
-
 	newToken := entity.Token{
 		ID:        eu.UUIDGenerator.NewUUID(),
 		UserID:    user.ID,
@@ -58,16 +57,12 @@ func (eu *EmailVerificationUseCase) RequestVerificationEmail(ctx context.Context
 		CreatedAt: time.Now().UTC(),
 		Revoke:    false,
 	}
-
 	if err = eu.tokenRepository.CreateToken(ctx, &newToken); err != nil {
 		return fmt.Errorf("failed to create token in db: %w", err)
 	}
-
-	verificationLink := fmt.Sprintf("http://localhost:8080/verify-email?verifier=%s&token=%s", verifier, plainToken)
-
+	verificationLink := fmt.Sprintf("%s/verify-email?verifier=%s&token=%s", eu.baseURL, verifier, plainToken)
 	emailSubject := "Verify your email address"
 	emailBody := fmt.Sprintf("Hello %s\n, please click the following link to verify your email address: %s", user.Username, verificationLink)
-
 	if err = eu.emailService.SendEmail(ctx, user.Email, emailSubject, emailBody); err != nil {
 		return fmt.Errorf("failed to send verification email: %w", err)
 	}
@@ -79,15 +74,14 @@ func (eu *EmailVerificationUseCase) VerifyEmailToken(ctx context.Context, verifi
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch token or invalid token: %w", err)
 	}
-
 	// check it token isnt expired
 	if time.Now().After(token.ExpiresAt) {
 		eu.tokenRepository.RevokeToken(ctx, token.ID)
-		return nil, fmt.Errorf("expired token: %w", err)
+		return nil, fmt.Errorf("expired token")
 	}
 	// check if token is revoked
 	if token.Revoke {
-		return nil, fmt.Errorf("token has been revoked: %w", err)
+		return nil, fmt.Errorf("token has been revoked")
 	}
 	// chech if the plaintoken and the hashed token match
 	if err = bcrypt.CompareHashAndPassword([]byte(token.TokenHash), []byte(plainToken)); err != nil {
@@ -103,15 +97,13 @@ func (eu *EmailVerificationUseCase) VerifyEmailToken(ctx context.Context, verifi
 	}
 	// check if user is already verified
 	if user.IsVerified {
-		return nil, fmt.Errorf("user is already verified: %w", err)
+		return nil, fmt.Errorf("user is already verified")
 	}
 	user.IsVerified = true
-
 	// update user
 	if _, err = eu.userRepository.UpdateUser(ctx, user); err != nil {
 		return nil, fmt.Errorf("failed to update user verification status: %w", err)
 	}
-
 	// revoke token
 	if err = eu.tokenRepository.RevokeToken(ctx, token.ID); err != nil {
 		return nil, fmt.Errorf("failed to revoke token after user is verified: %w", err)
