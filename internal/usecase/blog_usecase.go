@@ -208,7 +208,7 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 	// If there is a cache miss before retuning save the results to the cache
 	if uc.blogCache != nil {
 		key := buildBlogsListCacheKey(page, pageSize, sortBy, sortOrder, dateFrom, dateTo)
-		_ = uc.blogCache.SetBlogsPage(ctx, key, &usecasecontract.CachedBlogsPage{Blogs: filteredBlogs, Total: int(totalCount)})
+		_ = uc.blogCache.SetBlogsPage(ctx, key, &contract.CachedBlogsPage{Blogs: filteredBlogs, Total: int(totalCount)})
 		if uc.logger != nil {
 			uc.logger.Infof("cache set: blogs list key=%s size=%d ttl=%s", key, len(filteredBlogs), 5*time.Minute)
 		}
