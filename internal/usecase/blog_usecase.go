@@ -19,7 +19,7 @@ import (
 type IBlogUseCase interface {
 	CreateBlog(ctx context.Context, title, content string, authorID string, slug string, status entity.BlogStatus, featuredImageID *string, tags []string) (*entity.Blog, error)
 	GetBlogs(ctx context.Context, page, pageSize int, sortBy string, sortOrder string, dateFrom *time.Time, dateTo *time.Time) (blogs []entity.Blog, totalCount int, currentPage int, totalPages int, err error)
-	GetBlogDetail(cnt context.Context, slug string) (blog entity.Blog, err error)
+	GetBlogDetail(ctx context.Context, slug string) (blog entity.Blog, err error)
 	UpdateBlog(ctx context.Context, blogID, authorID string, title *string, content *string, status *entity.BlogStatus, featuredImageID *string) (*entity.Blog, error)
 	DeleteBlog(ctx context.Context, blogID, userID string, isAdmin bool) (bool, error)
 	SearchAndFilterBlogs(ctx context.Context, query string, tags []string, dateFrom *time.Time, dateTo *time.Time, minViews *int, maxViews *int, minLikes *int, maxLikes *int, authorID *string, page int, pageSize int) ([]entity.Blog, int, int, int, error)
@@ -208,7 +208,7 @@ func (uc *BlogUseCaseImpl) GetBlogs(ctx context.Context, page, pageSize int, sor
 	// If there is a cache miss before retuning save the results to the cache
 	if uc.blogCache != nil {
 		key := buildBlogsListCacheKey(page, pageSize, sortBy, sortOrder, dateFrom, dateTo)
-		_ = uc.blogCache.SetBlogsPage(ctx, key, &contract.CachedBlogsPage{Blogs: filteredBlogs, Total: int(totalCount)})
+		_ = uc.blogCache.SetBlogsPage(ctx, key, &usecasecontract.CachedBlogsPage{Blogs: filteredBlogs, Total: int(totalCount)})
 		if uc.logger != nil {
 			uc.logger.Infof("cache set: blogs list key=%s size=%d ttl=%s", key, len(filteredBlogs), 5*time.Minute)
 		}
