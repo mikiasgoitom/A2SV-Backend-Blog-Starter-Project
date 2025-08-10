@@ -37,7 +37,7 @@ func NewLikeUsecase(likeRepo contract.ILikeRepository, blogRepo contract.IBlogRe
 func (u *LikeUsecase) ToggleLike(ctx context.Context, userID, targetID string, targetType entity.TargetType) error {
 	existingReaction, err := u.likeRepo.GetReactionByUserIDAndTargetID(ctx, userID, targetID)
 	if err != nil {
-		if errors.Is(err, ErrReactionNotFound) {
+		if errors.Is(err, ErrReactionNotFound) || err.Error() == "reaction not found" {
 			existingReaction = nil
 		} else {
 			return fmt.Errorf("failed to retrieve existing reaction: %w", err)
