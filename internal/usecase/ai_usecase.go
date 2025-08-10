@@ -68,3 +68,26 @@ Return only the revised blog content.`,
 	return modifiedContent, nil
 
 }
+
+func (uc *AIUseCase) CensorAndCheckBlog(ctx context.Context, blog string) (string, error) {
+	if strings.TrimSpace(blog) == "" {
+		return "", fmt.Errorf("failed to check content: empty blog provided")
+	}
+	prompt := fmt.Sprintf(
+		`You are a content moderator.
+Review the following blog post and respond with "yes" if it is appropriate and follows community guidelines, or "no" if it contains inappropriate content or violates guidelines.
+
+Here is the blog post:
+%s
+
+Respond only with "yes" or "no".`,
+		blog,
+	)
+	// call the ai service to generate content
+	feedback, err := uc.aiService.GenerateContent(ctx, prompt)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate content: %w", err)
+	}
+	return feedback, nil
+
+}
