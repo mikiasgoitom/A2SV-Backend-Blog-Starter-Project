@@ -259,7 +259,7 @@ func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, filterOp
 	}
 
 	// Apply conditional stages for author details
-	if sortStage.sortKey == "authorDetails" {
+	if strings.HasPrefix(sortStage.sortKey, "authorDetails.") {
 		pipeline = append(pipeline,
 			bson.D{{Key: "$lookup", Value: bson.M{
 				"from":         "users",
