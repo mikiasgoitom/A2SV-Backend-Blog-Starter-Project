@@ -102,6 +102,8 @@ func buildBlogFilterAndSort(opts *contract.BlogFilterOptions) (bson.M, *sortStag
 		sortKey = "view_count"
 	case "like_count":
 		sortKey = "like_count"
+	case "popularity":
+		sortKey = "popularity"
 	// New sorting logic for author-related fields, which requires a lookup
 	case "username", "first_name", "last_name":
 		sortKey = "authorDetails." + sortKey
