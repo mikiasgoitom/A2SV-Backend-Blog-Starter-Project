@@ -16,6 +16,7 @@ import (
 	passwordservice "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/password_service"
 	randomgenerator "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/random_generator"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/repository/mongodb"
+	database "github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/database"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/store"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/uuidgen"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/infrastructure/validator"
@@ -39,7 +40,7 @@ func main() {
 	}
 
 	// Establish MongoDB connection
-	mongoClient, err := mongodb.NewMongoDBClient(mongoURI)
+	mongoClient, err := database.NewMongoDBClient(mongoURI)
 	if err != nil {
 		log.Fatalf("Failed to connect to MongoDB: %v", err)
 	}
