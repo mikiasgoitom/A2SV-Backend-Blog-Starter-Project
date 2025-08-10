@@ -35,12 +35,13 @@ func (h *InteractionHandler) LikeBlogHandler(c *gin.Context) {
 		ErrorHandler(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	SuccessHandler(c, http.StatusOK, "Toggled like successfully")
-}
-
-// Unlike is handled by ToggleLike as well (idempotent)
-func (h *InteractionHandler) UnlikeBlogHandler(c *gin.Context) {
-	h.LikeBlogHandler(c)
+	// Determine the new state by checking if the user has liked the blog
+	reaction, _ := h.likeUsecase.GetUserReaction(c.Request.Context(), userIDStr, blogID)
+	if reaction != nil && reaction.Type == entity.LIKE_TYPE_LIKE {
+		SuccessHandler(c, http.StatusOK, "Blog liked successfully")
+	} else {
+		SuccessHandler(c, http.StatusOK, "Blog unliked successfully")
+	}
 }
 
 func (h *InteractionHandler) DislikeBlogHandler(c *gin.Context) {
@@ -74,10 +75,11 @@ func (h *InteractionHandler) DislikeBlogHandler(c *gin.Context) {
 		ErrorHandler(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	SuccessHandler(c, http.StatusOK, "Toggled dislike successfully")
-}
-
-// Undislike is handled by ToggleDislike as well (idempotent)
-func (h *InteractionHandler) UndislikeBlogHandler(c *gin.Context) {
-	h.DislikeBlogHandler(c)
+	// Determine the new state by checking if the user has disliked the blog
+	reaction, _ := h.likeUsecase.GetUserReaction(c.Request.Context(), userIDStr, blogID)
+	if reaction != nil && reaction.Type == entity.LIKE_TYPE_DISLIKE {
+		SuccessHandler(c, http.StatusOK, "Blog disliked successfully")
+	} else {
+		SuccessHandler(c, http.StatusOK, "Blog undisliked successfully")
+	}
 }
