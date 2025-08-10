@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
 	"go.mongodb.org/mongo-driver/bson"
@@ -30,61 +29,84 @@ func NewBlogRepository(db *mongo.Database) *BlogRepository {
 	}
 }
 
-// getSortOrder is a helper to convert sort order string to an integer.
-func getSortOrder(sortOrder string) int {
-	if sortOrder == "asc" {
-		return 1
-	}
-	return -1
+// sortStage is a helper struct for the sort pipeline stage.
+type sortStage struct {
+	sortKey   string
+	sortOrder bson.M
 }
 
-// buildBaseMatchFilter creates a bson.M filter from BlogFilterOptions.
-func buildBaseMatchFilter(opts *contract.BlogFilterOptions) bson.M {
-	baseMatch := bson.M{"is_deleted": false}
+// buildBlogFilterAndSort creates a BSON filter and a sort order based on BlogFilterOptions.
+func buildBlogFilterAndSort(opts *contract.BlogFilterOptions) (bson.M, *sortStage) {
+	filter := bson.M{"is_deleted": false}
 
-	if opts.DateFrom != nil || opts.DateTo != nil {
-		createdAtFilter := bson.M{}
-		if opts.DateFrom != nil {
-			createdAtFilter["$gte"] = *opts.DateFrom
-		}
-		if opts.DateTo != nil {
-			createdAtFilter["$lte"] = *opts.DateTo
-		}
-		baseMatch["created_at"] = createdAtFilter
+	// Filter by author ID
+	if opts.AuthorID != nil && *opts.AuthorID != "" {
+		filter["author_id"] = *opts.AuthorID
 	}
 
-	if opts.MinViews != nil || opts.MaxViews != nil {
-		viewCountFilter := bson.M{}
-		if opts.MinViews != nil {
-			viewCountFilter["$gte"] = *opts.MinViews
-		}
-		if opts.MaxViews != nil {
-			viewCountFilter["$lte"] = *opts.MaxViews
-		}
-		baseMatch["view_count"] = viewCountFilter
-	}
-
-	if opts.MinLikes != nil || opts.MaxLikes != nil {
-		likeCountFilter := bson.M{}
-		if opts.MinLikes != nil {
-			likeCountFilter["$gte"] = *opts.MinLikes
-		}
-		if opts.MaxLikes != nil {
-			likeCountFilter["$lte"] = *opts.MaxLikes
-		}
-		baseMatch["like_count"] = likeCountFilter
-	}
-
-	if opts.AuthorID != nil {
-		baseMatch["author_id"] = *opts.AuthorID
-	}
-
-	// Updated to handle embedded tags from BlogFilterOptions
+	// Filter by tags
 	if len(opts.TagIDs) > 0 {
-		baseMatch["tags"] = bson.M{"$in": opts.TagIDs}
+		filter["tags"] = bson.M{"$in": opts.TagIDs}
 	}
 
-	return baseMatch
+	// Filter by date range
+	dateFilter := bson.M{}
+	if opts.DateFrom != nil {
+		dateFilter["$gte"] = opts.DateFrom
+	}
+	if opts.DateTo != nil {
+		dateFilter["$lte"] = opts.DateTo
+	}
+	if len(dateFilter) > 0 {
+		filter["created_at"] = dateFilter
+	}
+
+	// Filter by view count range
+	viewFilter := bson.M{}
+	if opts.MinViews != nil {
+		viewFilter["$gte"] = *opts.MinViews
+	}
+	if opts.MaxViews != nil {
+		viewFilter["$lte"] = *opts.MaxViews
+	}
+	if len(viewFilter) > 0 {
+		filter["view_count"] = viewFilter
+	}
+
+	// Filter by like count range
+	likeFilter := bson.M{}
+	if opts.MinLikes != nil {
+		likeFilter["$gte"] = *opts.MinLikes
+	}
+	if opts.MaxLikes != nil {
+		likeFilter["$lte"] = *opts.MaxLikes
+	}
+	if len(likeFilter) > 0 {
+		filter["like_count"] = likeFilter
+	}
+
+	// Handle sorting
+	var sortOrder int = -1 // default desc
+	if opts.SortOrder == "asc" {
+		sortOrder = 1
+	}
+
+	sortKey := opts.SortBy
+	switch sortKey {
+	case "", "created_at":
+		sortKey = "created_at"
+	case "view_count":
+		sortKey = "view_count"
+	case "like_count":
+		sortKey = "like_count"
+	// New sorting logic for author-related fields, which requires a lookup
+	case "username", "first_name", "last_name":
+		sortKey = "authorDetails." + sortKey
+	default:
+		sortKey = "created_at"
+	}
+
+	return filter, &sortStage{sortKey: sortKey, sortOrder: bson.M{sortKey: sortOrder}}
 }
 
 // CreateBlog inserts a new blog post record into the database.
@@ -134,175 +156,147 @@ func (r *BlogRepository) GetBlogBySlug(ctx context.Context, slug string) (*entit
 }
 
 // GetBlogs retrieves a list of blog posts with filtering, sorting, and pagination options.
-func (r *BlogRepository) GetBlogs(ctx context.Context, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error) {
-	baseMatch := buildBaseMatchFilter(opts)
-	sortField := "created_at"
-	if opts.SortBy != "" {
-		sortField = opts.SortBy
+func (r *BlogRepository) GetBlogs(ctx context.Context, filterOptions *contract.BlogFilterOptions) ([]*entity.Blog, int64, error) {
+	filter, sortStage := buildBlogFilterAndSort(filterOptions)
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: filter}},
 	}
 
-	// Use $facet for efficient counting and pagination in a single query
-	facetStage := bson.M{
-		"$facet": bson.M{
-			"totalCount": bson.A{
-				bson.M{"$count": "total"},
-			},
-			"blogs": bson.A{
-				bson.M{"$sort": bson.M{sortField: getSortOrder(opts.SortOrder)}},
-				bson.M{"$skip": int64((opts.Page - 1) * opts.PageSize)},
-				bson.M{"$limit": int64(opts.PageSize)},
-			},
-		},
+	// Add conditional stages for author details and search when necessary
+	// This makes GetBlogs more flexible, addressing a point from the review
+	if filterOptions.AuthorID != nil || sortStage.sortKey == "authorDetails" {
+		pipeline = append(pipeline,
+			bson.D{{Key: "$lookup", Value: bson.M{
+				"from":         "users",
+				"localField":   "author_id",
+				"foreignField": "_id",
+				"as":           "authorDetails",
+			}}},
+			bson.D{{Key: "$unwind", Value: bson.M{
+				"path":                       "$authorDetails",
+				"preserveNullAndEmptyArrays": true,
+			}}},
+		)
 	}
 
-	pipeline := []bson.M{
-		{"$match": baseMatch},
-		facetStage,
+	// First, get the total count with a separate CountDocuments query
+	totalCount, err := r.collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get total blog count: %w", err)
 	}
+
+	// Apply sorting, skipping, and limiting to the pipeline
+	if sortStage.sortKey != "" {
+		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: sortStage.sortOrder}})
+	}
+	skip := int64((filterOptions.Page - 1) * filterOptions.PageSize)
+	limit := int64(filterOptions.PageSize)
+	pipeline = append(pipeline, bson.D{{Key: "$skip", Value: skip}})
+	pipeline = append(pipeline, bson.D{{Key: "$limit", Value: limit}})
 
 	cursor, err := r.collection.Aggregate(ctx, pipeline)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to aggregate blogs: %w", err)
+		return nil, 0, fmt.Errorf("failed to retrieve blogs: %w", err)
 	}
 	defer cursor.Close(ctx)
 
-	var facetResults []struct {
-		Blogs      []*entity.Blog `bson:"blogs"`
-		TotalCount []struct {
-			Total int64 `bson:"total"`
-		} `bson:"totalCount"`
+	var blogs []*entity.Blog
+	if err := cursor.All(ctx, &blogs); err != nil {
+		return nil, 0, fmt.Errorf("failed to decode blogs: %w", err)
 	}
 
-	if err = cursor.All(ctx, &facetResults); err != nil {
-		return nil, 0, fmt.Errorf("failed to decode facet results: %w", err)
-	}
-
-	if len(facetResults) == 0 {
-		return []*entity.Blog{}, 0, nil
-	}
-
-	total := int64(0)
-	if len(facetResults[0].TotalCount) > 0 {
-		total = facetResults[0].TotalCount[0].Total
-	}
-
-	return facetResults[0].Blogs, total, nil
+	return blogs, totalCount, nil
 }
 
-// UpdateBlog updates an existing blog post with new data.
+// UpdateBlog updates a blog with the provided fields.
 func (r *BlogRepository) UpdateBlog(ctx context.Context, blogID string, updates map[string]interface{}) error {
 	updates["updated_at"] = time.Now()
-	filter := bson.M{"_id": blogID, "is_deleted": false}
 	update := bson.M{"$set": updates}
+	filter := bson.M{"_id": blogID, "is_deleted": false}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return fmt.Errorf("failed to update blog post: %w", err)
+		return fmt.Errorf("failed to update blog: %w", err)
+	}
+
+	if res.MatchedCount == 0 {
+		return errors.New("blog post not found")
 	}
 	if res.ModifiedCount == 0 {
-		var blog entity.Blog
-		err := r.collection.FindOne(ctx, bson.M{"_id": blogID}).Decode(&blog)
-		if err != nil && errors.Is(err, mongo.ErrNoDocuments) {
-			return fmt.Errorf("blog post with ID %s not found", blogID)
-		}
-		return fmt.Errorf("blog post with ID %s was not modified (no new data to apply)", blogID)
+		return errors.New("blog post was not modified")
 	}
 
 	return nil
 }
 
+// DeleteBlog marks a blog as deleted.
 func (r *BlogRepository) DeleteBlog(ctx context.Context, blogID string) error {
-	filter := bson.M{"_id": blogID, "is_deleted": false}
 	update := bson.M{"$set": bson.M{"is_deleted": true, "updated_at": time.Now()}}
+	filter := bson.M{"_id": blogID, "is_deleted": false}
 
 	res, err := r.collection.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return fmt.Errorf("failed to delete blog post: %w", err)
+		return fmt.Errorf("failed to delete blog: %w", err)
 	}
-	if res.ModifiedCount == 0 {
-		var blog entity.Blog
-		err := r.collection.FindOne(ctx, bson.M{"_id": blogID}).Decode(&blog)
-		if err != nil && errors.Is(err, mongo.ErrNoDocuments) {
-			return fmt.Errorf("blog post with ID %s not found", blogID)
-		}
-		return fmt.Errorf("blog post with ID %s was not modified (possibly already deleted)", blogID)
+
+	if res.MatchedCount == 0 {
+		return errors.New("blog post not found")
 	}
 
 	return nil
 }
 
 // SearchBlogs searches for blog posts based on a query (title, author name, or author ID) and applies filter options.
-func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, opts *contract.BlogFilterOptions) ([]*entity.Blog, int64, error) {
-	baseMatch := buildBaseMatchFilter(opts)
+func (r *BlogRepository) SearchBlogs(ctx context.Context, query string, filterOptions *contract.BlogFilterOptions) ([]*entity.Blog, int64, error) {
+	// Build filter from options, but add the text search part
+	filter, sortStage := buildBlogFilterAndSort(filterOptions)
+	filter["$text"] = bson.M{"$search": query}
 
-	searchConditions := []bson.M{
-		{"title": bson.M{"$regex": query, "$options": "i"}},
-		{"authorDetails.username": bson.M{"$regex": query, "$options": "i"}},
-		{"authorDetails.first_name": bson.M{"$regex": query, "$options": "i"}},
-		{"authorDetails.last_name": bson.M{"$regex": query, "$options": "i"}},
+	// Create the aggregation pipeline
+	pipeline := mongo.Pipeline{
+		bson.D{{Key: "$match", Value: filter}},
 	}
 
-	if _, err := uuid.Parse(query); err == nil {
-		searchConditions = append(searchConditions, bson.M{"author_id": query})
+	// Apply conditional stages for author details
+	if sortStage.sortKey == "authorDetails" {
+		pipeline = append(pipeline,
+			bson.D{{Key: "$lookup", Value: bson.M{
+				"from":         "users",
+				"localField":   "author_id",
+				"foreignField": "_id",
+				"as":           "authorDetails",
+			}}},
+			bson.D{{Key: "$unwind", Value: "$authorDetails"}},
+		)
 	}
 
-	sortField := opts.SortBy
-	switch sortField {
-	case "":
-		sortField = "created_at"
-	case "username", "first_name", "last_name":
-		sortField = "authorDetails." + sortField
+	// First, get the total count for all matching documents
+	totalCount, err := r.collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get total search count: %w", err)
 	}
 
-	pipeline := []bson.M{
-		{"$match": baseMatch},
-		{"$lookup": bson.M{
-			"from":         "users",
-			"localField":   "author_id",
-			"foreignField": "_id",
-			"as":           "authorDetails",
-		}},
-		{"$unwind": "$authorDetails"},
-		{"$match": bson.M{"$or": searchConditions}},
-		{"$facet": bson.M{
-			"totalCount": bson.A{
-				bson.M{"$count": "total"},
-			},
-			"blogs": bson.A{
-				bson.M{"$sort": bson.M{sortField: getSortOrder(opts.SortOrder)}},
-				bson.M{"$skip": int64((opts.Page - 1) * opts.PageSize)},
-				bson.M{"$limit": int64(opts.PageSize)},
-			},
-		}},
+	// Apply sorting, skipping, and limiting to the pipeline
+	if sortStage.sortKey != "" {
+		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: sortStage.sortOrder}})
 	}
+	skip := int64((filterOptions.Page - 1) * filterOptions.PageSize)
+	limit := int64(filterOptions.PageSize)
+	pipeline = append(pipeline, bson.D{{Key: "$skip", Value: skip}})
+	pipeline = append(pipeline, bson.D{{Key: "$limit", Value: limit}})
 
 	cursor, err := r.collection.Aggregate(ctx, pipeline)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to aggregate search results: %w", err)
+		return nil, 0, fmt.Errorf("failed to retrieve search results: %w", err)
 	}
 	defer cursor.Close(ctx)
 
-	var facetResults []struct {
-		Blogs      []*entity.Blog `bson:"blogs"`
-		TotalCount []struct {
-			Total int64 `bson:"total"`
-		} `bson:"totalCount"`
+	var blogs []*entity.Blog
+	if err := cursor.All(ctx, &blogs); err != nil {
+		return nil, 0, fmt.Errorf("failed to decode search results: %w", err)
 	}
 
-	if err = cursor.All(ctx, &facetResults); err != nil {
-		return nil, 0, fmt.Errorf("failed to decode search results from facet: %w", err)
-	}
-
-	if len(facetResults) == 0 {
-		return []*entity.Blog{}, 0, nil
-	}
-
-	totalBlogs := int64(0)
-	if len(facetResults[0].TotalCount) > 0 {
-		totalBlogs = facetResults[0].TotalCount[0].Total
-	}
-
-	return facetResults[0].Blogs, totalBlogs, nil
+	return blogs, totalCount, nil
 }
 
 // IncrementViewCount increments the view count of a specific blog post.

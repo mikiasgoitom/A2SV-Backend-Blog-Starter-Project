@@ -19,7 +19,7 @@ type IBlogRepository interface {
 	IncrementViewCount(ctx context.Context, blogID string) error
 	IncrementLikeCount(ctx context.Context, blogID string) error
 	DecrementLikeCount(ctx context.Context, blogID string) error
-	// IncrementDislikeCount(ctx context.Context, blogID string) error
+	IncrementDislikeCount(ctx context.Context, blogID string) error
 	// DecrementDislikeCount(ctx context.Context, blogID string) error
 	// IncrementCommentCount(ctx context.Context, blogID string) error
 	// DecrementCommentCount(ctx context.Context, blogID string) error
