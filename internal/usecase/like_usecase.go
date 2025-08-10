@@ -10,6 +10,12 @@ import (
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/utils"
 )
 
+// ExistsBlog checks if a blog exists by its ID
+func (u *LikeUsecase) ExistsBlog(ctx context.Context, blogID string) bool {
+	blog, err := u.blogRepo.GetBlogByID(ctx, blogID)
+	return err == nil && blog != nil
+}
+
 // ErrReactionNotFound is returned when a reaction is not found in the database.
 var ErrReactionNotFound = errors.New("reaction not found")
 
