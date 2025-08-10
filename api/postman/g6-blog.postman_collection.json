@@ -300,7 +300,7 @@
               "raw": "{{baseUrl}}/api/v1/blogs/:slugID",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "blogs", ":slugID"],
-              "variable": [{ "key": "slug", "value": "example-blog-slug" }]
+              "variable": [{ "key": "slugID", "value": "example-blog-slug" }]
             },
             "description": "Retrieves details of a blog by its slug."
           },
