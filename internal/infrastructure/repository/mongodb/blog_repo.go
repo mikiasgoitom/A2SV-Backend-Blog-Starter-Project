@@ -165,7 +165,7 @@ func (r *BlogRepository) GetBlogs(ctx context.Context, filterOptions *contract.B
 
 	// Add conditional stages for author details and search when necessary
 	// This makes GetBlogs more flexible, addressing a point from the review
-	if filterOptions.AuthorID != nil || sortStage.sortKey == "authorDetails" {
+	if filterOptions.AuthorID != nil || strings.HasPrefix(sortStage.sortKey, "authorDetails.") {
 		pipeline = append(pipeline,
 			bson.D{{Key: "$lookup", Value: bson.M{
 				"from":         "users",
