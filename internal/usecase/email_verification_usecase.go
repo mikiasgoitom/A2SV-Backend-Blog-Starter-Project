@@ -99,7 +99,10 @@ func (eu *EmailVerificationUseCase) VerifyEmailToken(ctx context.Context, verifi
 	if user.IsVerified {
 		return nil, fmt.Errorf("user is already verified")
 	}
-	user.IsVerified = true
+	if user.IsActive {
+		return nil, fmt.Errorf("user is already verified")
+	}
+	user.IsActive = true
 	// update user
 	if _, err = eu.userRepository.UpdateUser(ctx, user); err != nil {
 		return nil, fmt.Errorf("failed to update user verification status: %w", err)
