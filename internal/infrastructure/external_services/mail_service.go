@@ -18,11 +18,6 @@ type EmailService struct {
 }
 
 // EmailService factory
-func NewEmailService(host, port, username, appPassord, from string) *EmailService {
-	return &EmailService{
-		Host:        host,
-		Port:        port,
-		Username:    username,
 func NewEmailService(host, port, username, appPassword, from string) *EmailService {
 	return &EmailService{
 		Host:        host,
