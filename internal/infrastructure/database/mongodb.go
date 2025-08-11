@@ -3,6 +3,7 @@ package mongodb
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -33,7 +34,7 @@ func NewMongoDBClient(uri string) (*MongoDBClient, error) {
 	}
 
 	// Create indexes
-	if err := createIndexes(ctx, client.Database("blogdb")); err != nil {
+	if err := createIndexes(ctx, client.Database(os.Getenv("MONGODB_DB_NAME"))); err != nil {
 		log.Println("Failed to create indexes:", err)
 		// We can choose to return the error or just log it
 	}

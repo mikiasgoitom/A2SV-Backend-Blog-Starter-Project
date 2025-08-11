@@ -66,6 +66,15 @@ func (h *EmailHandler) HandleVerifyEmailToken(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid token or expired token"})
 		return
 	}
+	user.IsVerified = true
+	user.IsActive = true
+	// update the user
+	if _, err := h.userRepository.UpdateUser(ctx, user); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+		return
+	}
+	// send a success message
+	ctx.JSON(http.StatusOK, gin.H{"message": "Email verified successfully", "user": user})
 	// redirect to success page
 	ctx.Redirect(http.StatusFound, fmt.Sprintf("/email-verified-success?username=%s", user.Username))
 }

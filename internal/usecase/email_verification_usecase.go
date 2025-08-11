@@ -60,7 +60,7 @@ func (eu *EmailVerificationUseCase) RequestVerificationEmail(ctx context.Context
 	if err = eu.tokenRepository.CreateToken(ctx, &newToken); err != nil {
 		return fmt.Errorf("failed to create token in db: %w", err)
 	}
-	verificationLink := fmt.Sprintf("%s/verify-email?verifier=%s&token=%s", eu.baseURL, verifier, plainToken)
+	verificationLink := fmt.Sprintf("%s/api/v1/auth/verify-email?verifier=%s&token=%s", eu.baseURL, verifier, plainToken)
 	emailSubject := "Verify your email address"
 	emailBody := fmt.Sprintf("Hello %s\n, please click the following link to verify your email address: %s", user.Username, verificationLink)
 	if err = eu.emailService.SendEmail(ctx, user.Email, emailSubject, emailBody); err != nil {
@@ -103,6 +103,7 @@ func (eu *EmailVerificationUseCase) VerifyEmailToken(ctx context.Context, verifi
 		return nil, fmt.Errorf("user is already verified")
 	}
 	user.IsActive = true
+	user.IsVerified = true
 	// update user
 	if _, err = eu.userRepository.UpdateUser(ctx, user); err != nil {
 		return nil, fmt.Errorf("failed to update user verification status: %w", err)
