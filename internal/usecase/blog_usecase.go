@@ -114,13 +114,20 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 		now := time.Now()
 		blog.PublishedAt = &now
 	}
-	// Check for profanity in the content
-	feedback, err := uc.aiUC.CensorAndCheckBlog(ctx, content)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check content: %w", err)
-	}
-	if feedback == "no" {
-		return nil, errors.New("content contains inappropriate material")
+	// Check for profanity in the content using AI. If AI check fails (e.g., not configured or service error), proceed but log a warning.
+	if uc.aiUC != nil {
+		feedback, err := uc.aiUC.CensorAndCheckBlog(ctx, content)
+		if err != nil {
+			if uc.logger != nil {
+				uc.logger.Warningf("AI moderation unavailable, proceeding without block: %v", err)
+			}
+		} else {
+			// Normalize AI feedback and block only on an explicit "no"
+			norm := strings.TrimSpace(strings.ToLower(feedback))
+			if norm == "no" {
+				return nil, errors.New("content contains inappropriate material")
+			}
+		}
 	}
 
 	if err := uc.blogRepo.CreateBlog(ctx, blog); err != nil {
