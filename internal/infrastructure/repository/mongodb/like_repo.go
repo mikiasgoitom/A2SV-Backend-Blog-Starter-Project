@@ -24,7 +24,7 @@ type LikeRepository struct {
 // NewLikeRepository creates and returns a new LikeRepository instance.
 func NewLikeRepository(db *mongo.Database) *LikeRepository {
 	return &LikeRepository{
-		collection: db.Collection("likes"),
+		collection: db.Collection("blog_likes"),
 	}
 }
 

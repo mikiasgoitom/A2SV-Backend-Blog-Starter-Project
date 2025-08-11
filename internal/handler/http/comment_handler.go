@@ -27,23 +27,19 @@ func (h *CommentHandler) CreateComment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
 		return
 	}
-
-	// Get blog ID from URL
-	blogID := c.Param("blogId")
+	blogID := c.Param("blogID")
 	if blogID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Blog ID is required"})
 		return
 	}
-
-	// Get user ID from auth middleware
-	userIDStr, exists := c.Get("user_id")
+	userIDStr, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
-
 	userID := userIDStr.(string)
 
+	// parent_id and target_id are handled in req (DTO)
 	comment, err := h.commentUC.CreateComment(c.Request.Context(), req, userID, blogID)
 	if err != nil {
 		if err.Error() == "blog not found" {
@@ -53,12 +49,11 @@ func (h *CommentHandler) CreateComment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	c.JSON(http.StatusCreated, gin.H{"data": comment})
+	c.JSON(http.StatusCreated, comment)
 }
 
 func (h *CommentHandler) GetComment(c *gin.Context) {
-	commentIDStr := c.Param("commentId")
+	commentIDStr := c.Param("commentID")
 	commentID, err := uuid.Parse(commentIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid comment ID format"})
@@ -94,19 +89,19 @@ func (h *CommentHandler) UpdateComment(c *gin.Context) {
 		return
 	}
 
-	commentIDStr := c.Param("commentId")
+	commentIDStr := c.Param("commentID")
 	commentID, err := uuid.Parse(commentIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid comment ID format"})
 		return
 	}
 
-	userIDStr, exists := c.Get("user_id")
+	// Get user ID from auth middleware
+	userIDStr, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
-
 	userID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -132,19 +127,19 @@ func (h *CommentHandler) UpdateComment(c *gin.Context) {
 }
 
 func (h *CommentHandler) DeleteComment(c *gin.Context) {
-	commentIDStr := c.Param("commentId")
+	commentIDStr := c.Param("commentID")
 	commentID, err := uuid.Parse(commentIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid comment ID format"})
 		return
 	}
 
-	userIDStr, exists := c.Get("user_id")
+	// Get user ID from auth middleware
+	userIDStr, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
-
 	userID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -170,10 +165,9 @@ func (h *CommentHandler) DeleteComment(c *gin.Context) {
 
 // Listing Operations
 func (h *CommentHandler) GetBlogComments(c *gin.Context) {
-	blogIDStr := c.Param("blogId")
-	blogID, err := uuid.Parse(blogIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid blog ID format"})
+	blogID := c.Param("blogID")
+	if blogID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Blog ID is required"})
 		return
 	}
 
@@ -190,7 +184,7 @@ func (h *CommentHandler) GetBlogComments(c *gin.Context) {
 		}
 	}
 
-	comments, err := h.commentUC.GetBlogComments(c.Request.Context(), blogID.String(), page, pageSize, userID)
+	comments, err := h.commentUC.GetBlogComments(c.Request.Context(), blogID, page, pageSize, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -200,7 +194,7 @@ func (h *CommentHandler) GetBlogComments(c *gin.Context) {
 }
 
 func (h *CommentHandler) GetCommentThread(c *gin.Context) {
-	commentIDStr := c.Param("commentId")
+	commentIDStr := c.Param("commentID")
 	commentID, err := uuid.Parse(commentIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid comment ID format"})
@@ -209,7 +203,7 @@ func (h *CommentHandler) GetCommentThread(c *gin.Context) {
 
 	// Get user ID if authenticated (optional)
 	var userID *string
-	if userIDStr, exists := c.Get("user_id"); exists {
+	if userIDStr, exists := c.Get("userID"); exists {
 		if uid, err := uuid.Parse(userIDStr.(string)); err == nil {
 			uidStr := uid.String()
 			userID = &uidStr
@@ -258,7 +252,7 @@ func (h *CommentHandler) UpdateCommentStatus(c *gin.Context) {
 		return
 	}
 
-	commentIDStr := c.Param("commentId")
+	commentIDStr := c.Param("commentID")
 
 	moderatorIDStr, exists := c.Get("user_id")
 	if !exists {
@@ -287,7 +281,7 @@ func (h *CommentHandler) UpdateCommentStatus(c *gin.Context) {
 
 // Engagement
 func (h *CommentHandler) LikeComment(c *gin.Context) {
-	commentIDStr := c.Param("commentId")
+	commentIDStr := c.Param("commentID")
 
 	userIDStr, exists := c.Get("user_id")
 	if !exists {
@@ -319,7 +313,7 @@ func (h *CommentHandler) LikeComment(c *gin.Context) {
 }
 
 func (h *CommentHandler) UnlikeComment(c *gin.Context) {
-	commentIDStr := c.Param("commentId")
+	commentIDStr := c.Param("commentID")
 
 	userIDStr, exists := c.Get("user_id")
 	if !exists {
@@ -358,7 +352,7 @@ func (h *CommentHandler) ReportComment(c *gin.Context) {
 		return
 	}
 
-	commentIDStr := c.Param("commentId")
+	commentIDStr := c.Param("commentID")
 	userIDStr, exists := c.Get("user_id")
 
 	if !exists {
@@ -410,29 +404,26 @@ func (h *CommentHandler) CreateReply(c *gin.Context) {
 	}
 
 	// Get parent comment ID from URL
-	parentCommentID := c.Param("commentId")
-	if parentCommentID == "" {
+	parentcommentID := c.Param("commentID")
+	if parentcommentID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Comment ID is required"})
 		return
 	}
 
 	// Get user ID from auth middleware
-	userIDStr, exists := c.Get("user_id")
+	userIDStr, exists := c.Get("userID")
 	if !exists {
-		userIDStr, exists = c.Get("userID")
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-			return
-		}
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
 	}
 
 	userID := userIDStr.(string)
 
 	// Set the parent comment ID in the request
-	req.ParentID = &parentCommentID
+	req.ParentID = &parentcommentID
 
 	// We need to get the blog ID from the parent comment
-	parentComment, err := h.commentUC.GetComment(c.Request.Context(), parentCommentID, &userID)
+	parentComment, err := h.commentUC.GetComment(c.Request.Context(), parentcommentID, &userID)
 	if err != nil {
 		if err.Error() == "comment not found" {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Parent comment not found"})
@@ -462,7 +453,7 @@ func (h *CommentHandler) CreateReply(c *gin.Context) {
 
 // GetCommentReplies gets replies to a specific comment with pagination
 func (h *CommentHandler) GetCommentReplies(c *gin.Context) {
-	commentID := c.Param("commentId")
+	commentID := c.Param("commentID")
 	if commentID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Comment ID is required"})
 		return
@@ -494,8 +485,7 @@ func (h *CommentHandler) GetCommentReplies(c *gin.Context) {
 		userID = &uid
 	}
 
-	// For now, we'll use the existing GetCommentThread method with modifications
-	// In a real implementation, you might want to create a separate method in the usecase
+	// Use the existing GetCommentThread to fetch the full nested tree
 	thread, err := h.commentUC.GetCommentThread(c.Request.Context(), commentID, userID)
 	if err != nil {
 		if err.Error() == "comment not found" {
@@ -506,13 +496,31 @@ func (h *CommentHandler) GetCommentReplies(c *gin.Context) {
 		return
 	}
 
-	// Extract replies from the thread (simplified implementation)
+	// Flatten all nested replies into a single list
+	flat := make([]*dto.CommentThreadResponse, 0)
+	var flatten func(nodes []*dto.CommentThreadResponse)
+	flatten = func(nodes []*dto.CommentThreadResponse) {
+		for _, n := range nodes {
+			// Shallow copy without children to keep payload lean
+			copy := &dto.CommentThreadResponse{
+				Comment: n.Comment,
+				Depth:   n.Depth,
+				Replies: nil,
+			}
+			flat = append(flat, copy)
+			if len(n.Replies) > 0 {
+				flatten(n.Replies)
+			}
+		}
+	}
+	flatten(thread.Replies)
+
 	c.JSON(http.StatusOK, gin.H{
-		"replies": thread.Replies,
+		"replies": flat,
 		"pagination": gin.H{
 			"page":      page,
 			"page_size": pageSize,
-			"total":     len(thread.Replies),
+			"total":     len(flat),
 			"has_more":  false,
 		},
 	})
@@ -520,7 +528,7 @@ func (h *CommentHandler) GetCommentReplies(c *gin.Context) {
 
 // GetCommentDepth gets the depth of a comment thread
 func (h *CommentHandler) GetCommentDepth(c *gin.Context) {
-	commentID := c.Param("commentId")
+	commentID := c.Param("commentID")
 	if commentID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Comment ID is required"})
 		return
@@ -634,7 +642,7 @@ func (h *CommentHandler) GetCommentsByUser(c *gin.Context) {
 
 // LikeCommentToggle toggles like status on a comment
 func (h *CommentHandler) LikeCommentToggle(c *gin.Context) {
-	commentID := c.Param("commentId")
+	commentID := c.Param("commentID")
 	if commentID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Comment ID is required"})
 		return
@@ -688,7 +696,7 @@ func (h *CommentHandler) LikeCommentToggle(c *gin.Context) {
 
 // GetCommentStatistics gets comprehensive statistics for a comment
 func (h *CommentHandler) GetCommentStatistics(c *gin.Context) {
-	commentID := c.Param("commentId")
+	commentID := c.Param("commentID")
 	if commentID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Comment ID is required"})
 		return

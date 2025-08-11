@@ -1,7 +1,7 @@
 {
   "info": {
-    "_postman_id": "a2sv-g6-blog-updated",
-    "name": "G6 Blog API (Updated)",
+    "_postman_id": "a2sv-g6-blog",
+    "name": "G6 Blog API",
     "description": "Postman collection for the G6 Blog Starter Project API. Includes all endpoints as of August 2025.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -26,7 +26,15 @@
             },
             "description": "Registers a new user. Provides username, email, password, first name, and last name."
           },
-          "response": []
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [ { "key": "Content-Type", "value": "application/json" } ],
+              "body": "\"User created successfully. Please check your email to verify your account.\""
+            }
+          ]
         },
         {
           "name": "Login",
@@ -45,26 +53,43 @@
             },
             "description": "Logs in a user with email and password to receive access and refresh tokens."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [ { "key": "Content-Type", "value": "application/json" } ],
+              "body": "{\n  \"user\": {\n    \"id\": \"user-uuid\",\n    \"username\": \"johndoe\",\n    \"email\": \"johndoe@example.com\"\n  },\n  \"accessToken\": \"ACCESS.JWT\",\n  \"refreshToken\": \"REFRESH.JWT\"\n}"
+            }
+          ]
         },
         {
           "name": "Verify Email",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"token\": \"<your_email_verification_token_here>\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/verify-email",
+              "raw": "{{baseUrl}}/api/v1/auth/verify-email?verifier={{email_verification_verifier}}&token={{email_verification_token}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "verify-email"]
+              "path": ["api", "v1", "auth", "verify-email"],
+              "query": [
+                { "key": "verifier", "value": "{{email_verification_verifier}}" },
+                { "key": "token", "value": "{{email_verification_token}}" }
+              ]
             },
-            "description": "Verifies a user's email address using a token sent to their email."
+            "description": "Verifies a user's email via redirect. Expects query params 'verifier' and 'token'. Returns 302 to a success page."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Redirect to success",
+              "status": "Found",
+              "code": 302,
+              "header": [
+                { "key": "Location", "value": "/email-verified-success?username=johndoe" }
+              ],
+              "body": ""
+            }
+          ]
         },
         {
           "name": "Forgot Password",
@@ -83,7 +108,14 @@
             },
             "description": "Initiates the password reset process for a user by sending a reset link to their email."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "\"If an account with that email exists, a password reset link has been sent\""
+            }
+          ]
         },
         {
           "name": "Reset Password",
@@ -92,7 +124,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"token\": \"<your_reset_token_here>\",\n  \"password\": \"NewPass123!\"\n}",
+              "raw": "{\n  \"token\": \"{{reset_token}}\",\n  \"password\": \"NewPass123!\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -102,7 +134,14 @@
             },
             "description": "Resets a user's password using a valid reset token."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "\"Password reset successfully\""
+            }
+          ]
         },
         {
           "name": "Refresh Token",
@@ -111,7 +150,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"refresh_token\": \"<your_refresh_token_here>\"\n}",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -121,7 +160,40 @@
             },
             "description": "Generates a new access token using a valid refresh token."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"access_token\": \"NEW.ACCESS.JWT\",\n  \"refresh_token\": \"NEW.REFRESH.JWT\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Request Verification Email",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json", "type": "text" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/request-verification-email",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "request-verification-email"]
+            },
+            "description": "Requests a new email verification email to be sent to the given user_id."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "\"Verification email sent successfully\""
+            }
+          ]
         },
         {
           "name": "Logout",
@@ -136,7 +208,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"refresh_token\": \"<your_refresh_token_here>\"\n}",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -146,7 +218,14 @@
             },
             "description": "Logs out the user by invalidating the refresh token."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "\"Logged out successfully\""
+            }
+          ]
         },
         {
           "name": "Google Login",
@@ -154,13 +233,48 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/auth/google/login",
+              "raw": "{{baseUrl}}/api/v1/auth/google/login",
               "host": ["{{baseUrl}}"],
-              "path": ["auth", "google", "login"]
+              "path": ["api", "v1", "auth", "google", "login"]
             },
             "description": "Initiates Google OAuth2 login flow. This will redirect to Google's authentication page."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Redirect",
+              "status": "Found",
+              "code": 302,
+              "header": [
+                { "key": "Location", "value": "https://accounts.google.com/o/oauth2/auth?..." }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Google Callback",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/google/callback?code=AUTH_CODE&state=STATE",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "google", "callback"],
+              "query": [
+                { "key": "code", "value": "AUTH_CODE" },
+                { "key": "state", "value": "STATE" }
+              ]
+            },
+            "description": "Callback endpoint for Google OAuth2."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [ { "key": "Content-Type", "value": "application/json" } ],
+              "body": "{\n  \"message\": \"login successful\",\n  \"access token\": \"ACCESS.JWT\",\n  \"refresh token\": \"REFRESH.JWT\"\n}"
+            }
+          ]
         }
       ],
       "description": "Endpoints related to user authentication and authorization."
@@ -172,24 +286,26 @@
           "name": "Get User by ID",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
+            "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/users/:id",
+              "raw": "{{baseUrl}}/api/v1/users/profile/:id",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "users", ":id"],
+              "path": ["api", "v1", "users", "profile", ":id"],
               "variable": [
                 { "key": "id", "value": "123e4567-e89b-12d3-a456-426614174000" }
               ]
             },
-            "description": "Retrieves a specific user's profile by their ID. Requires authentication."
+            "description": "Retrieves a specific user's profile by their ID. Public endpoint."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [ { "key": "Content-Type", "value": "application/json" } ],
+              "body": "{\n  \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"username\": \"johndoe\",\n  \"email\": \"johndoe@example.com\",\n  \"firstname\": \"John\",\n  \"lastname\": \"Doe\",\n  \"avatarURL\": \"https://cdn.example.com/avatars/johndoe.png\"\n}"
+            }
+          ]
         },
         {
           "name": "Get Current User",
@@ -209,7 +325,14 @@
             },
             "description": "Retrieves the profile of the currently authenticated user. Requires authentication."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"id\": \"user-uuid\",\n  \"username\": \"johndoe\",\n  \"email\": \"johndoe@example.com\"\n}"
+            }
+          ]
         },
         {
           "name": "Update Current User",
@@ -234,7 +357,14 @@
             },
             "description": "Updates the profile of the currently authenticated user. Requires authentication."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"id\": \"user-uuid\",\n  \"username\": \"johndoe-updated\",\n  \"email\": \"johndoe@example.com\",\n  \"firstname\": \"JohnUpdated\",\n  \"lastname\": \"DoeUpdated\"\n}"
+            }
+          ]
         }
       ],
       "description": "Endpoints for managing user profiles."
@@ -253,7 +383,15 @@
             },
             "description": "Retrieves a paginated list of blogs. Supports sorting and filtering."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [ { "key": "Content-Type", "value": "application/json" } ],
+              "body": "{\n  \"blogs\": [\n    {\n      \"id\": \"blog-uuid\",\n      \"title\": \"My Blog\",\n      \"content\": \"Blog content...\",\n      \"author_id\": \"user-uuid\",\n      \"slug\": \"my-blog\",\n      \"status\": \"published\",\n      \"view_count\": 10,\n      \"like_count\": 2,\n      \"comment_count\": 1,\n      \"popularity\": 0.42,\n      \"featured_image_id\": null,\n      \"created_at\": \"2025-08-11T12:00:00Z\",\n      \"updated_at\": \"2025-08-11T12:05:00Z\"\n    }\n  ],\n  \"total_count\": 1,\n  \"current_page\": 1,\n  \"total_pages\": 1\n}"
+            }
+          ]
         },
         {
           "name": "Search and Filter Blogs",
@@ -273,7 +411,14 @@
             },
             "description": "Searches and filters blogs by query, tags, date, views, likes, author, and pagination.\n\n**To filter by multiple tags, use repeated query parameters:**\n\n`?tags=tag1&tags=tag2` (not `tags=tag1,tag2`).\n\nExample: `GET /api/v1/blogs/search?q=example&tags=tag1&tags=tag2&page=1&pageSize=10` will return blogs that have both tag1 and tag2."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"blogs\": [],\n  \"total_count\": 0,\n  \"current_page\": 1,\n  \"total_pages\": 0\n}"
+            }
+          ]
         },
         {
           "name": "Get Popular Blogs",
@@ -290,32 +435,42 @@
             },
             "description": "Retrieves popular blogs sorted by view count."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"blogs\": [\n    { \n      \"id\": \"blog-uuid\", \n      \"title\": \"Popular Blog\", \n      \"view_count\": 120, \n      \"like_count\": 30, \n      \"comment_count\": 12, \n      \"slug\": \"popular-blog\", \n      \"status\": \"published\", \n      \"author_id\": \"user-uuid\", \n      \"popularity\": 0.92, \n      \"created_at\": \"2025-08-01T00:00:00Z\", \n      \"updated_at\": \"2025-08-11T00:00:00Z\" \n    }\n  ],\n  \"total_count\": 1,\n  \"current_page\": 1,\n  \"total_pages\": 1\n}"
+            }
+          ]
         },
         {
           "name": "Get Blog Detail",
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/api/v1/blogs/:slugID",
+              "raw": "{{baseUrl}}/api/v1/blogs/slug/:slug",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "blogs", ":slugID"],
-              "variable": [{ "key": "slugID", "value": "example-blog-slug" }]
+              "path": ["api", "v1", "blogs", "slug", ":slug"],
+              "variable": [{ "key": "slug", "value": "{{slug_id}}" }]
             },
             "description": "Retrieves details of a blog by its slug."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"id\": \"blog-uuid\",\n  \"title\": \"My Blog\",\n  \"content\": \"Blog content...\",\n  \"author_id\": \"user-uuid\",\n  \"slug\": \"my-blog\",\n  \"status\": \"published\",\n  \"view_count\": 10,\n  \"like_count\": 2,\n  \"comment_count\": 1,\n  \"popularity\": 0.42,\n  \"featured_image_id\": null,\n  \"created_at\": \"2025-08-11T12:00:00Z\",\n  \"updated_at\": \"2025-08-11T12:05:00Z\"\n}"
+            }
+          ]
         },
         {
           "name": "Create Blog",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
             ],
             "body": {
               "mode": "raw",
@@ -329,7 +484,14 @@
             },
             "description": "Creates a new blog post. Requires authentication.\n\nRequest Body Example:\n```json\n{\n  \"title\": \"My Blog\",\n  \"content\": \"Blog content...\",\n  \"slug\": \"my-blog\",\n  \"status\": \"published\",\n  \"tags\": [\"tag1\", \"tag2\"],\n  \"featured_image_id\": \"<optional_image_id>\"\n}\n```\n- `title` (string, required): Blog title.\n- `content` (string, required): Blog content.\n- `slug` (string, required): Blog slug.\n- `status` (string, required): Blog status (`draft`, `published`, `archived`).\n- `tags` (array of string, optional): List of tag IDs to associate with the blog.\n- `featured_image_id` (string, optional): ID of the featured image.\n\nResponse: 201 Created, message: Blog created successfully."
           },
-          "response": []
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "body": "\"Blog created successfully\""
+            }
+          ]
         },
         {
           "name": "Update Blog",
@@ -360,7 +522,14 @@
             },
             "description": "Updates a blog post by ID. Requires authentication.\n\nRequest Body Example:\n```json\n{\n  \"title\": \"Updated Blog\",\n  \"content\": \"Updated content...\",\n  \"status\": \"published\"\n}\n```\n- `title` (string, optional): New blog title.\n- `content` (string, optional): New blog content.\n- `status` (string, required): Blog status (`draft`, `published`, `archived`).\n\nResponse: 200 OK, returns updated blog object."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"id\": \"blog-uuid\",\n  \"title\": \"Updated Blog\",\n  \"content\": \"Updated content...\",\n  \"author_id\": \"user-uuid\",\n  \"slug\": \"my-blog\",\n  \"status\": \"published\",\n  \"view_count\": 12,\n  \"like_count\": 2,\n  \"comment_count\": 1,\n  \"popularity\": 0.45,\n  \"created_at\": \"2025-08-11T12:00:00Z\",\n  \"updated_at\": \"2025-08-11T12:10:00Z\"\n}"
+            }
+          ]
         },
         {
           "name": "Delete Blog",
@@ -386,7 +555,14 @@
             },
             "description": "Deletes a blog post by ID. Requires authentication."
           },
-          "response": []
+          "response": [
+            {
+              "name": "204 No Content",
+              "status": "No Content",
+              "code": 204,
+              "body": "\"Deleted successfully\""
+            }
+          ]
         }
       ],
       "description": "Endpoints for managing blogs."
@@ -409,32 +585,14 @@
               "raw": "{{baseUrl}}/api/v1/blogs/:blogID/like",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "blogs", ":blogID", "like"],
-              "variable": [{ "key": "blogID", "value": "<blog_id>" }]
+              "variable": [{ "key": "blogID", "value": "{{blog_id}}" }]
             },
             "description": "Likes a blog post. Requires authentication."
           },
-          "response": []
-        },
-        {
-          "name": "Unlike Blog",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/blogs/:blogID/like",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "blogs", ":blogID", "like"],
-              "variable": [{ "key": "blogID", "value": "<blog_id>" }]
-            },
-            "description": "Unlikes a blog post. Requires authentication."
-          },
-          "response": []
+          "response": [
+            { "name": "200 OK (liked)", "status": "OK", "code": 200, "body": "\"Blog liked successfully\"" },
+            { "name": "200 OK (unliked)", "status": "OK", "code": 200, "body": "\"Blog unliked successfully\"" }
+          ]
         },
         {
           "name": "Dislike Blog",
@@ -451,32 +609,14 @@
               "raw": "{{baseUrl}}/api/v1/blogs/:blogID/dislike",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "blogs", ":blogID", "dislike"],
-              "variable": [{ "key": "blogID", "value": "<blog_id>" }]
+              "variable": [{ "key": "blogID", "value": "{{blog_id}}" }]
             },
             "description": "Dislikes a blog post. Requires authentication."
           },
-          "response": []
-        },
-        {
-          "name": "Undislike Blog",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/blogs/:blogID/dislike",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "blogs", ":blogID", "dislike"],
-              "variable": [{ "key": "blogID", "value": "<blog_id>" }]
-            },
-            "description": "Removes a dislike from a blog post. Requires authentication."
-          },
-          "response": []
+          "response": [
+            { "name": "200 OK (disliked)", "status": "OK", "code": 200, "body": "\"Blog disliked successfully\"" },
+            { "name": "200 OK (undisliked)", "status": "OK", "code": 200, "body": "\"Blog undisliked successfully\"" }
+          ]
         },
         {
           "name": "Track Blog View",
@@ -493,14 +633,394 @@
               "raw": "{{baseUrl}}/api/v1/blogs/:blogID/view",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "blogs", ":blogID", "view"],
-              "variable": [{ "key": "blogID", "value": "<blog_id>" }]
+              "variable": [{ "key": "blogID", "value": "{{blog_id}}" }]
             },
             "description": "Tracks a view for a blog post. Requires authentication."
           },
-          "response": []
-        }
+          "response": [
+            { "name": "200 OK", "status": "OK", "code": 200, "body": "\"view tracked successfully\"" },
+            { "name": "200 OK (already viewed)", "status": "OK", "code": 200, "body": "\"Already viewed recently\"" },
+            { "name": "429 Too Many Requests (velocity)", "status": "Too Many Requests", "code": 429, "body": "\"Exceeded view velocity limit\"" },
+            { "name": "429 Too Many Requests (IP rotation)", "status": "Too Many Requests", "code": 429, "body": "\"Exceeded IP rotation limit\"" }
+          ]
+        },
+            {
+              "name": "Create Comment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" },
+                  { "key": "Content-Type", "value": "application/json", "type": "text" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"This is a comment!\",\n  \"type\": \"comment\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/blogs/:blogID/comment",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "blogs", ":blogID", "comment"],
+                  "variable": [{ "key": "blogID", "value": "{{blog_id}}" }]
+                },
+                "description": "Adds a top-level comment to a blog post. Requires authentication."
+              },
+              "response": [
+                {
+                  "name": "201 Created",
+                  "status": "Created",
+                  "code": 201,
+                  "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                  "body": "{\n  \"id\": \"cmt-uuid\",\n  \"blog_id\": \"blog-uuid\",\n  \"type\": \"comment\",\n  \"parent_id\": null,\n  \"target_id\": null,\n  \"author_id\": \"user-uuid\",\n  \"author_name\": \"johndoe\",\n  \"target_user_name\": \"\",\n  \"content\": \"This is a comment!\",\n  \"status\": \"approved\",\n  \"like_count\": 0,\n  \"is_liked\": false,\n  \"created_at\": \"2025-08-11T12:00:00Z\",\n  \"updated_at\": \"2025-08-11T12:00:00Z\",\n  \"reply_count\": 0\n}"
+                }
+              ]
+            },
+            {
+              "name": "Get Comment",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentId"],
+                  "variable": [{ "key": "commentId", "value": "{{comment_id}}" }]
+                },
+                "description": "Retrieves a single comment by its ID. Requires authentication."
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                  "body": "{\n  \"data\": {\n    \"id\": \"cmt-uuid\",\n    \"blog_id\": \"blog-uuid\",\n    \"type\": \"comment\",\n    \"parent_id\": null,\n    \"target_id\": null,\n    \"author_id\": \"user-uuid\",\n    \"author_name\": \"johndoe\",\n    \"target_user_name\": \"\",\n    \"content\": \"This is a comment!\",\n    \"status\": \"approved\",\n    \"like_count\": 1,\n    \"is_liked\": true,\n    \"created_at\": \"2025-08-11T12:00:00Z\",\n    \"updated_at\": \"2025-08-11T12:00:00Z\",\n    \"reply_count\": 2\n  }\n}"
+                }
+              ]
+            },
+            {
+              "name": "Create Reply to Comment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"This is a reply!\",\n  \"type\": \"reply\",\n  \"target_id\": \"TARGET_COMMENT_OR_REPLY_ID\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentID/reply",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentID", "reply"],
+                  "variable": [{ "key": "commentID", "value": "{{comment_id}}" }]
+                },
+                "description": "Creates a reply to a comment. Requires parent comment ID in the URL and target_id in the body."
+              },
+              "response": [
+                {
+                  "name": "201 Created",
+                  "status": "Created",
+                  "code": 201,
+                  "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                  "body": "{\n  \"comment\": {\n    \"id\": \"reply-uuid\",\n    \"blog_id\": \"blog-uuid\",\n    \"type\": \"reply\",\n    \"parent_id\": \"cmt-uuid\",\n    \"target_id\": \"target-uuid\",\n    \"author_id\": \"user-uuid\",\n    \"author_name\": \"johndoe\",\n    \"target_user_name\": \"janedoe\",\n    \"content\": \"This is a reply!\",\n    \"status\": \"approved\",\n    \"like_count\": 0,\n    \"is_liked\": false,\n    \"created_at\": \"2025-08-11T12:00:00Z\",\n    \"updated_at\": \"2025-08-11T12:00:00Z\",\n    \"reply_count\": 0\n  }\n}"
+                }
+              ]
+            },
+            {
+              "name": "Get All Replies of a Comment",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentID/replies?page=1&limit=10&depth=3",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentID", "replies"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "10" },
+                    { "key": "depth", "value": "3" }
+                  ],
+                  "variable": [{ "key": "commentID", "value": "{{comment_id}}" }]
+                },
+                "description": "Fetches all replies (including nested) for a given comment ID. Returns a list of replies."
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                  "body": "{\n  \"replies\": [\n    { \n      \"comment\": { \n        \"id\": \"reply-1\", \n        \"parent_id\": \"cmt-uuid\", \n        \"content\": \"First reply\" \n      }, \n      \"depth\": 1, \n      \"replies\": [] \n    }\n  ],\n  \"pagination\": {\n    \"page\": 1,\n    \"page_size\": 10,\n    \"total\": 1,\n    \"has_more\": false\n  }\n}"
+                }
+              ]
+            },
+            {
+              "name": "Get Comment Statistics",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentID/count",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentID", "count"],
+                  "variable": [{ "key": "commentID", "value": "{{comment_id}}" }]
+                },
+                "description": "Fetches a comment by ID and returns the total count of its replies. Useful for analytics and UI display."
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                  "body": "{\n  \"comment_id\": \"cmt-uuid\",\n  \"like_count\": 5,\n  \"reply_count\": 4,\n  \"thread_depth\": 3,\n  \"is_liked\": true,\n  \"author_id\": \"user-uuid\",\n  \"created_at\": \"2025-08-11T12:00:00Z\",\n  \"updated_at\": \"2025-08-11T12:30:00Z\",\n  \"status\": \"approved\"\n}"
+                }
+              ]
+            },
+            {
+              "name": "Update Comment",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"Updated comment text\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentId"],
+                  "variable": [{ "key": "commentId", "value": "{{comment_id}}" }]
+                },
+                "description": "Updates a comment by its ID. Requires authentication."
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "body": "{\n  \"data\": {\n    \"id\": \"cmt-uuid\",\n    \"content\": \"Updated comment text\"\n  }\n}"
+                }
+              ]
+            },
+            {
+              "name": "Delete Comment",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentId"],
+                  "variable": [{ "key": "commentId", "value": "{{comment_id}}" }]
+                },
+                "description": "Deletes a comment by its ID. Requires authentication."
+              },
+              "response": [
+                { "name": "200 OK", "status": "OK", "code": 200, "body": "\"Comment deleted successfully\"" }
+              ]
+            },
+            {
+              "name": "List Blog Comments",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/blogs/:blogID/comments?page=1&page_size=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "blogs", ":blogID", "comments"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "page_size", "value": "20" }
+                  ],
+                  "variable": [{ "key": "blogID", "value": "{{blog_id}}" }]
+                },
+                "description": "Lists comments for a blog post. Requires authentication."
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "body": "{\n  \"data\": [\n    { \n      \"id\": \"cmt-uuid\", \n      \"blog_id\": \"blog-uuid\", \n      \"content\": \"This is a comment!\" \n    }\n  ]\n}"
+                }
+              ]
+            },
+            {
+              "name": "Like Comment",
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" } ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentID/like",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentID", "like"],
+                  "variable": [{ "key": "commentID", "value": "{{comment_id}}" }]
+                }
+              },
+              "response": [
+                { "name": "200 OK", "status": "OK", "code": 200, "body": "\"Comment liked successfully\"" }
+              ]
+            },
+            {
+              "name": "Unlike Comment",
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" } ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentID/unlike",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentID", "unlike"],
+                  "variable": [{ "key": "commentID", "value": "{{comment_id}}" }]
+                }
+              },
+              "response": [
+                { "name": "200 OK", "status": "OK", "code": 200, "body": "\"Comment unliked successfully\"" }
+              ]
+            },
+            {
+              "name": "Report Comment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" },
+                  { "key": "Content-Type", "value": "application/json", "type": "text" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"reason\": \"spam\",\n  \"details\": \"This comment contains spam content\"\n}" },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentID/report",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentID", "report"],
+                  "variable": [{ "key": "commentID", "value": "{{comment_id}}" }]
+                }
+              },
+              "response": [
+                { "name": "200 OK", "status": "OK", "code": 200, "body": "\"Comment reported successfully\"" }
+              ]
+            },
+            {
+              "name": "Update Comment Status (Admin/Moderator)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" },
+                  { "key": "Content-Type", "value": "application/json", "type": "text" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"status\": \"approved\"\n}" },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentID/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentID", "status"],
+                  "variable": [{ "key": "commentID", "value": "{{comment_id}}" }]
+                }
+              },
+              "response": [
+                { "name": "200 OK", "status": "OK", "code": 200, "body": "\"Comment status updated successfully\"" }
+              ]
+            },
+            {
+              "name": "List User Comments",
+              "request": {
+                "method": "GET",
+                "header": [ { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" } ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/:userId/comments?page=1&page_size=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", ":userId", "comments"],
+                  "query": [ { "key": "page", "value": "1" }, { "key": "page_size", "value": "20" } ],
+                  "variable": [{ "key": "userId", "value": "{{user_id}}" }]
+                }
+              },
+              "response": [
+                { "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"data\": []\n}" }
+              ]
+            },
+            {
+              "name": "Get Blog Comments Count",
+              "request": {
+                "method": "GET",
+                "header": [ { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" } ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/blogs/:blogID/comments/count",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "blogs", ":blogID", "comments", "count"],
+                  "variable": [{ "key": "blogID", "value": "{{blog_id}}" }]
+                }
+              },
+              "response": [
+                { "name": "200 OK", "status": "OK", "code": 200, "body": "{\n  \"blog_id\": \"blog-uuid\",\n  \"comment_count\": 3\n}" }
+              ]
+            },
+            {
+              "name": "Get Comment Thread",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentId/thread",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentId", "thread"],
+                  "variable": [{ "key": "commentId", "value": "{{comment_id}}" }]
+                },
+                "description": "Retrieves the thread for a comment, including all nested replies. Requires authentication."
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                  "body": "{\n  \"data\": {\n    \"comment\": { \n      \"id\": \"cmt-uuid\", \n      \"content\": \"This is a comment!\" \n    },\n    \"replies\": [\n      { \n        \"comment\": { \n          \"id\": \"reply-uuid\", \n          \"content\": \"This is a reply\" \n        }, \n        \"replies\": [], \n        \"depth\": 1 \n      }\n    ],\n    \"depth\": 0\n  }\n}"
+                }
+              ]
+            },
+            {
+              "name": "List User Comments",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/:userId/comments?page=1&page_size=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", ":userId", "comments"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "page_size", "value": "20" }
+                  ],
+                  "variable": [{ "key": "userId", "value": "{{user_id}}" }]
+                },
+                "description": "Lists comments made by a user. Requires authentication."
+              },
+              "response": [
+                {
+                  "name": "200 OK",
+                  "status": "OK",
+                  "code": 200,
+                  "body": "{\n  \"data\": [\n    { \n      \"id\": \"cmt-by-user\", \n      \"blog_id\": \"blog-uuid\", \n      \"content\": \"User comment\" \n    }\n  ]\n}"
+                }
+              ]
+            }
       ],
-      "description": "Endpoints for blog interactions (like, unlike, dislike, undislike, view)."
+  "description": "Endpoints for blog interactions (like, dislike, view, and comment)."
     },
     {
       "name": "Monitoring",
@@ -517,7 +1037,14 @@
             },
             "description": "Exposes Prometheus metrics in text format for scraping. Useful for quick inspection in Postman."
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "# HELP http_requests_total ...\n# TYPE http_requests_total counter\nhttp_requests_total{method=\"get\",status=\"200\"} 42\n..."
+            }
+          ]
         }
       ],
       "description": "Operational monitoring endpoints (Prometheus metrics)."
@@ -525,6 +1052,14 @@
   ],
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8080" },
-    { "key": "accessToken", "value": "" }
+    { "key": "accessToken", "value": "" },
+    { "key": "blog_id", "value": "" },
+    { "key": "slug_id", "value": "" },
+    { "key": "reset_token", "value": "" },
+    { "key": "refresh_token", "value": "" },
+  { "key": "email_verification_token", "value": "" },
+  { "key": "email_verification_verifier", "value": "" },
+  { "key": "comment_id", "value": "" },
+  { "key": "user_id", "value": "" }
   ]
 }
