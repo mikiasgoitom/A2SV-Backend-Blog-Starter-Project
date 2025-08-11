@@ -23,7 +23,12 @@ func NewEmailService(host, port, username, appPassord, from string) *EmailServic
 		Host:        host,
 		Port:        port,
 		Username:    username,
-		AppPassword: appPassord,
+func NewEmailService(host, port, username, appPassword, from string) *EmailService {
+	return &EmailService{
+		Host:        host,
+		Port:        port,
+		Username:    username,
+		AppPassword: appPassword,
 		From:        from,
 	}
 }
