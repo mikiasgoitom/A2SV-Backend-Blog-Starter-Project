@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -56,11 +57,17 @@ func (h *BlogHandler) CreateBlogHandler(cxt *gin.Context) {
 	authorID, ok := authorIDAny.(string)
 	if !ok {
 		ErrorHandler(cxt, http.StatusBadRequest, "Invalid user ID format in token")
+		return
 	}
 
 	_, err := h.blogUsecase.CreateBlog(cxt.Request.Context(), req.Title, req.Content, authorID, req.Slug, entity.BlogStatus(req.Status), req.FeaturedImageID, req.Tags)
 
 	if err != nil {
+		// Map known validation/moderation errors to 400
+		if strings.Contains(strings.ToLower(err.Error()), "inappropriate") {
+			ErrorHandler(cxt, http.StatusBadRequest, "Content contains inappropriate material")
+			return
+		}
 		ErrorHandler(cxt, http.StatusInternalServerError, "Failed to create blog")
 		return
 	}
