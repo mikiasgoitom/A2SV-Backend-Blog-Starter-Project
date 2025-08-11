@@ -34,6 +34,7 @@ type BlogUseCaseImpl struct {
 	blogRepo  contract.IBlogRepository
 	uuidgen   contract.IUUIDGenerator
 	logger    usecasecontract.IAppLogger
+	aiUC      usecasecontract.IAIUseCase
 	blogCache contract.IBlogCache
 	// simple metrics
 	detailHits uint64
@@ -43,11 +44,12 @@ type BlogUseCaseImpl struct {
 }
 
 // NewBlogUseCase creates a new instance of BlogUseCase
-func NewBlogUseCase(blogRepo contract.IBlogRepository, uuidgenrator contract.IUUIDGenerator, logger usecasecontract.IAppLogger) *BlogUseCaseImpl {
+func NewBlogUseCase(blogRepo contract.IBlogRepository, uuidgenrator contract.IUUIDGenerator, logger usecasecontract.IAppLogger, aiUC usecasecontract.IAIUseCase) *BlogUseCaseImpl {
 	return &BlogUseCaseImpl{
 		blogRepo: blogRepo,
 		logger:   logger,
 		uuidgen:  uuidgenrator,
+		aiUC:     aiUC,
 	}
 }
 
@@ -111,6 +113,14 @@ func (uc *BlogUseCaseImpl) CreateBlog(ctx context.Context, title, content string
 	if status == entity.BlogStatusPublished {
 		now := time.Now()
 		blog.PublishedAt = &now
+	}
+	// Check for profanity in the content
+	feedback, err := uc.aiUC.CensorAndCheckBlog(ctx, content)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check content: %w", err)
+	}
+	if feedback == "no" {
+		return nil, errors.New("content contains inappropriate material")
 	}
 
 	if err := uc.blogRepo.CreateBlog(ctx, blog); err != nil {
@@ -309,6 +319,14 @@ func (uc *BlogUseCaseImpl) UpdateBlog(ctx context.Context, blogID, authorID stri
 	}
 	if content != nil {
 		updates["content"] = *content
+		// if content is edited check for profanity
+		feedback, err := uc.aiUC.CensorAndCheckBlog(ctx, *content)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check content: %w", err)
+		}
+		if feedback == "no" {
+			return nil, errors.New("content contains inappropriate material")
+		}
 	}
 
 	if status != nil {

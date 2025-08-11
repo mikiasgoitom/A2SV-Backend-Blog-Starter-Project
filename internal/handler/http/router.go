@@ -1,6 +1,11 @@
 package http
 
 import (
+	"time"
+
+	"github.com/didip/tollbooth/v7"
+	"github.com/didip/tollbooth/v7/limiter"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/handler/http/middleware"
@@ -36,6 +41,19 @@ func NewRouter(userUsecase usecasecontract.IUserUseCase, blogUsecase usecase.IBl
 }
 
 func (r *Router) SetupRoutes(router *gin.Engine) {
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+	// rate limiter configuration
+	lmt := tollbooth.NewLimiter(10, &limiter.ExpirableOptions{DefaultExpirationTTL: time.Hour})
+	lmt.SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"})
+	lmt.SetMessage("Too many requests, please try again later.")
+	router.Use(middleware.RateLimiter(lmt))
 
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	router.GET("/api/v1/metrics", gin.WrapH(promhttp.Handler()))
