@@ -36,7 +36,7 @@ func (h *AuthHandler) googleOauthConfig() *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-		RedirectURL:  h.BaseURL + "/auth/google/callback",
+		RedirectURL:  h.BaseURL + "/api/v1/auth/google/callback",
 		Scopes:       []string{"email", "profile"},
 		Endpoint:     google.Endpoint,
 	}
