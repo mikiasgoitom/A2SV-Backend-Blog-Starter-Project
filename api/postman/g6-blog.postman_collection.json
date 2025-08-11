@@ -311,11 +311,7 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
-              }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
             ],
             "body": {
               "mode": "raw",
@@ -456,9 +452,201 @@
             "description": "Tracks a view for a blog post. Requires authentication."
           },
           "response": []
-        }
+        },
+        {
+              "name": "Create Comment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"This is a comment!\",\n  \"type\": \"comment\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/blogs/:blogId/comment",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "blogs", ":blogId", "comment"],
+                  "variable": [{ "key": "blogId", "value": "{{blog_id}}" }]
+                },
+                "description": "Adds a comment or reply to a blog post.\n\nTop-level comment request body:\n```json\n{\n  \"content\": \"This is a comment!\",\n  \"type\": \"comment\"\n}\n```\n\nReply request body:\n```json\n{\n  \"content\": \"This is a reply!\",\n  \"type\": \"reply\",\n  \"parent_id\": \"<parent_comment_id>\",\n  \"target_id\": \"<target_comment_or_reply_id>\",\n  \"target_user_name\": \"<username_being_replied_to>\"\n}\n```\n\nRequires authentication."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Comment",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentId"],
+                  "variable": [{ "key": "commentId", "value": "{{comment_id}}" }]
+                },
+                "description": "Retrieves a single comment by its ID. Requires authentication."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Reply to Comment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"This is a reply!\",\n  \"type\": \"reply\",\n  \"target_id\": \"TARGET_COMMENT_OR_REPLY_ID\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentID/reply",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentID", "reply"],
+                  "variable": [{ "key": "commentID", "value": "{{comment_id}}" }]
+                },
+                "description": "Creates a reply to a comment. Requires parent comment ID in the URL and target_id in the body."
+              },
+              "response": []
+            },
+            {
+              "name": "Get All Replies of a Comment",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentID/replies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentID", "replies"],
+                  "variable": [{ "key": "commentID", "value": "{{comment_id}}" }]
+                },
+                "description": "Fetches all replies (including nested) for a given comment ID. Returns a list of replies."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Comment Statistics",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentID/count",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentID", "count"],
+                  "variable": [{ "key": "commentID", "value": "{{comment_id}}" }]
+                },
+                "description": "Fetches a comment by ID and returns the total count of its replies. Useful for analytics and UI display."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Comment",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"Updated comment text\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentId"],
+                  "variable": [{ "key": "commentId", "value": "{{comment_id}}" }]
+                },
+                "description": "Updates a comment by its ID. Requires authentication."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Comment",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentId"],
+                  "variable": [{ "key": "commentId", "value": "{{comment_id}}" }]
+                },
+                "description": "Deletes a comment by its ID. Requires authentication."
+              },
+              "response": []
+            },
+            {
+              "name": "List Blog Comments",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/blogs/:blogId/comments?page=1&page_size=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "blogs", ":blogId", "comments"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "page_size", "value": "20" }
+                  ],
+                  "variable": [{ "key": "blogId", "value": "{{blog_id}}" }]
+                },
+                "description": "Lists comments for a blog post. Requires authentication."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Comment Thread",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/comments/:commentId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "comments", ":commentId"],
+                  "variable": [{ "key": "commentId", "value": "{{comment_id}}" }]
+                },
+                "description": "Retrieves the thread for a comment, including all nested replies. Requires authentication."
+              },
+              "response": []
+            },
+            {
+              "name": "List User Comments",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/:userId/comments?page=1&page_size=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", ":userId", "comments"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "page_size", "value": "20" }
+                  ],
+                  "variable": [{ "key": "userId", "value": "{{user_id}}" }]
+                },
+                "description": "Lists comments made by a user. Requires authentication."
+              },
+              "response": []
+            }
       ],
-  "description": "Endpoints for blog interactions (like, dislike, view)."
+  "description": "Endpoints for blog interactions (like, dislike, view, and comment)."
     },
     {
       "name": "Monitoring",
