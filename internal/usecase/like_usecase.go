@@ -10,6 +10,12 @@ import (
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/utils"
 )
 
+// ExistsBlog checks if a blog exists by its ID
+func (u *LikeUsecase) ExistsBlog(ctx context.Context, blogID string) bool {
+	blog, err := u.blogRepo.GetBlogByID(ctx, blogID)
+	return err == nil && blog != nil
+}
+
 // ErrReactionNotFound is returned when a reaction is not found in the database.
 var ErrReactionNotFound = errors.New("reaction not found")
 
@@ -31,7 +37,7 @@ func NewLikeUsecase(likeRepo contract.ILikeRepository, blogRepo contract.IBlogRe
 func (u *LikeUsecase) ToggleLike(ctx context.Context, userID, targetID string, targetType entity.TargetType) error {
 	existingReaction, err := u.likeRepo.GetReactionByUserIDAndTargetID(ctx, userID, targetID)
 	if err != nil {
-		if errors.Is(err, ErrReactionNotFound) {
+		if errors.Is(err, ErrReactionNotFound) || err.Error() == "reaction not found" {
 			existingReaction = nil
 		} else {
 			return fmt.Errorf("failed to retrieve existing reaction: %w", err)
@@ -61,12 +67,9 @@ func (u *LikeUsecase) ToggleLike(ctx context.Context, userID, targetID string, t
 
 	// Update blog like_count and popularity if this is a blog like/dislike
 	if targetType == entity.TargetTypeBlog && u.blogRepo != nil {
-		go func(ctx context.Context, targetID string) {
-			likes, err1 := u.likeRepo.CountLikesByTargetID(ctx, targetID)
-			dislikes, err2 := u.likeRepo.CountDislikesByTargetID(ctx, targetID)
-			if err1 != nil || err2 != nil {
-				return // skip update if count fails
-			}
+		likes, err1 := u.likeRepo.CountLikesByTargetID(ctx, targetID)
+		dislikes, err2 := u.likeRepo.CountDislikesByTargetID(ctx, targetID)
+		if err1 == nil && err2 == nil {
 			blog, err := u.blogRepo.GetBlogByID(ctx, targetID)
 			views := 0
 			comments := 0
@@ -81,7 +84,7 @@ func (u *LikeUsecase) ToggleLike(ctx context.Context, userID, targetID string, t
 				"popularity":    popularity,
 			}
 			_ = u.blogRepo.UpdateBlog(ctx, targetID, updates)
-		}(ctx, targetID)
+		}
 	}
 	return resultErr
 }
@@ -126,15 +129,9 @@ func (u *LikeUsecase) ToggleDislike(ctx context.Context, userID, targetID string
 
 	// Update blog dislike_count and popularity if this is a blog like/dislike
 	if targetType == entity.TargetTypeBlog && u.blogRepo != nil {
-		go func(ctx context.Context, targetID string) {
-			likes, err1 := u.likeRepo.CountLikesByTargetID(ctx, targetID)
-			dislikes, err2 := u.likeRepo.CountDislikesByTargetID(ctx, targetID)
-			if err1 != nil {
-				return // skip update if count fails
-			}
-			if err2 != nil {
-				return // skip update if count fails
-			}
+		likes, err1 := u.likeRepo.CountLikesByTargetID(ctx, targetID)
+		dislikes, err2 := u.likeRepo.CountDislikesByTargetID(ctx, targetID)
+		if err1 == nil && err2 == nil {
 			blog, err := u.blogRepo.GetBlogByID(ctx, targetID)
 			views := 0
 			comments := 0
@@ -148,11 +145,8 @@ func (u *LikeUsecase) ToggleDislike(ctx context.Context, userID, targetID string
 				"dislike_count": dislikes,
 				"popularity":    popularity,
 			}
-			err = u.blogRepo.UpdateBlog(ctx, targetID, updates)
-			if err != nil {
-				return // log error
-			}
-		}(ctx, targetID)
+			_ = u.blogRepo.UpdateBlog(ctx, targetID, updates)
+		}
 	}
 	return nil
 }

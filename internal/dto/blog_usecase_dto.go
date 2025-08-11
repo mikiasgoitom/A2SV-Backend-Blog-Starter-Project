@@ -6,9 +6,11 @@ import (
 
 // Request DTOs
 type CreateCommentRequest struct {
-	Content  string  `json:"content" validate:"required,min=1,max=1000"`
-	ParentID *string `json:"parent_id"`
-	TargetID *string `json:"target_id"`
+	Content        string  `json:"content" validate:"required,min=1,max=1000"`
+	Type           string  `json:"type"`
+	ParentID       *string `json:"parent_id"`
+	TargetID       *string `json:"target_id"`
+	TargetUserName string  `json:"target_user_name"`
 }
 
 type UpdateCommentRequest struct {
@@ -26,19 +28,21 @@ type ReportCommentRequest struct {
 
 // Response DTOs
 type CommentResponse struct {
-	ID         string    `json:"id"`
-	BlogID     string    `json:"blog_id"`
-	ParentID   *string   `json:"parent_id"`
-	TargetID   *string   `json:"target_id"`
-	AuthorID   string    `json:"author_id"`
-	AuthorName string    `json:"author_name"`
-	Content    string    `json:"content"`
-	Status     string    `json:"status"`
-	LikeCount  int       `json:"like_count"`
-	IsLiked    bool      `json:"is_liked"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
-	ReplyCount int       `json:"reply_count"`
+	ID             string    `json:"id"`
+	BlogID         string    `json:"blog_id"`
+	Type           string    `json:"type"`
+	ParentID       *string   `json:"parent_id"`
+	TargetID       *string   `json:"target_id"`
+	AuthorID       string    `json:"author_id"`
+	AuthorName     string    `json:"author_name"`
+	TargetUserName string    `json:"target_user_name"`
+	Content        string    `json:"content"`
+	Status         string    `json:"status"`
+	LikeCount      int       `json:"like_count"`
+	IsLiked        bool      `json:"is_liked"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	ReplyCount     int       `json:"reply_count"`
 }
 
 type CommentThreadResponse struct {

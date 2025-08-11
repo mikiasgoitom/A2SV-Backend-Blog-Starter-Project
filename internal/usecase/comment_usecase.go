@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"math"
 	"strings"
-	"time"
+
+	// "time"
 
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/contract"
 	"github.com/mikiasgoitom/A2SV-Backend-Blog-Starter-Project/internal/domain/entity"
@@ -45,14 +46,59 @@ func (uc *commentUseCase) CreateComment(ctx context.Context, req dto.CreateComme
 		return nil, err
 	}
 
-	// Create comment entity
+	commentType := req.Type
+	if commentType == "" {
+		if req.ParentID != nil && *req.ParentID != "" {
+			commentType = "reply"
+		} else {
+			commentType = "comment"
+		}
+	}
+
+	var targetUserName string
+	if req.TargetID != nil && *req.TargetID != "" {
+		target, err := uc.commentRepo.GetByID(ctx, *req.TargetID)
+		if err == nil {
+			targetUserName = target.AuthorName
+		}
+	}
+
+	replyCount := 0
+	if req.ParentID != nil && *req.ParentID != "" {
+		parent, err := uc.commentRepo.GetByID(ctx, *req.ParentID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid parent/target relationship: parent comment not found: %w", err)
+		}
+		replyCount = parent.ReplyCount + 1
+		parent.ReplyCount = replyCount
+		_ = uc.commentRepo.Update(ctx, parent)
+
+		// If no explicit target provided, default target to the parent comment's author
+		if (req.TargetID == nil || *req.TargetID == "") && targetUserName == "" {
+			targetUserName = parent.AuthorName
+		}
+	}
+
+	// Fetch author name from userRepo
+	authorName := ""
+	if uc.userRepo != nil {
+		user, err := uc.userRepo.GetUserByID(ctx, userID)
+		if err == nil {
+			authorName = user.Username
+		}
+	}
+
 	comment := &entity.Comment{
-		BlogID:   blogID,
-		AuthorID: userID,
-		Content:  strings.TrimSpace(req.Content),
-		ParentID: req.ParentID,
-		TargetID: req.TargetID,
-		Status:   "approved", // Could be "pending" based on moderation policy
+		BlogID:         blogID,
+		AuthorID:       userID,
+		AuthorName:     authorName,
+		Content:        strings.TrimSpace(req.Content),
+		ParentID:       req.ParentID,
+		TargetID:       req.TargetID,
+		Type:           commentType,
+		TargetUserName: targetUserName,
+		Status:         "approved",
+		ReplyCount:     0,
 	}
 
 	// Create comment
@@ -92,11 +138,6 @@ func (uc *commentUseCase) UpdateComment(ctx context.Context, commentID, userID s
 	// Check ownership
 	if comment.AuthorID != userID {
 		return nil, errors.New("unauthorized: can only edit your own comments")
-	}
-
-	// Check edit time window (15 minutes)
-	if time.Since(comment.CreatedAt) > 15*time.Minute {
-		return nil, errors.New("comment edit time window has expired")
 	}
 
 	// Validate content
@@ -386,24 +427,25 @@ func (uc *commentUseCase) toCommentResponse(ctx context.Context, comment *entity
 		isLiked, _ = uc.commentRepo.IsCommentLikedByUser(ctx, comment.ID, *userID)
 	}
 
-	// Get reply count (you might want to cache this)
-	// This is a simplified implementation
-	replyCount := 0 // Implement logic to count replies
+	// Use stored reply count for now (could be recalculated if needed)
+	replyCount := comment.ReplyCount
 
 	return &dto.CommentResponse{
-		ID:         comment.ID,
-		BlogID:     comment.BlogID,
-		ParentID:   comment.ParentID,
-		TargetID:   comment.TargetID,
-		AuthorID:   comment.AuthorID,
-		AuthorName: author.Username, // Using User entity's Username field
-		Content:    comment.Content,
-		Status:     comment.Status,
-		LikeCount:  comment.LikeCount,
-		IsLiked:    isLiked,
-		CreatedAt:  comment.CreatedAt,
-		UpdatedAt:  comment.UpdatedAt,
-		ReplyCount: replyCount,
+		ID:             comment.ID,
+		BlogID:         comment.BlogID,
+		Type:           comment.Type,
+		ParentID:       comment.ParentID,
+		TargetID:       comment.TargetID,
+		AuthorID:       comment.AuthorID,
+		AuthorName:     author.Username,
+		TargetUserName: comment.TargetUserName,
+		Content:        comment.Content,
+		Status:         comment.Status,
+		LikeCount:      comment.LikeCount,
+		IsLiked:        isLiked,
+		CreatedAt:      comment.CreatedAt,
+		UpdatedAt:      comment.UpdatedAt,
+		ReplyCount:     replyCount,
 	}, nil
 }
 

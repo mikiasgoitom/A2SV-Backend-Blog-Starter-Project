@@ -6,17 +6,21 @@ import (
 
 // Comment represents a comment on a blog post with advanced reply-to-reply support
 type Comment struct {
-	ID        string    `json:"id" bson:"_id,omitempty"`
-	BlogID    string    `json:"blog_id" bson:"blog_id"`
-	ParentID  *string   `json:"parent_id" bson:"parent_id"` // Top-level comment ID
-	TargetID  *string   `json:"target_id" bson:"target_id"` // Direct reply target
-	AuthorID  string    `json:"author_id" bson:"author_id"`
-	Content   string    `json:"content" bson:"content"`
-	Status    string    `json:"status" bson:"status"` // approved, pending, hidden, flagged
-	LikeCount int       `json:"like_count" bson:"like_count"`
-	CreatedAt time.Time `json:"created_at" bson:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`
-	IsDeleted bool      `json:"is_deleted" bson:"is_deleted"`
+	ID             string    `json:"id" bson:"_id,omitempty"`
+	BlogID         string    `json:"blog_id" bson:"blog_id"`
+	Type           string    `json:"type" bson:"type"` // "comment" or "reply"
+	ParentID       *string   `json:"parent_id" bson:"parent_id"`
+	TargetID       *string   `json:"target_id" bson:"target_id"`
+	AuthorID       string    `json:"author_id" bson:"author_id"`
+	AuthorName     string    `json:"author_name" bson:"author_name"`
+	TargetUserName string    `json:"target_user_name" bson:"target_user_name"`
+	Content        string    `json:"content" bson:"content"`
+	Status         string    `json:"status" bson:"status"`
+	LikeCount      int       `json:"like_count" bson:"like_count"`
+	ReplyCount     int       `json:"reply_count" bson:"reply_count"`
+	CreatedAt      time.Time `json:"created_at" bson:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at" bson:"updated_at"`
+	IsDeleted      bool      `json:"is_deleted" bson:"is_deleted"`
 }
 
 // CommentThread represents a comment with its nested replies
