@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -28,8 +27,6 @@ func (h *CommentHandler) CreateComment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
 		return
 	}
-	// Debug log for Type field
-	fmt.Println("DEBUG: req.Type =", req.Type)
 	blogID := c.Param("blogID")
 	if blogID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Blog ID is required"})
@@ -488,8 +485,7 @@ func (h *CommentHandler) GetCommentReplies(c *gin.Context) {
 		userID = &uid
 	}
 
-	// For now, we'll use the existing GetCommentThread method with modifications
-	// In a real implementation, you might want to create a separate method in the usecase
+	// Use the existing GetCommentThread to fetch the full nested tree
 	thread, err := h.commentUC.GetCommentThread(c.Request.Context(), commentID, userID)
 	if err != nil {
 		if err.Error() == "comment not found" {
@@ -500,13 +496,31 @@ func (h *CommentHandler) GetCommentReplies(c *gin.Context) {
 		return
 	}
 
-	// Extract replies from the thread (simplified implementation)
+	// Flatten all nested replies into a single list
+	flat := make([]*dto.CommentThreadResponse, 0)
+	var flatten func(nodes []*dto.CommentThreadResponse)
+	flatten = func(nodes []*dto.CommentThreadResponse) {
+		for _, n := range nodes {
+			// Shallow copy without children to keep payload lean
+			copy := &dto.CommentThreadResponse{
+				Comment: n.Comment,
+				Depth:   n.Depth,
+				Replies: nil,
+			}
+			flat = append(flat, copy)
+			if len(n.Replies) > 0 {
+				flatten(n.Replies)
+			}
+		}
+	}
+	flatten(thread.Replies)
+
 	c.JSON(http.StatusOK, gin.H{
-		"replies": thread.Replies,
+		"replies": flat,
 		"pagination": gin.H{
 			"page":      page,
 			"page_size": pageSize,
-			"total":     len(thread.Replies),
+			"total":     len(flat),
 			"has_more":  false,
 		},
 	})

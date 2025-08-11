@@ -71,7 +71,7 @@ func (r *Router) SetupRoutes(router *gin.Engine) {
 		blogs.GET("", r.blogHandler.GetBlogsHandler)
 		blogs.GET("/search", r.blogHandler.SearchAndFilterBlogsHandler)
 		blogs.GET("/popular", r.blogHandler.GetPopularBlogsHandler)
-		blogs.GET("/slug/:slugID", r.blogHandler.GetBlogDetailHandler)
+		blogs.GET("/slug/:slug", r.blogHandler.GetBlogDetailHandler)
 	}
 
 	// Protected routes (authentication required)
@@ -96,11 +96,20 @@ func (r *Router) SetupRoutes(router *gin.Engine) {
 		protected.POST("/blogs/:blogID/comment", r.commentHandler.CreateComment)
 		protected.POST("/comments/:commentID/reply", r.commentHandler.CreateReply) // Create a reply to a comment
 		protected.GET("/blogs/:blogID/comments", r.commentHandler.GetBlogComments)
-		protected.GET("/comments/:commentID", r.commentHandler.GetCommentThread)           // Fetch comment thread (all nested replies)
-		protected.GET("/comments/:commentID/replies", r.commentHandler.GetCommentReplies)  // Fetch all replies (nested) for a comment
-		protected.GET("/comments/:commentID/count", r.commentHandler.GetCommentStatistics) // Fetch comment by ID with total reply count
+		protected.GET("/blogs/:blogID/comments/count", r.commentHandler.GetBlogCommentsCount) // Total comments in a blog
+		protected.GET("/comments/:commentID", r.commentHandler.GetComment)                    // Single comment by ID
+		protected.GET("/comments/:commentID/replies", r.commentHandler.GetCommentReplies)     // Fetch all replies (nested) for a comment
+		protected.GET("/comments/:commentID/count", r.commentHandler.GetCommentStatistics)    // Fetch comment by ID with total reply count
+		protected.GET("/comments/:commentID/depth", r.commentHandler.GetCommentDepth)         // Depth of a comment thread
 		protected.PUT("/comments/:commentID", r.commentHandler.UpdateComment)
 		protected.DELETE("/comments/:commentID", r.commentHandler.DeleteComment)
+		protected.GET("/comments/:commentID/thread", r.commentHandler.GetCommentThread) // Fetch comment thread (all nested replies)
+
+		// Comment engagement & moderation
+		protected.POST("/comments/:commentID/like", r.commentHandler.LikeComment)
+		protected.POST("/comments/:commentID/unlike", r.commentHandler.UnlikeComment)
+		protected.POST("/comments/:commentID/report", r.commentHandler.ReportComment)
+		protected.PUT("/comments/:commentID/status", r.commentHandler.UpdateCommentStatus)
 		protected.GET("/users/:userId/comments", r.commentHandler.GetUserComments)
 	}
 

@@ -72,6 +72,11 @@ func (uc *commentUseCase) CreateComment(ctx context.Context, req dto.CreateComme
 		replyCount = parent.ReplyCount + 1
 		parent.ReplyCount = replyCount
 		_ = uc.commentRepo.Update(ctx, parent)
+
+		// If no explicit target provided, default target to the parent comment's author
+		if (req.TargetID == nil || *req.TargetID == "") && targetUserName == "" {
+			targetUserName = parent.AuthorName
+		}
 	}
 
 	// Fetch author name from userRepo
@@ -422,9 +427,8 @@ func (uc *commentUseCase) toCommentResponse(ctx context.Context, comment *entity
 		isLiked, _ = uc.commentRepo.IsCommentLikedByUser(ctx, comment.ID, *userID)
 	}
 
-	// Get reply count (you might want to cache this)
-	// This is a simplified implementation
-	replyCount := 0 // Implement logic to count replies
+	// Use stored reply count for now (could be recalculated if needed)
+	replyCount := comment.ReplyCount
 
 	return &dto.CommentResponse{
 		ID:             comment.ID,
