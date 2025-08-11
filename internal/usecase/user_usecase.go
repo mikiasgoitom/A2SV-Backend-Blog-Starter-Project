@@ -476,7 +476,6 @@ func (uc *UserUsecase) DemoteUser(ctx context.Context, userID string) (*entity.U
 
 	user.Role = entity.UserRoleUser
 
-	user.Role = entity.UserRoleUser
 	_, err = uc.userRepo.UpdateUser(ctx, user)
 	if err != nil {
 		uc.logger.Errorf("failed to demote user %s: %v", userID, err)
